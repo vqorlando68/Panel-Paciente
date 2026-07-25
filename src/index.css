@@ -1,0 +1,57 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Montserrat', system-ui, sans-serif;
+
+  --color-brand-primary: #00aae1;
+  --color-brand-primary-dark: #0196d4;
+  --color-brand-primary-light: #effaff;
+  --color-brand-outline: #0177ab;
+
+  --color-text-primary: #033d59;
+  --color-text-secondary: #035476;
+  --color-text-tertiary: #00678f;
+  --color-text-black: #000000;
+  --color-text-white: #ffffff;
+  --color-text-seguridad: #00aae1;
+  --color-text-creatividad: #ff7a39;
+  --color-text-proteccion: #0fecaa;
+  --color-text-salud: #01ae6c;
+
+  --color-input-filled: #033d59;
+  --color-input-placeholder: #035476;
+  --color-input-caption: #033d59;
+  --color-input-label: #033d59;
+  --color-input-active: #ff7a39;
+  --color-input-border: #e2e8eb;
+
+  --color-button-bg-primary: #00aae1;
+  --color-button-bg-primary-hover: #0196d4;
+  --color-button-text-basic: #033d59;
+  --color-button-text-basic-hover: #023147;
+  --color-button-bg-secondary: #effaff;
+  --color-button-text-primary: #00aae1;
+  --color-button-text-disabled: #9ca3af;
+
+  --color-feedback-success-base: #01ae6c;
+  --color-feedback-success-light: #ebfef4;
+  --color-feedback-info-base: #0284c7;
+  --color-feedback-info-light: #f0f9ff;
+  --color-feedback-warning-base: #fbbf24;
+  --color-feedback-warning-light: #fffbeb;
+  --color-feedback-error-base: #e11d48;
+  --color-feedback-error-light: #fff1f2;
+
+  --color-border-basic: #d0d5dd;
+  --color-border-complementario-1: #ececee;
+}
+
+:root {
+  font-family: 'Montserrat', system-ui, sans-serif;
+}
+
+body {
+  font-family: 'Montserrat', system-ui, sans-serif;
+  color: #033d59;
+  background-color: #ffffff;
+}

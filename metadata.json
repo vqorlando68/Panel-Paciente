@@ -1,0 +1,6 @@
+{
+  "name": "Patient List Panel",
+  "description": "Panel clínico de gestión de pacientes con tabla interactiva de 17 columnas, filtros avanzados, roles de Comité Médico y Coordinadora SIAU, e indicadores de vencimiento.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
