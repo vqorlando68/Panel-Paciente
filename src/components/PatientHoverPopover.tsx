@@ -1,6 +1,6 @@
 import React from 'react';
 import { Patient } from '../types';
-import { Phone, Mail, MapPin, CreditCard, Edit3 } from 'lucide-react';
+import { Phone, Mail, MapPin, CreditCard, Edit3, X } from 'lucide-react';
 
 interface PatientHoverPopoverProps {
   patient: Patient;
@@ -17,7 +17,6 @@ export const PatientHoverPopover: React.FC<PatientHoverPopoverProps> = ({
 }) => {
   return (
     <div
-      onMouseLeave={onClose}
       style={{
         top: `${position.top}px`,
         left: `${position.left}px`,
@@ -38,13 +37,22 @@ export const PatientHoverPopover: React.FC<PatientHoverPopoverProps> = ({
           </div>
         </div>
 
-        <button
-          onClick={onClickEdit}
-          className="text-[#00aae1] hover:bg-[#effaff] p-1 rounded-md transition-colors cursor-pointer"
-          title="Editar información del paciente"
-        >
-          <Edit3 className="w-3.5 h-3.5" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={onClickEdit}
+            className="text-[#00aae1] hover:bg-[#effaff] p-1 rounded-md transition-colors cursor-pointer"
+            title="Editar información del paciente"
+          >
+            <Edit3 className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-1 rounded-md transition-colors cursor-pointer"
+            title="Cerrar"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
 
       <div className="space-y-1.5 text-[#033d59]">

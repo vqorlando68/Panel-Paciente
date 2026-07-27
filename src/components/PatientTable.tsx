@@ -200,16 +200,21 @@ export const PatientTable: React.FC<PatientTableProps> = ({
     });
   }, [patients, sortField, sortDirection]);
 
-  // Handle patient name mouse enter for popover
-  const handleMouseEnterName = (e: React.MouseEvent, patient: Patient) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    setHoveredPatient({
-      patient,
-      position: {
-        top: rect.bottom + 8,
-        left: rect.left,
-      },
-    });
+  // Handle patient name click for popover toggle
+  const handleNameClick = (e: React.MouseEvent, patient: Patient) => {
+    e.stopPropagation();
+    if (hoveredPatient?.patient.id === patient.id) {
+      setHoveredPatient(null);
+    } else {
+      const rect = e.currentTarget.getBoundingClientRect();
+      setHoveredPatient({
+        patient,
+        position: {
+          top: rect.bottom + 8,
+          left: rect.left,
+        },
+      });
+    }
   };
 
   const handleRiskClick = (patient: Patient) => {
@@ -283,7 +288,7 @@ export const PatientTable: React.FC<PatientTableProps> = ({
         {cohorteMenuPatientId === patient.id && (
           <div className="absolute top-full left-0 mt-1 z-30 bg-white rounded-lg shadow-xl border border-[#e2e8eb] p-1.5 w-72 max-h-60 overflow-y-auto text-xs font-medium space-y-0.5">
             <div className="text-[10px] font-bold text-[#035476] px-2 py-1 uppercase tracking-wider border-b border-[#e2e8eb] mb-1">
-              Estado Cohorte (Interpretación)
+              Estado Cohorte
             </div>
             {COHORTE_OPTIONS.map((coh) => (
               <button
@@ -776,17 +781,27 @@ export const PatientTable: React.FC<PatientTableProps> = ({
 
                   {/* Col 3: NOMBRE DEL PACIENTE (Sticky Left-[280px]) */}
                   <td className="sticky left-[280px] z-20 bg-white group-hover:bg-[#f9fafb] px-3 py-2 border-r border-[#e2e8eb] min-w-[220px] max-w-[220px]">
-                    <div className="overflow-hidden">
+                    <div className="overflow-hidden flex items-center justify-between gap-1">
+                      <div className="overflow-hidden">
+                        <button
+                          onClick={(e) => handleNameClick(e, patient)}
+                          className="font-bold text-[#033d59] hover:text-[#00aae1] text-xs text-left truncate block max-w-[165px] transition-colors cursor-pointer"
+                          title="Clic para ver u ocultar los datos del paciente"
+                        >
+                          {patient.nombre}
+                        </button>
+                        <span className="text-[10px] text-[#035476] block font-mono">
+                          {patient.identificacion}
+                        </span>
+                      </div>
+
                       <button
                         onClick={() => onEditPatient(patient)}
-                        onMouseEnter={(e) => handleMouseEnterName(e, patient)}
-                        className="font-bold text-[#033d59] hover:text-[#00aae1] text-xs text-left truncate block max-w-[200px] transition-colors cursor-pointer"
+                        className="p-1 rounded hover:bg-[#effaff] text-[#035476] hover:text-[#00aae1] transition-colors shrink-0 cursor-pointer"
+                        title="Editar datos del paciente"
                       >
-                        {patient.nombre}
+                        <Pencil className="w-3.5 h-3.5" />
                       </button>
-                      <span className="text-[10px] text-[#035476] block font-mono">
-                        {patient.identificacion}
-                      </span>
                     </div>
                   </td>
 
