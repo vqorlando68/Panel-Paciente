@@ -33,7 +33,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-bold text-[#033d59] tracking-tight">Panel de Listado de Pacientes</h1>
             <span className="text-[11px] px-2 py-0.5 rounded bg-[#effaff] text-[#00aae1] font-medium border border-[#00aae1]/20">
-              SIAU v2.4
+              SIAU v2.0
             </span>
           </div>
           <p className="text-xs text-[#035476]">

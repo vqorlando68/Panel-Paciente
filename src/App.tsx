@@ -8,6 +8,7 @@ import {
   SpecialistKey,
   SpecialistInfo,
   COORDINADORES_LIST,
+  COHORTE_OPTIONS,
 } from './types';
 import { INITIAL_PATIENTS } from './mockData';
 import { Header } from './components/Header';
@@ -87,8 +88,22 @@ export default function App() {
       }
 
       // Cohorte Filter
-      if (filters.cohorte !== 'Todos' && patient.cohorte !== filters.cohorte) {
-        return false;
+      if (filters.cohorte !== 'Todos') {
+        const patientCohorte = (patient.cohorte || '').toLowerCase();
+        const selectedCohorteCode = filters.cohorte.toLowerCase();
+        
+        const selectedObj = COHORTE_OPTIONS.find(c => c.code.toLowerCase() === selectedCohorteCode || c.label.toLowerCase() === selectedCohorteCode);
+        const selectedLabel = selectedObj ? selectedObj.label.toLowerCase() : selectedCohorteCode;
+        
+        const patientObj = COHORTE_OPTIONS.find(c => c.code.toLowerCase() === patientCohorte || c.label.toLowerCase() === patientCohorte);
+        const patientFullLabel = patientObj ? patientObj.label.toLowerCase() : patientCohorte;
+
+        const matchesCode = patientCohorte === selectedCohorteCode;
+        const matchesInFullLabel = patientFullLabel.includes(selectedCohorteCode) || patientFullLabel.includes(selectedLabel);
+        
+        if (!matchesCode && !matchesInFullLabel) {
+          return false;
+        }
       }
 
       // Seguimiento Filter

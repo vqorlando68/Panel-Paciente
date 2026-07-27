@@ -255,24 +255,35 @@ export const PatientTable: React.FC<PatientTableProps> = ({
       style = 'bg-[#fffbeb] text-[#b45309] border-[#fbbf24]/40 hover:bg-[#fef3c7]';
     }
 
-    const currentOption = COHORTE_OPTIONS.find((c) => c.code === patient.cohorte);
-    const displayLabel = currentOption ? currentOption.code : patient.cohorte;
+    const currentOption = COHORTE_OPTIONS.find((c) => c.code === patient.cohorte || c.label === patient.cohorte);
+    const displayCode = currentOption ? currentOption.code : patient.cohorte;
+    const interpretationText = currentOption
+      ? (currentOption.label.includes(' - ') ? currentOption.label.split(' - ')[1] : currentOption.label)
+      : '';
 
     return (
-      <div className="relative font-sans">
+      <div className="relative font-sans flex flex-col items-start gap-0.5">
         <button
           onClick={() => setCohorteMenuPatientId(cohorteMenuPatientId === patient.id ? null : patient.id)}
           className={`px-2 py-0.5 rounded-full text-[10px] font-bold border transition-all flex items-center gap-1 cursor-pointer ${style}`}
           title={`Estado Cohorte: ${currentOption?.label || patient.cohorte}. Clic para cambiar.`}
         >
-          <span className="truncate max-w-[110px]">{displayLabel}</span>
+          <span className="truncate max-w-[120px]">{displayCode}</span>
           <ChevronDown className="w-3 h-3 opacity-60 shrink-0" />
         </button>
+        {interpretationText && (
+          <span
+            className="text-[9.5px] text-[#035476]/80 font-normal truncate max-w-[140px] leading-tight"
+            title={`Interpretación: ${interpretationText}`}
+          >
+            {interpretationText}
+          </span>
+        )}
 
         {cohorteMenuPatientId === patient.id && (
-          <div className="absolute top-full left-0 mt-1 z-30 bg-white rounded-lg shadow-xl border border-[#e2e8eb] p-1.5 w-64 max-h-56 overflow-y-auto text-xs font-medium space-y-0.5">
+          <div className="absolute top-full left-0 mt-1 z-30 bg-white rounded-lg shadow-xl border border-[#e2e8eb] p-1.5 w-72 max-h-60 overflow-y-auto text-xs font-medium space-y-0.5">
             <div className="text-[10px] font-bold text-[#035476] px-2 py-1 uppercase tracking-wider border-b border-[#e2e8eb] mb-1">
-              Estado Cohorte
+              Estado Cohorte (Interpretación)
             </div>
             {COHORTE_OPTIONS.map((coh) => (
               <button
@@ -285,12 +296,15 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                   }
                   setCohorteMenuPatientId(null);
                 }}
-                className={`w-full text-left px-2 py-1 rounded-md text-[11px] hover:bg-[#effaff] cursor-pointer transition-colors ${
+                className={`w-full text-left px-2 py-1.5 rounded-md text-[11px] hover:bg-[#effaff] cursor-pointer transition-colors flex flex-col ${
                   patient.cohorte === coh.code ? 'bg-[#effaff] text-[#00aae1] font-bold' : 'text-[#033d59]'
                 }`}
                 title={coh.label}
               >
-                {coh.label}
+                <span className="font-bold">{coh.code}</span>
+                <span className="text-[10px] text-[#035476]/70 font-normal leading-tight">
+                  {coh.label.includes(' - ') ? coh.label.split(' - ')[1] : coh.label}
+                </span>
               </button>
             ))}
           </div>
