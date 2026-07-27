@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { AlertTriangle } from 'lucide-react';
 import {
   Patient,
   UserRole,
@@ -352,22 +353,23 @@ export default function App() {
             )}
           </div>
 
-          <div className="flex items-center gap-4 text-[11px] font-medium">
-            <span className="flex items-center gap-1">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#01ae6c]" />
-              Activo
+          <div className="flex items-center gap-3.5 text-[11px] font-medium text-[#035476]">
+            <span className="font-semibold text-[#033d59]">Nivel de Riesgo:</span>
+            <span className="flex items-center gap-1" title="Critical (Triángulo Rojo)">
+              <AlertTriangle className="w-3.5 h-3.5 text-[#e11d48] fill-[#e11d48]/20 stroke-[2.5]" />
+              Critical
             </span>
-            <span className="flex items-center gap-1">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#00aae1]" />
-              Aceptado
-            </span>
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1" title="Alto (Círculo Rojo)">
               <span className="w-2.5 h-2.5 rounded-full bg-[#e11d48]" />
-              Rechazado
+              Alto
             </span>
-            <span className="flex items-center gap-1">
-              <span className="w-2.5 h-2.5 bg-[#fffbeb] border-l-2 border-[#b45309]" />
-              Alerta Vencido
+            <span className="flex items-center gap-1" title="Medio (Círculo Amarillo)">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#fbbf24]" />
+              Medio
+            </span>
+            <span className="flex items-center gap-1" title="Bajo (Círculo Verde)">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#01ae6c]" />
+              Bajo
             </span>
           </div>
         </footer>
