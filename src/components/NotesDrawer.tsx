@@ -6,7 +6,12 @@ interface NotesDrawerProps {
   patient: Patient;
   type: 'op' | 'cli';
   activeRole: UserRole;
-  onAddNote: (patientId: string, type: 'op' | 'cli', noteContent: string) => void;
+  onAddNote: (
+    patientId: string, 
+    type: 'op' | 'cli', 
+    noteContent: string, 
+    rehusoInfo?: { isRehuso: boolean; professional: string; specialty: string }
+  ) => void;
   onClose: () => void;
 }
 
@@ -18,6 +23,9 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({
   onClose,
 }) => {
   const [newNoteContent, setNewNoteContent] = useState('');
+  const [isRehuso, setIsRehuso] = useState(false);
+  const [rehusoProfessional, setRehusoProfessional] = useState('');
+  const [rehusoSpecialty, setRehusoSpecialty] = useState('');
 
   const notesList = type === 'op' ? patient.operationalNotes : patient.clinicalNotes;
   const isOperational = type === 'op';
@@ -25,8 +33,26 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newNoteContent.trim()) return;
-    onAddNote(patient.id, type, newNoteContent.trim());
+    if (isRehuso && (!rehusoProfessional.trim() || !rehusoSpecialty.trim())) return;
+
+    let fullContent = newNoteContent.trim();
+    if (isOperational && isRehuso) {
+      fullContent = `[REHÚSO REGISTRADO - Prof: ${rehusoProfessional.trim()} | Esp: ${rehusoSpecialty.trim()}]\n${fullContent}`;
+    }
+
+    onAddNote(
+      patient.id, 
+      type, 
+      fullContent, 
+      isOperational && isRehuso 
+        ? { isRehuso: true, professional: rehusoProfessional.trim(), specialty: rehusoSpecialty.trim() } 
+        : undefined
+    );
+
     setNewNoteContent('');
+    setIsRehuso(false);
+    setRehusoProfessional('');
+    setRehusoSpecialty('');
   };
 
   return (
@@ -122,13 +148,59 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({
             </p>
           </div>
         ) : (
-          <form onSubmit={handleAdd} className="p-4 bg-white border-t border-[#e2e8eb] space-y-2">
+          <form onSubmit={handleAdd} className="p-4 bg-white border-t border-[#e2e8eb] space-y-2.5">
             <div className="flex items-center justify-between text-xs text-[#035476]">
               <span className="font-semibold text-[#033d59]">Agregar Nueva Nota</span>
               <span className="text-[11px]">
                 Autor: <strong className="text-[#00aae1]">{activeRole === 'comite_medico' ? 'Comité Médico' : 'Coordinación SIAU'}</strong>
               </span>
             </div>
+
+            {/* Checkbox: Marcar Rehúso (Only for Operational Notes) */}
+            {isOperational && (
+              <div className="bg-[#fff1f2] border border-[#fecdd3] rounded-lg p-2.5 space-y-2">
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-[#e11d48]">
+                  <input
+                    type="checkbox"
+                    checked={isRehuso}
+                    onChange={(e) => setIsRehuso(e.target.checked)}
+                    className="rounded border-rose-300 text-[#e11d48] focus:ring-[#e11d48] cursor-pointer"
+                  />
+                  <span>Marcar Rehúso del Paciente</span>
+                </label>
+
+                {isRehuso && (
+                  <div className="grid grid-cols-2 gap-2 pt-1 border-t border-rose-200">
+                    <div>
+                      <label className="block text-[10px] font-bold text-rose-800 mb-0.5">
+                        Nombre del Profesional *
+                      </label>
+                      <input
+                        type="text"
+                        required={isRehuso}
+                        value={rehusoProfessional}
+                        onChange={(e) => setRehusoProfessional(e.target.value)}
+                        placeholder="Ej: Dr. Roberto Silva"
+                        className="w-full text-xs p-1.5 bg-white border border-rose-300 rounded text-[#033d59] focus:outline-none focus:border-[#e11d48]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-rose-800 mb-0.5">
+                        Especialidad *
+                      </label>
+                      <input
+                        type="text"
+                        required={isRehuso}
+                        value={rehusoSpecialty}
+                        onChange={(e) => setRehusoSpecialty(e.target.value)}
+                        placeholder="Ej: Cardiología"
+                        className="w-full text-xs p-1.5 bg-white border border-rose-300 rounded text-[#033d59] focus:outline-none focus:border-[#e11d48]"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             <textarea
               rows={3}
@@ -145,7 +217,7 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({
             <div className="flex items-center justify-end">
               <button
                 type="submit"
-                disabled={!newNoteContent.trim()}
+                disabled={!newNoteContent.trim() || (isOperational && isRehuso && (!rehusoProfessional.trim() || !rehusoSpecialty.trim()))}
                 className="text-xs font-semibold text-white bg-[#00aae1] hover:bg-[#0196d4] disabled:bg-[#e2e8eb] disabled:text-[#9ca3af] px-4 py-2 rounded-lg shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer disabled:cursor-not-allowed"
               >
                 <Send className="w-3.5 h-3.5" />

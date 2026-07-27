@@ -196,14 +196,24 @@ export const EditPatientModal: React.FC<EditPatientModalProps> = ({
 
             <div>
               <label className="block text-[11px] font-semibold text-[#035476] mb-1 uppercase">
-                Etiqueta
+                Prioridad Inicial
               </label>
-              <input
-                type="text"
-                value={formData.etiqueta}
-                onChange={(e) => setFormData({ ...formData, etiqueta: e.target.value })}
-                className="w-full bg-white border border-[#e2e8eb] rounded-md px-2.5 py-1.5 text-[#033d59]"
-              />
+              <select
+                value={formData.prioridadInicial ?? 1}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    prioridadInicial: parseInt(e.target.value, 10),
+                  })
+                }
+                className="w-full bg-white border border-[#e2e8eb] rounded-md px-2.5 py-1.5 font-bold text-[#033d59]"
+              >
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((pNum) => (
+                  <option key={pNum} value={pNum}>
+                    P-{pNum} (Prioridad {pNum})
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>

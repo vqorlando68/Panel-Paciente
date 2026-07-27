@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { FilterState, COHORTE_OPTIONS } from '../types';
-import { Search, FilterX, ChevronDown, ChevronUp, Bell, Check } from 'lucide-react';
+import { Search, FilterX, ChevronDown, ChevronUp, Plus, Check, X, Layers } from 'lucide-react';
 
 interface FilterBarProps {
   filters: FilterState;
@@ -9,6 +9,7 @@ interface FilterBarProps {
   conveniosList: string[];
   onResetFilters: () => void;
   alarmCount?: number;
+  onAddCohorte?: (name: string, description: string) => void;
 }
 
 const SPECIFIC_CONVENIOS = [
@@ -18,16 +19,32 @@ const SPECIFIC_CONVENIOS = [
   'CMP Vive al 100 Caribe',
 ];
 
+const FAST_FILTER_CHIPS = [
+  'Todos',
+  'Activos',
+  'Vencidos',
+  'Inconforme',
+  'Críticos',
+  '>90 días',
+  'Rehúso',
+  'Aceptados',
+  'Sin Acta',
+];
+
 export const FilterBar: React.FC<FilterBarProps> = ({
   filters,
   onFilterChange,
   coordinatorsList,
   conveniosList,
   onResetFilters,
-  alarmCount,
+  onAddCohorte,
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isConvenioMenuOpen, setIsConvenioMenuOpen] = useState(false);
+  const [isNewCohorteModalOpen, setIsNewCohorteModalOpen] = useState(false);
+  const [cohorteName, setCohorteName] = useState('');
+  const [cohorteDesc, setCohorteDesc] = useState('');
+
   const convenioDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -83,6 +100,8 @@ export const FilterBar: React.FC<FilterBarProps> = ({
     handleChange('convenioNombre', 'Todos');
   };
 
+  const activeFastFilter = filters.fastFilter || 'Todos';
+
   const hasActiveFilters =
     filters.cohorte !== 'Todos' ||
     filters.seguimiento !== 'Todos' ||
@@ -91,8 +110,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
     filters.identificacion !== '' ||
     filters.nombresApellidos !== '' ||
     filters.numeroCarga !== '' ||
-    filters.soloVencidas ||
-    Boolean(filters.soloAlarmas);
+    activeFastFilter !== 'Todos';
 
   const convenioButtonLabel = useMemo(() => {
     if (isAllConveniosSelected) {
@@ -104,9 +122,20 @@ export const FilterBar: React.FC<FilterBarProps> = ({
     return `${selectedConveniosArray.length} convenios sel.`;
   }, [isAllConveniosSelected, selectedConveniosArray]);
 
+  const handleCreateCohorteSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!cohorteName.trim()) return;
+    if (onAddCohorte) {
+      onAddCohorte(cohorteName.trim(), cohorteDesc.trim());
+    }
+    setCohorteName('');
+    setCohorteDesc('');
+    setIsNewCohorteModalOpen(false);
+  };
+
   return (
     <div className="bg-white border border-[#e2e8eb] p-4 shrink-0 max-w-[1550px] w-full mx-auto font-sans rounded-xl shadow-2xs my-2 transition-all">
-      {/* Header bar with bell toggle and collapse button on same alignment */}
+      {/* Header bar */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold text-[#033d59] uppercase tracking-wide">Filtros de Búsqueda</span>
@@ -118,31 +147,22 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Campana de Alarmas Button */}
+          {/* Primary Button "+ Nueva COHORTE" */}
           <button
             type="button"
-            onClick={() => handleChange('soloAlarmas', !filters.soloAlarmas)}
-            title={filters.soloAlarmas ? "Mostrando solo pacientes con alarmas" : "Filtrar por pacientes con alarmas de seguimiento"}
-            className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg border cursor-pointer transition-all ${
-              filters.soloAlarmas 
-                ? 'bg-[#fffbeb] text-[#b45309] border-[#fbbf24] shadow-2xs font-bold ring-2 ring-[#fbbf24]/30' 
-                : 'bg-[#f9fafb] text-[#035476] border-[#e2e8eb] hover:bg-[#fffbeb] hover:text-[#b45309]'
-            }`}
+            onClick={() => setIsNewCohorteModalOpen(true)}
+            className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-[#00aae1] hover:bg-[#0196d4] text-white shadow-2xs cursor-pointer transition-all"
           >
-            <Bell className={`w-3.5 h-3.5 ${filters.soloAlarmas ? 'text-[#b45309] fill-[#b45309]' : 'text-[#035476]'}`} />
-            <span>Alarmas</span>
-            {alarmCount !== undefined && alarmCount > 0 && (
-              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-extrabold ${
-                filters.soloAlarmas ? 'bg-[#b45309] text-white' : 'bg-[#fffbeb] text-[#b45309] border border-[#fbbf24]'
-              }`}>
-                {alarmCount}
-              </span>
-            )}
+            <Plus className="w-3.5 h-3.5" />
+            <span>Nueva COHORTE</span>
           </button>
 
           {hasActiveFilters && (
             <button
-              onClick={onResetFilters}
+              onClick={() => {
+                onResetFilters();
+                handleChange('fastFilter', 'Todos');
+              }}
               className="text-xs text-[#e11d48] hover:text-[#be123c] font-semibold flex items-center gap-1 hover:underline cursor-pointer transition-colors px-1"
             >
               <FilterX className="w-3.5 h-3.5" />
@@ -337,6 +357,105 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             />
           </div>
 
+        </div>
+      )}
+
+      {/* Row of Fast Filter Chips */}
+      <div className="mt-3 pt-2.5 border-t border-[#e2e8eb] flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+        <span className="text-[10px] font-extrabold text-[#035476] uppercase tracking-wider shrink-0 flex items-center gap-1">
+          <Layers className="w-3 h-3 text-[#00aae1]" />
+          Filtros Rápidos:
+        </span>
+        <div className="flex items-center gap-1.5 flex-nowrap">
+          {FAST_FILTER_CHIPS.map((chip) => {
+            const isActive = activeFastFilter === chip;
+            return (
+              <button
+                key={chip}
+                type="button"
+                onClick={() => handleChange('fastFilter', chip)}
+                className={`text-xs px-3 py-1 rounded-full font-semibold transition-all shrink-0 cursor-pointer ${
+                  isActive
+                    ? 'bg-[#00aae1] text-white shadow-2xs font-bold scale-102 ring-2 ring-[#00aae1]/20'
+                    : 'bg-[#f9fafb] text-[#035476] border border-[#e2e8eb] hover:bg-[#effaff] hover:text-[#00aae1]'
+                }`}
+              >
+                {chip === '>90 días' && <span className="inline-block w-2 h-2 rounded-full bg-[#8b5cf6] mr-1"></span>}
+                {chip === 'Rehúso' && <span className="inline-block w-2 h-2 rounded-full bg-[#e11d48] mr-1"></span>}
+                {chip === 'Inconforme' && <span className="inline-block w-2 h-2 rounded-full bg-[#e11d48] mr-1"></span>}
+                {chip}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Modal: Nueva COHORTE */}
+      {isNewCohorteModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-2xs flex items-center justify-center p-4 animate-in fade-in duration-150 font-sans">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full border border-[#e2e8eb] overflow-hidden">
+            <div className="p-4 bg-[#effaff] border-b border-[#e2e8eb] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-[#00aae1] text-white flex items-center justify-center font-bold">
+                  <Plus className="w-4 h-4" />
+                </div>
+                <h3 className="font-bold text-sm text-[#033d59]">Crear Nueva Cohorte</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsNewCohorteModalOpen(false)}
+                className="p-1 text-[#035476] hover:text-[#033d59] rounded-lg hover:bg-white/80 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateCohorteSubmit} className="p-4 space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-[#033d59] mb-1">
+                  Nombre de la Cohorte *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej: RIESGO VASCULAR AVANZADO"
+                  value={cohorteName}
+                  onChange={(e) => setCohorteName(e.target.value)}
+                  className="w-full text-xs p-2.5 bg-white border border-[#e2e8eb] rounded-lg text-[#033d59] focus:outline-none focus:border-[#00aae1]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-[#033d59] mb-1">
+                  Descripción
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder="Descripción del grupo o criterios de inclusión de la cohorte..."
+                  value={cohorteDesc}
+                  onChange={(e) => setCohorteDesc(e.target.value)}
+                  className="w-full text-xs p-2.5 bg-white border border-[#e2e8eb] rounded-lg text-[#033d59] focus:outline-none focus:border-[#00aae1] resize-none"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#e2e8eb]">
+                <button
+                  type="button"
+                  onClick={() => setIsNewCohorteModalOpen(false)}
+                  className="px-3.5 py-1.5 text-xs font-semibold text-[#035476] bg-[#f9fafb] hover:bg-[#e2e8eb] border border-[#e2e8eb] rounded-lg cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={!cohorteName.trim()}
+                  className="px-4 py-1.5 text-xs font-bold text-white bg-[#00aae1] hover:bg-[#0196d4] disabled:bg-gray-300 rounded-lg shadow-2xs cursor-pointer transition-colors"
+                >
+                  Guardar Cohorte
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

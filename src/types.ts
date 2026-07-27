@@ -19,9 +19,10 @@ export interface SpecialistInfo {
   specialistTitle: string; // e.g. "Med. Gen.", "Cardiología", etc.
   professionalName: string;
   lastAttentionDate: string; // YYYY-MM-DD or DD/MM/YYYY HH:MM AM/PM
-  frequency: string; // e.g. "Cada 30 días", "Trimestral"
+  frequency: string; // e.g. "Semanal", "Quincenal", "Mensual", "Bimensual", "Trimestral", "Semestral", "Anual"
   targetDate: string; // YYYY-MM-DD or DD/MM/YYYY HH:MM AM/PM
   isOverdue?: boolean;
+  hasRehuso?: boolean;
   attentionsHistory?: SpecialistAttentionItem[];
 }
 
@@ -84,15 +85,20 @@ export interface Patient {
   direccion: string;
   idConvenio: string; // ID Convenio
   convenioNombre: string; // e.g. "EPS Suramericana Cuidate360"
+  prioridadInicial?: number; // 1 to 10
+  fechaProximaRevision?: string; // e.g. "18/08/2026"
   cohorte: string;
   estado: EstadoPaciente;
   riesgo: NivelRiesgo;
-  etiqueta: string; // Activo 1, Activo 2, Activo 3, Inconforme, etc.
-  retroalimentacion?: string; // "Inconforme" if etiqueta == "Inconforme", else ""
+  etiqueta: string; // "Inconforme" or ""
+  retroalimentacion?: string;
   fase: FasePaciente;
   acta: ActaInfo;
+  actasHistory?: ActaInfo[];
   coordinador: string;
   numeroCarga: string;
+  hasRehuso?: boolean;
+  rehusoInfo?: { professional: string; specialty: string };
   tasas: TasasData;
   hasAlarm: boolean;
   alarmReasons: string[];
@@ -114,6 +120,7 @@ export interface FilterState {
   numeroCarga: string;
   soloVencidas: boolean;
   soloAlarmas?: boolean;
+  fastFilter?: string; // 'Todos' | 'Activos' | 'Vencidos' | 'Inconforme' | 'Críticos' | '>90 días' | 'Rehúso' | 'Aceptados' | 'Sin Acta'
 }
 
 export const COHORTE_OPTIONS = [

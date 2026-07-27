@@ -4,30 +4,52 @@ export const INITIAL_PATIENTS: Patient[] = [
   {
     id: 'PAT-001',
     nombre: 'Valeria Restrepo Montoya',
-    identificacion: '10482',
+    identificacion: 'CC 52.849.182',
     telefono: '+57 312 458 9012',
     email: 'valeria.restrepo@gmail.com',
     direccion: 'Calle 45 #28-14, Medellín',
     idConvenio: 'SURA-8492',
     convenioNombre: 'EPS Suramericana Cuidate360',
+    prioridadInicial: 1,
+    fechaProximaRevision: '18/08/2026',
     cohorte: 'ACTIVO',
     estado: 'Activo',
     riesgo: 'Critical',
-    etiqueta: 'Prioritario',
+    etiqueta: '',
     retroalimentacion: 'Satisfecho',
     fase: 'I',
     acta: {
       numero: 142,
-      fecha: '2026-07-10',
+      fecha: '16 jul 2026',
       resumen: 'Aprobación de tratamiento anticoagulante orales de nueva generación y remisión prioritaria a Cardiología.',
       integrantes: ['Dr. Fernando Hoyos', 'Dra. Sofía López', 'Dra. María Paz']
     },
+    actasHistory: [
+      {
+        numero: 142,
+        fecha: '16 jul 2026',
+        resumen: 'Aprobación de tratamiento anticoagulante orales de nueva generación y remisión prioritaria a Cardiología.',
+        integrantes: ['Dr. Fernando Hoyos', 'Dra. Sofía López', 'Dra. María Paz']
+      },
+      {
+        numero: 110,
+        fecha: '10 may 2026',
+        resumen: 'Ajuste de dosis de antihipertensivos y control de función renal.',
+        integrantes: ['Dr. Carlos Mendoza', 'Dra. Sofía López']
+      },
+      {
+        numero: 85,
+        fecha: '15 mar 2026',
+        resumen: 'Evaluación de ingreso al programa de riesgo vascular.',
+        integrantes: ['Dr. Fernando Hoyos']
+      }
+    ],
     coordinador: 'Anyeli Ledezma',
     numeroCarga: 'CARGA-104',
     hasAlarm: true,
     alarmReasons: [
-      'Paciente lleva > 3 meses sin visita de Medicina General (Última: 10/05/2026)',
-      'Cita de Nutricionista asignada con profesional fuera de cuadro médico (Lic. Mariana Gómez)'
+      'Paciente lleva > 3 meses sin visita de Medicina General (Última: 10/01/2026)',
+      'Cita de Nutricionista asignada con profesional fuera de cuadro médico'
     ],
     tasas: {
       cancelacionesPct: 22,
@@ -60,21 +82,22 @@ export const INITIAL_PATIENTS: Patient[] = [
       med_gen: {
         specialistTitle: 'MEDICO GEN.',
         professionalName: 'Dr. Carlos Mendoza',
-        lastAttentionDate: '10/05/2026 09:00 AM',
-        frequency: 'Cada 30 días',
-        targetDate: '10/06/2026 09:00 AM',
+        lastAttentionDate: '10/01/2026 09:00 AM',
+        frequency: 'Mensual',
+        targetDate: '10/02/2026 09:00 AM',
         isOverdue: true,
         attentionsHistory: [
-          { id: 'at-1', dateTime: '10/05/2026 09:00 AM', professional: 'Dr. Carlos Mendoza', status: 'Atendida' },
-          { id: 'at-2', dateTime: '10/04/2026 08:30 AM', professional: 'Dr. Carlos Mendoza', status: 'Atendida' },
-          { id: 'at-3', dateTime: '10/03/2026 10:00 AM', professional: 'Dr. Carlos Mendoza', status: 'Atendida' }
+          { id: 'at-1', dateTime: '10/01/2026 09:00 AM', professional: 'Dr. Carlos Mendoza', status: 'Atendida' },
+          { id: 'at-2', dateTime: '10/12/2025 08:30 AM', professional: 'Dr. Carlos Mendoza', status: 'Atendida' },
+          { id: 'at-3', dateTime: '10/11/2025 10:00 AM', professional: 'Dr. Carlos Mendoza', status: 'Atendida' },
+          { id: 'at-4', dateTime: '10/10/2025 09:00 AM', professional: 'Dr. Carlos Mendoza', status: 'Atendida' }
         ]
       },
       nutri: {
         specialistTitle: 'NUTRICIONISTA',
         professionalName: 'Lic. Mariana Gómez',
         lastAttentionDate: '15/06/2026 10:30 AM',
-        frequency: 'Cada 60 días',
+        frequency: 'Bimensual',
         targetDate: '15/08/2026 10:30 AM',
         isOverdue: false,
         attentionsHistory: [
@@ -82,10 +105,10 @@ export const INITIAL_PATIENTS: Patient[] = [
         ]
       },
       psicol: {
-        specialistTitle: 'Psicologia',
+        specialistTitle: 'PSICOLOGIA',
         professionalName: 'Dra. Claudia Ruiz',
         lastAttentionDate: '20/06/2026 02:00 PM',
-        frequency: 'Cada 45 días',
+        frequency: 'Quincenal',
         targetDate: '04/08/2026 02:00 PM',
         isOverdue: false,
         attentionsHistory: [
@@ -93,7 +116,7 @@ export const INITIAL_PATIENTS: Patient[] = [
         ]
       },
       esp_1: {
-        specialistTitle: 'Cardiología',
+        specialistTitle: 'ESP. 1',
         professionalName: 'Dr. Roberto Silva',
         lastAttentionDate: '01/07/2026 11:00 AM',
         frequency: 'Trimestral',
@@ -104,7 +127,7 @@ export const INITIAL_PATIENTS: Patient[] = [
         ]
       },
       esp_2: {
-        specialistTitle: 'Nefrología',
+        specialistTitle: 'ESP. 2',
         professionalName: 'Dr. Andrés Parra',
         lastAttentionDate: '12/03/2026 03:00 PM',
         frequency: 'Semestral',
@@ -115,10 +138,10 @@ export const INITIAL_PATIENTS: Patient[] = [
         ]
       },
       esp_3: {
-        specialistTitle: 'Endocrinología',
+        specialistTitle: 'ESP. 3',
         professionalName: 'Dra. Beatriz Franco',
         lastAttentionDate: '14/06/2026 08:00 AM',
-        frequency: 'Cada 90 días',
+        frequency: 'Trimestral',
         targetDate: '15/09/2026 08:00 AM',
         isOverdue: false,
         attentionsHistory: [
@@ -129,7 +152,7 @@ export const INITIAL_PATIENTS: Patient[] = [
         specialistTitle: 'ESP. 4',
         professionalName: 'Dr. Gabriel Restrepo',
         lastAttentionDate: '20/05/2026 02:00 PM',
-        frequency: 'Cada 60 días',
+        frequency: 'Bimensual',
         targetDate: '20/07/2026 02:00 PM',
         isOverdue: false,
         attentionsHistory: []
@@ -157,24 +180,40 @@ export const INITIAL_PATIENTS: Patient[] = [
   {
     id: 'PAT-002',
     nombre: 'Santiago Gómez Echeverri',
-    identificacion: '80192',
+    identificacion: 'CC 80.192.410',
     telefono: '+57 300 671 2234',
     email: 'sgomez.echeverri@hotmail.com',
     direccion: 'Carrera 70 #10-45, Bogotá',
     idConvenio: 'SANITAS-201',
     convenioNombre: 'CMP Caribe',
+    prioridadInicial: 3,
+    fechaProximaRevision: '22/08/2026',
     cohorte: 'ACEPTADO',
     estado: 'Aceptado',
     riesgo: 'High',
-    etiqueta: 'Activo 1',
-    retroalimentacion: '',
+    etiqueta: 'Inconforme',
+    retroalimentacion: 'Inconforme',
     fase: 'D',
     acta: {
       numero: 138,
-      fecha: '2026-06-28',
+      fecha: '28 jun 2026',
       resumen: 'Inclusión en programa de glucometrías continuas y monitoreo ambulatorio.',
       integrantes: ['Dr. Fernando Hoyos', 'Dra. Beatriz Franco']
     },
+    actasHistory: [
+      {
+        numero: 138,
+        fecha: '28 jun 2026',
+        resumen: 'Inclusión en programa de glucometrías continuas y monitoreo ambulatorio.',
+        integrantes: ['Dr. Fernando Hoyos', 'Dra. Beatriz Franco']
+      },
+      {
+        numero: 99,
+        fecha: '12 abr 2026',
+        resumen: 'Revisión por Inconformidad manifestada en atención domiciliaria.',
+        integrantes: ['Dra. Sofía López']
+      }
+    ],
     coordinador: 'Katherine Mora',
     numeroCarga: 'CARGA-104',
     hasAlarm: false,
@@ -198,77 +237,70 @@ export const INITIAL_PATIENTS: Patient[] = [
     ],
     agenda: [
       { id: 'ag-21', date: '2026-08-05', time: '10:00 AM', specialty: 'Medicina General', professional: 'Dr. Jorge Castro', status: 'Programada', type: 'Presencial' },
-      { id: 'ag-22', date: '2026-08-26', time: '03:00 PM', specialty: 'Endocrinología', professional: 'Dra. Beatriz Franco', status: 'Programada', type: 'Teleconsulta' }
     ],
     specialists: {
       med_gen: {
         specialistTitle: 'MEDICO GEN.',
         professionalName: 'Dr. Jorge Castro',
-        lastAttentionDate: '05/07/2026 10:00 AM',
-        frequency: 'Cada 30 días',
-        targetDate: '05/08/2026 10:00 AM',
+        lastAttentionDate: '05/07/2026 09:00 AM',
+        frequency: 'Mensual',
+        targetDate: '05/08/2026 09:00 AM',
         isOverdue: false,
         attentionsHistory: [
-          { id: 'at-201', dateTime: '05/07/2026 10:00 AM', professional: 'Dr. Jorge Castro', status: 'Atendida' }
+          { id: 'at-201', dateTime: '05/07/2026 09:00 AM', professional: 'Dr. Jorge Castro', status: 'Atendida' }
         ]
       },
       nutri: {
         specialistTitle: 'NUTRICIONISTA',
         professionalName: 'Lic. Paola Tobón',
-        lastAttentionDate: '10/06/2026 11:00 AM',
-        frequency: 'Cada 60 días',
-        targetDate: '10/08/2026 11:00 AM',
+        lastAttentionDate: '10/06/2026 10:00 AM',
+        frequency: 'Trimestral',
+        targetDate: '10/09/2026 10:00 AM',
         isOverdue: false,
-        attentionsHistory: [
-          { id: 'at-202', dateTime: '10/06/2026 11:00 AM', professional: 'Lic. Paola Tobón', status: 'Atendida' }
-        ]
+        attentionsHistory: []
       },
       psicol: {
-        specialistTitle: 'Psicologia',
-        professionalName: 'Lic. Mateo Ríos',
-        lastAttentionDate: '20/06/2026 09:00 AM',
-        frequency: 'Cada 90 días',
-        targetDate: '20/09/2026 09:00 AM',
+        specialistTitle: 'PSICOLOGIA',
+        professionalName: 'Sin asignar',
+        lastAttentionDate: 'No registra',
+        frequency: 'Mensual',
+        targetDate: 'Pendiente',
         isOverdue: false,
-        attentionsHistory: [
-          { id: 'at-203', dateTime: '20/06/2026 09:00 AM', professional: 'Lic. Mateo Ríos', status: 'Atendida' }
-        ]
+        attentionsHistory: []
       },
       esp_1: {
-        specialistTitle: 'Endocrinología',
+        specialistTitle: 'ESP. 1',
         professionalName: 'Dra. Beatriz Franco',
-        lastAttentionDate: '12/07/2026 02:00 PM',
-        frequency: 'Cada 45 días',
-        targetDate: '26/08/2026 02:00 PM',
+        lastAttentionDate: '15/05/2026 11:00 AM',
+        frequency: 'Trimestral',
+        targetDate: '15/08/2026 11:00 AM',
         isOverdue: false,
-        attentionsHistory: [
-          { id: 'at-204', dateTime: '12/07/2026 02:00 PM', professional: 'Dra. Beatriz Franco', status: 'Atendida' }
-        ]
+        attentionsHistory: []
       },
       esp_2: {
-        specialistTitle: 'Oftalmología',
-        professionalName: 'Dr. Ricardo Velez',
-        lastAttentionDate: '15/01/2026 08:00 AM',
-        frequency: 'Anual',
-        targetDate: '15/01/2027 08:00 AM',
+        specialistTitle: 'ESP. 2',
+        professionalName: 'Sin asignar',
+        lastAttentionDate: 'No registra',
+        frequency: 'Semestral',
+        targetDate: 'Pendiente',
         isOverdue: false,
         attentionsHistory: []
       },
       esp_3: {
-        specialistTitle: 'Podología',
-        professionalName: 'Dra. Luisa Fernanda',
-        lastAttentionDate: '01/05/2026 10:00 AM',
-        frequency: 'Cada 90 días',
-        targetDate: '01/08/2026 10:00 AM',
+        specialistTitle: 'ESP. 3',
+        professionalName: 'Sin asignar',
+        lastAttentionDate: 'No registra',
+        frequency: 'Anual',
+        targetDate: 'Pendiente',
         isOverdue: false,
         attentionsHistory: []
       },
       esp_4: {
         specialistTitle: 'ESP. 4',
-        professionalName: 'Dra. Isabel Cristina',
-        lastAttentionDate: '10/06/2026 09:00 AM',
-        frequency: 'Cada 90 días',
-        targetDate: '10/09/2026 09:00 AM',
+        professionalName: 'Sin asignar',
+        lastAttentionDate: 'No registra',
+        frequency: 'Anual',
+        targetDate: 'Pendiente',
         isOverdue: false,
         attentionsHistory: []
       },
@@ -278,457 +310,237 @@ export const INITIAL_PATIENTS: Patient[] = [
   },
   {
     id: 'PAT-003',
-    nombre: 'Camila Esperanza Torres',
-    identificacion: '52849',
-    telefono: '+57 315 892 0192',
-    email: 'ctorres.esperanza@yahoo.es',
-    direccion: 'Transversal 15 #102-18, Cali',
-    idConvenio: 'NUEVA_EPS-992',
+    nombre: 'Camila Andrea Rojas Ruiz',
+    identificacion: 'CC 1.092.384.112',
+    telefono: '+57 315 889 0011',
+    email: 'camila.rojas@gmail.com',
+    direccion: 'Calle 12 #4-50, Cali',
+    idConvenio: 'CALI-552',
     convenioNombre: 'CMP Salud Mental Cali',
-    cohorte: 'INTERESADO',
-    estado: 'Activo',
-    riesgo: 'Critical',
-    etiqueta: 'Activo 2',
+    prioridadInicial: 5,
+    fechaProximaRevision: '10/09/2026',
+    cohorte: 'RECHAZO EL SERVICIO',
+    estado: 'Rechazado',
+    riesgo: 'Medium',
+    etiqueta: '',
     retroalimentacion: '',
     fase: 'E',
+    hasRehuso: true,
+    rehusoInfo: { professional: 'Dr. Roberto Silva', specialty: 'Cardiología' },
     acta: {
-      numero: 145,
-      fecha: '2026-07-15',
-      resumen: 'Valoración de urgencia por síntomas de preeclampsia leve en semana 32.',
-      integrantes: ['Dra. Sofía López', 'Dr. Felipe Morales', 'Dra. Paula Agudelo']
+      numero: 121,
+      fecha: '15 may 2026',
+      resumen: 'Paciente rechaza atención por Cardiología argumentando que prefiere su médico particular.',
+      integrantes: ['Dr. Fernando Hoyos', 'Angela Valencia']
     },
+    actasHistory: [
+      {
+        numero: 121,
+        fecha: '15 may 2026',
+        resumen: 'Paciente rechaza atención por Cardiología argumentando que prefiere su médico particular.',
+        integrantes: ['Dr. Fernando Hoyos', 'Angela Valencia']
+      }
+    ],
     coordinador: 'Angela Valencia',
-    numeroCarga: 'CARGA-108',
+    numeroCarga: 'CARGA-105',
     hasAlarm: true,
-    alarmReasons: [
-      'Atención de Nutricionista vencida desde el 02/07/2026'
-    ],
+    alarmReasons: ['Registra Rehúso en atención especializada (Cardiología)'],
     tasas: {
-      cancelacionesPct: 15,
-      cancelacionesNum: 3,
-      inasistenciasPct: 8,
+      cancelacionesPct: 40,
+      cancelacionesNum: 4,
+      inasistenciasPct: 20,
       inasistenciasNum: 2,
-      reprogramacionesPct: 12,
-      reprogramacionesNum: 2,
-      history: [
-        { id: 't-31', date: '2026-07-18', specialty: 'Med. Gen.', professional: 'Dr. Carlos Mendoza', status: 'Atendida' },
-        { id: 't-32', date: '2026-06-02', specialty: 'Nutrición', professional: 'Lic. Mariana Gómez', status: 'Atendida' }
-      ]
+      reprogramacionesPct: 10,
+      reprogramacionesNum: 1,
+      history: []
     },
-    cuadroMedico: [
-      { id: 'cm-31', specialty: 'Medicina General', professional: 'Dr. Carlos Mendoza', inNetwork: true },
-      { id: 'cm-32', specialty: 'Nutrición', professional: 'Lic. Mariana Gómez', inNetwork: true },
-      { id: 'cm-33', specialty: 'Ginecobstetricia', professional: 'Dra. Paula Agudelo', inNetwork: true }
-    ],
-    agenda: [
-      { id: 'ag-31', date: '2026-08-01', time: '08:00 AM', specialty: 'Medicina General', professional: 'Dr. Carlos Mendoza', status: 'Programada', type: 'Presencial' }
-    ],
+    cuadroMedico: [],
+    agenda: [],
     specialists: {
       med_gen: {
         specialistTitle: 'MEDICO GEN.',
         professionalName: 'Dr. Carlos Mendoza',
-        lastAttentionDate: '18/07/2026 08:00 AM',
-        frequency: 'Quincenal',
-        targetDate: '01/08/2026 08:00 AM',
+        lastAttentionDate: '01/06/2026 08:00 AM',
+        frequency: 'Mensual',
+        targetDate: '01/07/2026 08:00 AM',
         isOverdue: false,
-        attentionsHistory: [
-          { id: 'at-301', dateTime: '18/07/2026 08:00 AM', professional: 'Dr. Carlos Mendoza', status: 'Atendida' }
-        ]
+        attentionsHistory: []
       },
       nutri: {
         specialistTitle: 'NUTRICIONISTA',
-        professionalName: 'Lic. Mariana Gómez',
-        lastAttentionDate: '02/06/2026 09:00 AM',
-        frequency: 'Cada 30 días',
-        targetDate: '02/07/2026 09:00 AM',
-        isOverdue: true,
-        attentionsHistory: [
-          { id: 'at-302', dateTime: '02/06/2026 09:00 AM', professional: 'Lic. Mariana Gómez', status: 'Atendida' }
-        ]
+        professionalName: 'Sin asignar',
+        lastAttentionDate: 'No registra',
+        frequency: 'Bimensual',
+        targetDate: 'Pendiente',
+        isOverdue: false,
+        attentionsHistory: []
       },
       psicol: {
-        specialistTitle: 'Psicologia',
+        specialistTitle: 'PSICOLOGIA',
         professionalName: 'Dra. Claudia Ruiz',
-        lastAttentionDate: '02/05/2026 10:00 AM',
-        frequency: 'Cada 30 días',
-        targetDate: '02/06/2026 10:00 AM',
+        lastAttentionDate: '10/06/2026 03:00 PM',
+        frequency: 'Quincenal',
+        targetDate: '25/06/2026 03:00 PM',
         isOverdue: false,
         attentionsHistory: []
       },
       esp_1: {
-        specialistTitle: 'Ginecobstetricia',
-        professionalName: 'Dra. Paula Agudelo',
-        lastAttentionDate: '15/07/2026 03:00 PM',
-        frequency: 'Semanal',
-        targetDate: '22/07/2026 03:00 PM',
+        specialistTitle: 'ESP. 1',
+        professionalName: 'Dr. Roberto Silva',
+        lastAttentionDate: '12/04/2026 10:00 AM',
+        frequency: 'Trimestral',
+        targetDate: '12/07/2026 10:00 AM',
         isOverdue: false,
+        hasRehuso: true,
         attentionsHistory: []
       },
       esp_2: {
-        specialistTitle: 'Perinatología',
-        professionalName: 'Dr. Hernán Barrientos',
-        lastAttentionDate: '10/07/2026 11:00 AM',
-        frequency: 'Quincenal',
-        targetDate: '25/07/2026 11:00 AM',
+        specialistTitle: 'ESP. 2',
+        professionalName: 'Sin asignar',
+        lastAttentionDate: 'No registra',
+        frequency: 'Semestral',
+        targetDate: 'Pendiente',
         isOverdue: false,
         attentionsHistory: []
       },
       esp_3: {
-        specialistTitle: 'Anestesiología',
-        professionalName: 'Dr. Samuel Varela',
-        lastAttentionDate: '01/06/2026 02:00 PM',
-        frequency: 'Pre-quirúrgico',
-        targetDate: '15/08/2026 02:00 PM',
+        specialistTitle: 'ESP. 3',
+        professionalName: 'Sin asignar',
+        lastAttentionDate: 'No registra',
+        frequency: 'Anual',
+        targetDate: 'Pendiente',
         isOverdue: false,
         attentionsHistory: []
       },
       esp_4: {
         specialistTitle: 'ESP. 4',
-        professionalName: 'Dr. Alejandro Marín',
-        lastAttentionDate: '15/05/2026 11:00 AM',
-        frequency: 'Cada 60 días',
-        targetDate: '15/07/2026 11:00 AM',
+        professionalName: 'Sin asignar',
+        lastAttentionDate: 'No registra',
+        frequency: 'Anual',
+        targetDate: 'Pendiente',
         isOverdue: false,
         attentionsHistory: []
       },
     },
-    operationalNotes: [],
+    operationalNotes: [
+      {
+        id: 'op-301',
+        author: 'Angela Valencia',
+        role: 'Coordinadora SIAU',
+        timestamp: '2026-05-15 14:20',
+        content: 'Marcar Rehúso: Paciente indica que no desea consulta con Dr. Roberto Silva (Cardiología).'
+      }
+    ],
     clinicalNotes: []
   },
   {
     id: 'PAT-004',
-    nombre: 'Jorge Enrique Benítez',
-    identificacion: '19482',
-    telefono: '+57 320 901 8832',
-    email: 'jorge.benitez@outlook.com',
-    direccion: 'Avenida 19 #134-22, Bucaramanga',
-    idConvenio: 'SURA-8492',
+    nombre: 'Hernán Darío Morales Paz',
+    identificacion: 'CC 19.382.910',
+    telefono: '+57 310 998 7766',
+    email: 'hernan.morales@gmail.com',
+    direccion: 'Avenida 6N #22-18, Barranquilla',
+    idConvenio: 'CARIBE-90',
     convenioNombre: 'CMP Vive al 100 Caribe',
-    cohorte: 'ESTRATIFICADO',
+    prioridadInicial: 2,
+    fechaProximaRevision: '05/08/2026',
+    cohorte: 'PROSPECTO',
     estado: 'Activo',
-    riesgo: 'Medium',
-    etiqueta: 'Activo 3',
+    riesgo: 'Low',
+    etiqueta: '',
     retroalimentacion: '',
     fase: 'M/E',
     acta: {
-      numero: 120,
-      fecha: '2026-05-10',
-      resumen: 'Fin de ciclos de quimioterapia adjuvante. Pasa a fase de vigilancia clínica.',
-      integrantes: ['Dr. Fernando Hoyos', 'Dr. Jaime Ospina']
+      numero: 0,
+      fecha: '',
+      resumen: ''
     },
+    actasHistory: [],
     coordinador: 'Anyeli Ledezma',
-    numeroCarga: 'CARGA-104',
+    numeroCarga: 'CARGA-106',
     hasAlarm: false,
     alarmReasons: [],
     tasas: {
-      cancelacionesPct: 8,
-      cancelacionesNum: 1,
-      inasistenciasPct: 4,
-      inasistenciasNum: 1,
-      reprogramacionesPct: 6,
-      reprogramacionesNum: 1,
-      history: [
-        { id: 't-41', date: '2026-06-25', specialty: 'Med. Gen.', professional: 'Dra. Karen Cepeda', status: 'Atendida' }
-      ]
+      cancelacionesPct: 0,
+      cancelacionesNum: 0,
+      inasistenciasPct: 0,
+      inasistenciasNum: 0,
+      reprogramacionesPct: 0,
+      reprogramacionesNum: 0,
+      history: []
     },
     cuadroMedico: [
-      { id: 'cm-41', specialty: 'Medicina General', professional: 'Dra. Karen Cepeda', inNetwork: true },
-      { id: 'cm-42', specialty: 'Oncología', professional: 'Dr. Jaime Ospina', inNetwork: true }
-    ],
-    agenda: [
-      { id: 'ag-41', date: '2026-08-10', time: '10:00 AM', specialty: 'Oncología', professional: 'Dr. Jaime Ospina', status: 'Programada', type: 'Presencial' }
-    ],
-    specialists: {
-      med_gen: {
-        specialistTitle: 'MEDICO GEN.',
-        professionalName: 'Dra. Karen Cepeda',
-        lastAttentionDate: '25/06/2026 09:00 AM',
-        frequency: 'Cada 30 días',
-        targetDate: '25/07/2026 09:00 AM',
-        isOverdue: false,
-        attentionsHistory: [
-          { id: 'at-401', dateTime: '25/06/2026 09:00 AM', professional: 'Dra. Karen Cepeda', status: 'Atendida' }
-        ]
-      },
-      nutri: {
-        specialistTitle: 'NUTRICIONISTA',
-        professionalName: 'Lic. Esteban Marín',
-        lastAttentionDate: '20/06/2026 11:00 AM',
-        frequency: 'Cada 45 días',
-        targetDate: '04/08/2026 11:00 AM',
-        isOverdue: false,
-        attentionsHistory: []
-      },
-      psicol: {
-        specialistTitle: 'Psicologia',
-        professionalName: 'Dra. Claudia Ruiz',
-        lastAttentionDate: '15/06/2026 03:00 PM',
-        frequency: 'Cada 60 días',
-        targetDate: '15/08/2026 03:00 PM',
-        isOverdue: false,
-        attentionsHistory: []
-      },
-      esp_1: {
-        specialistTitle: 'Oncología',
-        professionalName: 'Dr. Jaime Ospina',
-        lastAttentionDate: '10/05/2026 10:00 AM',
-        frequency: 'Trimestral',
-        targetDate: '10/08/2026 10:00 AM',
-        isOverdue: false,
-        attentionsHistory: []
-      },
-      esp_2: {
-        specialistTitle: 'Gastroenterología',
-        professionalName: 'Dra. Patricia Serna',
-        lastAttentionDate: '18/04/2026 02:00 PM',
-        frequency: 'Semestral',
-        targetDate: '18/10/2026 02:00 PM',
-        isOverdue: false,
-        attentionsHistory: []
-      },
-      esp_3: {
-        specialistTitle: 'Cirugía General',
-        professionalName: 'Dr. Mario Henao',
-        lastAttentionDate: '01/03/2026 09:00 AM',
-        frequency: 'Semestral',
-        targetDate: '01/09/2026 09:00 AM',
-        isOverdue: false,
-        attentionsHistory: []
-      },
-      esp_4: {
-        specialistTitle: 'ESP. 4',
-        professionalName: 'Dr. Esteban Jaramillo',
-        lastAttentionDate: '01/06/2026 10:00 AM',
-        frequency: 'Cada 90 días',
-        targetDate: '01/09/2026 10:00 AM',
-        isOverdue: false,
-        attentionsHistory: []
-      },
-    },
-    operationalNotes: [],
-    clinicalNotes: []
-  },
-  {
-    id: 'PAT-005',
-    nombre: 'Elena María Villamizar',
-    identificacion: '32901',
-    telefono: '+57 311 234 5678',
-    email: 'elena.villamizar@gmail.com',
-    direccion: 'Calle 100 #15-30, Barranquilla',
-    idConvenio: 'COMPENSAR-502',
-    convenioNombre: 'EPS Suramericana Cuidate360',
-    cohorte: 'PROSPECTO',
-    estado: 'Rechazado',
-    riesgo: 'Low',
-    etiqueta: 'Prioritario',
-    retroalimentacion: 'Neutral',
-    fase: 'I',
-    acta: {
-      numero: 112,
-      fecha: '2026-04-05',
-      resumen: 'Rechazo por inasistencia reiterada a controles dialíticos y cambio de domicilio fuera del área de cobertura.',
-      integrantes: ['Dra. Sofía López', 'Dr. Andrés Parra']
-    },
-    coordinador: 'Katherine Mora',
-    numeroCarga: 'CARGA-102',
-    hasAlarm: true,
-    alarmReasons: [
-      'Atención de Psicología vencida desde mayo 2026'
-    ],
-    tasas: {
-      cancelacionesPct: 18,
-      cancelacionesNum: 4,
-      inasistenciasPct: 12,
-      inasistenciasNum: 3,
-      reprogramacionesPct: 10,
-      reprogramacionesNum: 2,
-      history: [
-        { id: 't-51', date: '2026-06-10', specialty: 'Med. Gen.', professional: 'Dr. Jorge Castro', status: 'Atendida' }
-      ]
-    },
-    cuadroMedico: [
-      { id: 'cm-51', specialty: 'Medicina General', professional: 'Dr. Jorge Castro', inNetwork: true },
-      { id: 'cm-52', specialty: 'Nefrología', professional: 'Dr. Andrés Parra', inNetwork: true }
+      { id: 'cm-41', specialty: 'Medicina General', professional: 'Dr. Carlos Mendoza', inNetwork: true }
     ],
     agenda: [],
     specialists: {
       med_gen: {
         specialistTitle: 'MEDICO GEN.',
-        professionalName: 'Dr. Jorge Castro',
-        lastAttentionDate: '10/06/2026 09:00 AM',
-        frequency: 'Cada 30 días',
-        targetDate: '10/07/2026 09:00 AM',
-        isOverdue: false,
-        attentionsHistory: []
-      },
-      nutri: {
-        specialistTitle: 'NUTRICIONISTA',
-        professionalName: 'Lic. Paola Tobón',
-        lastAttentionDate: '15/04/2026 10:00 AM',
-        frequency: 'Cada 30 días',
-        targetDate: '15/05/2026 10:00 AM',
-        isOverdue: false,
-        attentionsHistory: []
-      },
-      psicol: {
-        specialistTitle: 'Psicologia',
-        professionalName: 'Lic. Mateo Ríos',
-        lastAttentionDate: '20/05/2026 02:00 PM',
-        frequency: 'Cada 90 días',
-        targetDate: '20/08/2026 02:00 PM',
-        isOverdue: true,
-        attentionsHistory: []
-      },
-      esp_1: {
-        specialistTitle: 'Nefrología',
-        professionalName: 'Dr. Andrés Parra',
-        lastAttentionDate: '01/06/2026 11:00 AM',
-        frequency: 'Mensual',
-        targetDate: '01/07/2026 11:00 AM',
-        isOverdue: false,
-        attentionsHistory: []
-      },
-      esp_2: {
-        specialistTitle: 'Vascular',
-        professionalName: 'Dr. Thomas White',
-        lastAttentionDate: '05/02/2026 08:00 AM',
-        frequency: 'Semestral',
-        targetDate: '05/08/2026 08:00 AM',
-        isOverdue: false,
-        attentionsHistory: []
-      },
-      esp_3: {
-        specialistTitle: 'Trabajo Social',
-        professionalName: 'Lic. Diana Cardona',
-        lastAttentionDate: '01/05/2026 03:00 PM',
-        frequency: 'Cada 60 días',
-        targetDate: '01/07/2026 03:00 PM',
-        isOverdue: false,
-        attentionsHistory: []
-      },
-      esp_4: {
-        specialistTitle: 'ESP. 4',
-        professionalName: 'Dra. Mónica Silva',
-        lastAttentionDate: '05/04/2026 08:00 AM',
-        frequency: 'Cada 90 días',
-        targetDate: '05/07/2026 08:00 AM',
-        isOverdue: false,
-        attentionsHistory: []
-      },
-    },
-    operationalNotes: [],
-    clinicalNotes: []
-  },
-  {
-    id: 'PAT-006',
-    nombre: 'Gonzalo Andrés Salamanca',
-    identificacion: '79482',
-    telefono: '+57 318 776 5432',
-    email: 'gonzalo.salamanca@gmail.com',
-    direccion: 'Carrera 43A #1S-150, Envigado',
-    idConvenio: 'SURA-8492',
-    convenioNombre: 'CMP Caribe',
-    cohorte: 'VISITADO ESPECIALISTA',
-    estado: 'Activo',
-    riesgo: 'High',
-    etiqueta: 'Activo 1',
-    retroalimentacion: '',
-    fase: 'I',
-    acta: {
-      numero: 140,
-      fecha: '2026-07-02',
-      resumen: 'Suministro de concentrador de oxígeno portátil y seguimiento por Neumología.',
-      integrantes: ['Dra. Sofía López', 'Dr. Samuel Varela']
-    },
-    coordinador: 'Angela Valencia',
-    numeroCarga: 'CARGA-108',
-    hasAlarm: false,
-    alarmReasons: [],
-    tasas: {
-      cancelacionesPct: 4,
-      cancelacionesNum: 1,
-      inasistenciasPct: 2,
-      inasistenciasNum: 0,
-      reprogramacionesPct: 5,
-      reprogramacionesNum: 1,
-      history: [
-        { id: 't-61', date: '2026-07-08', specialty: 'Med. Gen.', professional: 'Dr. Carlos Mendoza', status: 'Atendida' }
-      ]
-    },
-    cuadroMedico: [
-      { id: 'cm-61', specialty: 'Medicina General', professional: 'Dr. Carlos Mendoza', inNetwork: true },
-      { id: 'cm-62', specialty: 'Neumología', professional: 'Dr. Hernando Betancur', inNetwork: true }
-    ],
-    agenda: [
-      { id: 'ag-61', date: '2026-08-08', time: '09:00 AM', specialty: 'Medicina General', professional: 'Dr. Carlos Mendoza', status: 'Programada', type: 'Presencial' }
-    ],
-    specialists: {
-      med_gen: {
-        specialistTitle: 'MEDICO GEN.',
         professionalName: 'Dr. Carlos Mendoza',
-        lastAttentionDate: '08/07/2026 09:00 AM',
-        frequency: 'Cada 30 días',
-        targetDate: '08/08/2026 09:00 AM',
+        lastAttentionDate: '10/07/2026 09:00 AM',
+        frequency: 'Mensual',
+        targetDate: '10/08/2026 09:00 AM',
         isOverdue: false,
-        attentionsHistory: []
+        attentionsHistory: [
+          { id: 'at-401', dateTime: '10/07/2026 09:00 AM', professional: 'Dr. Carlos Mendoza', status: 'Atendida' }
+        ]
       },
       nutri: {
         specialistTitle: 'NUTRICIONISTA',
         professionalName: 'Lic. Mariana Gómez',
-        lastAttentionDate: '01/06/2026 10:00 AM',
-        frequency: 'Cada 60 días',
-        targetDate: '01/08/2026 10:00 AM',
+        lastAttentionDate: '12/07/2026 11:00 AM',
+        frequency: 'Trimestral',
+        targetDate: '12/10/2026 11:00 AM',
         isOverdue: false,
         attentionsHistory: []
       },
       psicol: {
-        specialistTitle: 'Psicologia',
-        professionalName: 'Dra. Claudia Ruiz',
-        lastAttentionDate: '10/06/2026 02:00 PM',
-        frequency: 'Cada 60 días',
-        targetDate: '10/08/2026 02:00 PM',
+        specialistTitle: 'PSICOLOGIA',
+        professionalName: 'Sin asignar',
+        lastAttentionDate: 'No registra',
+        frequency: 'Mensual',
+        targetDate: 'Pendiente',
         isOverdue: false,
         attentionsHistory: []
       },
       esp_1: {
-        specialistTitle: 'Neumología',
-        professionalName: 'Dr. Hernando Betancur',
-        lastAttentionDate: '02/07/2026 11:00 AM',
-        frequency: 'Trimestral',
-        targetDate: '02/10/2026 11:00 AM',
+        specialistTitle: 'ESP. 1',
+        professionalName: 'Sin asignar',
+        lastAttentionDate: 'No registra',
+        frequency: 'Anual',
+        targetDate: 'Pendiente',
         isOverdue: false,
         attentionsHistory: []
       },
       esp_2: {
-        specialistTitle: 'Fisioterapia Resp.',
-        professionalName: 'Ft. Camilo Cárdenas',
-        lastAttentionDate: '18/07/2026 03:00 PM',
-        frequency: 'Semanal',
-        targetDate: '25/07/2026 03:00 PM',
+        specialistTitle: 'ESP. 2',
+        professionalName: 'Sin asignar',
+        lastAttentionDate: 'No registra',
+        frequency: 'Anual',
+        targetDate: 'Pendiente',
         isOverdue: false,
         attentionsHistory: []
       },
       esp_3: {
-        specialistTitle: 'Cardiología',
-        professionalName: 'Dr. Roberto Silva',
-        lastAttentionDate: '10/04/2026 09:00 AM',
-        frequency: 'Semestral',
-        targetDate: '10/10/2026 09:00 AM',
+        specialistTitle: 'ESP. 3',
+        professionalName: 'Sin asignar',
+        lastAttentionDate: 'No registra',
+        frequency: 'Anual',
+        targetDate: 'Pendiente',
         isOverdue: false,
         attentionsHistory: []
       },
       esp_4: {
         specialistTitle: 'ESP. 4',
-        professionalName: 'Dr. Fernando Botero',
-        lastAttentionDate: '12/05/2026 03:00 PM',
-        frequency: 'Cada 60 días',
-        targetDate: '12/07/2026 03:00 PM',
+        professionalName: 'Sin asignar',
+        lastAttentionDate: 'No registra',
+        frequency: 'Anual',
+        targetDate: 'Pendiente',
         isOverdue: false,
         attentionsHistory: []
-      },
+      }
     },
     operationalNotes: [],
     clinicalNotes: []
   }
 ];
-

@@ -8,6 +8,7 @@ import {
   NivelRiesgo,
   SpecialistKey,
   SpecialistInfo,
+  ActaInfo,
   COORDINADORES_LIST,
   COHORTE_OPTIONS,
 } from './types';
@@ -165,6 +166,25 @@ export default function App() {
         return false;
       }
 
+      // Fast Filter Chips
+      if (filters.fastFilter && filters.fastFilter !== 'Todos') {
+        const ff = filters.fastFilter;
+        if (ff === 'Activos' && patient.estado !== 'Activo') return false;
+        if (ff === 'Vencidos' && !patientHasOverdueSpecialist(patient)) return false;
+        if (ff === 'Inconforme' && patient.etiqueta !== 'Inconforme' && patient.retroalimentacion !== 'Inconforme') return false;
+        if (ff === 'Críticos' && patient.riesgo !== 'Critical' && patient.riesgo !== 'High') return false;
+        if (ff === '>90 días') {
+          const hasMoreThan90Days = Object.values(patient.specialists).some((s) => Boolean((s as SpecialistInfo)?.isOverdue));
+          if (!hasMoreThan90Days) return false;
+        }
+        if (ff === 'Rehúso') {
+          const hasRehuso = patient.hasRehuso || Object.values(patient.specialists).some((s) => Boolean((s as SpecialistInfo)?.hasRehuso));
+          if (!hasRehuso) return false;
+        }
+        if (ff === 'Aceptados' && patient.cohorte !== 'ACEPTADO' && patient.estado !== 'Aceptado') return false;
+        if (ff === 'Sin Acta' && patient.acta && patient.acta.numero > 0) return false;
+      }
+
       return true;
     });
   }, [patients, filters]);
@@ -226,7 +246,32 @@ export default function App() {
     );
   };
 
-  const handleAddNote = (patientId: string, type: 'op' | 'cli', noteContent: string) => {
+  const handleUpdatePrioridad = (patientId: string, priority: number) => {
+    setPatients((prev) =>
+      prev.map((p) => (p.id === patientId ? { ...p, prioridadInicial: priority } : p))
+    );
+  };
+
+  const handleSaveActa = (patientId: string, newActa: ActaInfo) => {
+    setPatients((prev) =>
+      prev.map((p) =>
+        p.id === patientId
+          ? {
+              ...p,
+              acta: newActa,
+              actasHistory: [newActa, ...(p.actasHistory || [])],
+            }
+          : p
+      )
+    );
+  };
+
+  const handleAddNote = (
+    patientId: string, 
+    type: 'op' | 'cli', 
+    noteContent: string,
+    rehusoInfo?: { isRehuso: boolean; professional: string; specialty: string }
+  ) => {
     const newNote = {
       id: `${type}-${Date.now()}`,
       author: activeRole === 'comite_medico' ? 'Comité Médico' : 'Coordinación SIAU',
@@ -238,8 +283,15 @@ export default function App() {
     setPatients((prev) =>
       prev.map((p) => {
         if (p.id !== patientId) return p;
+        const hasRehusoUpdated = rehusoInfo?.isRehuso ? true : p.hasRehuso;
+        const rehusoInfoUpdated = rehusoInfo?.isRehuso 
+          ? { professional: rehusoInfo.professional, specialty: rehusoInfo.specialty }
+          : p.rehusoInfo;
+
         return {
           ...p,
+          hasRehuso: hasRehusoUpdated,
+          rehusoInfo: rehusoInfoUpdated,
           operationalNotes:
             type === 'op' ? [newNote, ...p.operationalNotes] : p.operationalNotes,
           clinicalNotes:
@@ -255,6 +307,10 @@ export default function App() {
           ...notesDrawerState,
           patient: {
             ...updatedP,
+            hasRehuso: rehusoInfo?.isRehuso ? true : updatedP.hasRehuso,
+            rehusoInfo: rehusoInfo?.isRehuso 
+              ? { professional: rehusoInfo.professional, specialty: rehusoInfo.specialty } 
+              : updatedP.rehusoInfo,
             operationalNotes:
               type === 'op' ? [newNote, ...updatedP.operationalNotes] : updatedP.operationalNotes,
             clinicalNotes:
@@ -263,6 +319,11 @@ export default function App() {
         });
       }
     }
+  };
+
+  const handleAddCohorte = (name: string, description: string) => {
+    // Add new cohorte
+    console.log('Nueva cohorte guardada:', name, description);
   };
 
   const handleSaveSpecialist = (
@@ -331,13 +392,15 @@ export default function App() {
           conveniosList={conveniosList}
           onResetFilters={handleResetFilters}
           alarmCount={alarmCount}
+          onAddCohorte={handleAddCohorte}
         />
 
-        {/* Main Table Section (19 Columns) */}
+        {/* Main Table Section (14 Columns) */}
         <PatientTable
           patients={filteredPatients}
           activeRole={activeRole}
           onEditPatient={(patient) => setEditingPatient(patient)}
+          onUpdatePrioridad={handleUpdatePrioridad}
           onUpdateStatus={handleUpdateStatus}
           onUpdateRisk={handleUpdateRisk}
           onUpdateCohorte={handleUpdateCohorte}
@@ -412,6 +475,7 @@ export default function App() {
         <ActaModal
           patient={actaModalPatient}
           activeRole={activeRole}
+          onSaveActa={handleSaveActa}
           onClose={() => setActaModalPatient(null)}
         />
       )}
