@@ -195,25 +195,34 @@ export const EditPatientModal: React.FC<EditPatientModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold text-[#035476] mb-1 uppercase">
-                Prioridad Inicial
+              <label className="block text-[11px] font-semibold text-[#035476] mb-1 uppercase flex items-center justify-between">
+                <span>Prioridad Inicial</span>
+                {!isComite && (
+                  <span className="text-[9px] text-[#b45309] font-normal lowercase">(solo lectura)</span>
+                )}
               </label>
-              <select
-                value={formData.prioridadInicial ?? 1}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    prioridadInicial: parseInt(e.target.value, 10),
-                  })
-                }
-                className="w-full bg-white border border-[#e2e8eb] rounded-md px-2.5 py-1.5 font-bold text-[#033d59]"
-              >
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((pNum) => (
-                  <option key={pNum} value={pNum}>
-                    P-{pNum} (Prioridad {pNum})
-                  </option>
-                ))}
-              </select>
+              {isComite ? (
+                <select
+                  value={formData.prioridadInicial ?? 1}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      prioridadInicial: parseInt(e.target.value, 10),
+                    })
+                  }
+                  className="w-full bg-white border border-[#e2e8eb] rounded-md px-2.5 py-1.5 font-bold text-[#033d59]"
+                >
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((pNum) => (
+                    <option key={pNum} value={pNum}>
+                      P-{pNum} (Prioridad {pNum})
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <div className="w-full bg-gray-100 border border-[#e2e8eb] rounded-md px-2.5 py-1.5 font-bold text-gray-500 cursor-not-allowed">
+                  P-{formData.prioridadInicial ?? 1} (Prioridad {formData.prioridadInicial ?? 1})
+                </div>
+              )}
             </div>
 
             <div>

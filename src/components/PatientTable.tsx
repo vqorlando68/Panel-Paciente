@@ -11,6 +11,9 @@ import {
   COORDINADORES_LIST,
 } from '../types';
 import { PatientHoverPopover } from './PatientHoverPopover';
+import { PatientCard } from './PatientCard';
+import { SpecialistCard } from './SpecialistCard';
+import { ThreeDotsMenu } from './ThreeDotsMenu';
 import {
   AlertTriangle,
   Circle,
@@ -101,6 +104,7 @@ export const PatientTable: React.FC<PatientTableProps> = ({
   } | null>(null);
 
   const [activeMenuPatientId, setActiveMenuPatientId] = useState<string | null>(null);
+  const [adherenciaPatientId, setAdherenciaPatientId] = useState<string | null>(null);
   const [activeAlarmTooltipPatientId, setActiveAlarmTooltipPatientId] = useState<string | null>(null);
   const [riskMenuPatientId, setRiskMenuPatientId] = useState<string | null>(null);
   const [cohorteMenuPatientId, setCohorteMenuPatientId] = useState<string | null>(null);
@@ -470,42 +474,19 @@ export const PatientTable: React.FC<PatientTableProps> = ({
   };
 
   const renderSpecialistCell = (patient: Patient, key: SpecialistKey) => {
-    const data = patient.specialists[key];
-    if (!data) return <div className="text-[#035476] text-[10px]">—</div>;
-
-    const isOverdue = data.isOverdue;
-
+    const data = patient.specialists?.[key];
     return (
-      <div
-        onClick={() => onEditSpecialist(patient, key, data)}
-        className={`p-1.5 rounded-md transition-all cursor-pointer text-[10px] space-y-0.5 border font-sans ${
-          isOverdue
-            ? 'bg-[#fffbeb] border-l-[3px] border-l-[#b45309] border-t-[#fbbf24]/50 border-r-[#fbbf24]/50 border-b-[#fbbf24]/50 text-[#b45309]'
-            : 'bg-white border-[#e2e8eb] hover:border-[#00aae1] text-[#033d59]'
-        }`}
-        title={`Atención de ${data.specialistTitle}. Clic para editar.`}
-      >
-        <div className="font-semibold truncate text-[10px] leading-tight text-[#033d59]">
-          {data.professionalName}
-        </div>
-
-        <div className="text-[9px] flex items-center justify-between opacity-90">
-          <span className="text-[#035476]">Última:</span>
-          <span className="font-mono text-[#033d59]">{data.lastAttentionDate}</span>
-        </div>
-
-        <div className="text-[9px] flex items-center justify-between opacity-80">
-          <span className="text-[#035476]">Frec:</span>
-          <span className="truncate max-w-[75px] text-[#033d59]">{data.frequency}</span>
-        </div>
-
-        <div className={`text-[9px] flex items-center justify-between font-mono font-medium ${
-          isOverdue ? 'text-[#b45309] font-bold' : 'text-[#035476]'
-        }`}>
-          <span>Obj:</span>
-          <span>{data.targetDate}</span>
-        </div>
-      </div>
+      <SpecialistCard
+        data={data}
+        patientHasRehuso={patient.hasRehuso}
+        onClick={() => onEditSpecialist(patient, key, data || {
+          specialistTitle: key,
+          professionalName: '—',
+          lastAttentionDate: '—',
+          frequency: 'Sin definir',
+          targetDate: '—'
+        })}
+      />
     );
   };
 
@@ -673,171 +654,30 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                         <div className="w-5" /> // spacer
                       )}
 
-                      {/* 3 Vertical Dots Menu Button */}
-                      <div className="relative">
-                        <button
-                          onClick={() => setActiveMenuPatientId(isMenuOpen ? null : patient.id)}
-                          className={`p-1.5 rounded-lg text-[#035476] hover:text-[#00aae1] hover:bg-[#effaff] transition-colors cursor-pointer ${
-                            isMenuOpen ? 'bg-[#effaff] text-[#00aae1]' : ''
-                          }`}
-                          title="Menú de Opciones"
-                        >
-                          <MoreVertical className="w-4 h-4" />
-                        </button>
-
-                        {/* Dropdown Menu */}
-                        {isMenuOpen && (
-                          <div className="absolute top-full left-0 mt-1 z-50 bg-white rounded-xl shadow-xl border border-[#e2e8eb] p-1.5 w-52 text-xs font-semibold space-y-1 animate-in fade-in zoom-in-95 duration-150">
-                            {/* Option 1: Ver Actas */}
-                            <button
-                              onClick={() => {
-                                onOpenActa(patient);
-                                setActiveMenuPatientId(null);
-                              }}
-                              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[#033d59] hover:bg-[#effaff] hover:text-[#00aae1] transition-colors cursor-pointer text-left"
-                            >
-                              <Eye className="w-3.5 h-3.5 text-[#00aae1]" />
-                              <span>📄 Ver Actas</span>
-                            </button>
-
-                            {/* Option 2: Evolución */}
-                            <button
-                              onClick={() => {
-                                onOpenNotesDrawer(patient, 'cli');
-                                setActiveMenuPatientId(null);
-                              }}
-                              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[#033d59] hover:bg-[#effaff] hover:text-[#00aae1] transition-colors cursor-pointer text-left"
-                            >
-                              <Activity className="w-3.5 h-3.5 text-[#00aae1]" />
-                              <span>🩺 Evolución</span>
-                            </button>
-
-                            {/* Option 3: Nueva Acta */}
-                            {!isComite ? (
-                              <button
-                                disabled
-                                title="Solo el Cuadro / Comité Médico puede registrar nuevas actas"
-                                className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-gray-400 bg-gray-50 cursor-not-allowed text-left opacity-70"
-                              >
-                                <span className="flex items-center gap-2">
-                                  <Plus className="w-3.5 h-3.5 text-gray-400" />
-                                  <span>➕ Nueva Acta</span>
-                                </span>
-                                <Lock className="w-3 h-3 text-[#fbbf24]" />
-                              </button>
-                            ) : (
-                              <button
-                                onClick={() => {
-                                  onOpenActa(patient);
-                                  setActiveMenuPatientId(null);
-                                }}
-                                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[#033d59] hover:bg-[#effaff] hover:text-[#00aae1] transition-colors cursor-pointer text-left"
-                              >
-                                <Plus className="w-3.5 h-3.5 text-[#00aae1]" />
-                                <span>➕ Nueva Acta</span>
-                              </button>
-                            )}
-
-                            <div className="border-t border-[#e2e8eb] my-1" />
-
-                            {/* Option 4: Costos */}
-                            <button
-                              onClick={() => {
-                                onOpenCostAnalysis(patient);
-                                setActiveMenuPatientId(null);
-                              }}
-                              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[#033d59] hover:bg-[#effaff] hover:text-[#00aae1] transition-colors cursor-pointer text-left"
-                            >
-                              <BarChart3 className="w-3.5 h-3.5 text-[#00aae1]" />
-                              <span>💰 Costos</span>
-                            </button>
-
-                            {/* Option 5: Cuadro Médico */}
-                            <button
-                              onClick={() => {
-                                onOpenCuadroMedico(patient);
-                                setActiveMenuPatientId(null);
-                              }}
-                              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[#033d59] hover:bg-[#effaff] hover:text-[#00aae1] transition-colors cursor-pointer text-left"
-                            >
-                              <Users className="w-3.5 h-3.5 text-[#00aae1]" />
-                              <span>👥 Cuadro Médico</span>
-                            </button>
-
-                            {/* Option 6: Agenda y Alertas */}
-                            <button
-                              onClick={() => {
-                                onOpenAgenda(patient);
-                                setActiveMenuPatientId(null);
-                              }}
-                              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[#033d59] hover:bg-[#effaff] hover:text-[#00aae1] transition-colors cursor-pointer text-left"
-                            >
-                              <Calendar className="w-3.5 h-3.5 text-[#00aae1]" />
-                              <span>📅 Agenda y Alertas</span>
-                            </button>
-
-                            {/* Option 7: Adherencia */}
-                            <button
-                              onClick={() => {
-                                onOpenTasas(patient);
-                                setActiveMenuPatientId(null);
-                              }}
-                              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[#033d59] hover:bg-[#effaff] hover:text-[#00aae1] transition-colors cursor-pointer text-left"
-                            >
-                              <Clock className="w-3.5 h-3.5 text-[#00aae1]" />
-                              <span>📊 Adherencia</span>
-                            </button>
-                          </div>
-                        )}
-                      </div>
-
+                      {/* 3 Vertical Dots Menu Component */}
+                      <ThreeDotsMenu
+                        patient={patient}
+                        activeRole={activeRole}
+                        isOpen={isMenuOpen}
+                        onToggle={() => setActiveMenuPatientId(isMenuOpen ? null : patient.id)}
+                        onOpenActas={(p) => onOpenActa(p)}
+                        onOpenEvolucion={(p) => onOpenNotesDrawer(p, 'cli')}
+                        onOpenNuevaActa={(p) => onOpenActa(p)}
+                        onOpenCostos={(p) => onOpenCostAnalysis(p)}
+                        onOpenCuadroMedico={(p) => onOpenCuadroMedico(p)}
+                        onOpenAgenda={(p) => onOpenAgenda(p)}
+                        isAdherenciaOpen={adherenciaPatientId === patient.id}
+                        onToggleAdherencia={() => setAdherenciaPatientId(prev => prev === patient.id ? null : patient.id)}
+                      />
                     </div>
                   </td>
 
                   {/* Col 2: PACIENTE (Compact Card: Sticky Left-[100px]) */}
-                  <td className="sticky left-[100px] z-20 bg-white group-hover:bg-[#f9fafb] px-3 py-2 border-r border-[#e2e8eb] min-w-[240px] max-w-[240px]">
-                    <div className="flex items-start justify-between gap-1">
-                      <div
-                        onClick={() => onEditPatient(patient)}
-                        className="overflow-hidden space-y-0.5 cursor-pointer group/patient"
-                        title="Clic para Editar Ficha del Paciente"
-                      >
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onEditPatient(patient);
-                          }}
-                          className="font-bold text-[#033d59] group-hover/patient:text-[#00aae1] text-xs text-left truncate block max-w-[190px] transition-colors leading-tight cursor-pointer"
-                        >
-                          {patient.nombre}
-                        </button>
-                        
-                        <div className="text-[10px] text-[#035476] font-mono leading-none">
-                          {patient.identificacion}
-                        </div>
-
-                        <div
-                          className="text-[9.5px] text-gray-500 truncate max-w-[190px] leading-snug"
-                          title={`${patient.telefono} • ${patient.direccion} • ${patient.email}`}
-                        >
-                          <span>{patient.telefono}</span>
-                          <span className="mx-1 font-bold text-[#00aae1]">•</span>
-                          <span>{patient.direccion}</span>
-                          <span className="mx-1 font-bold text-[#00aae1]">•</span>
-                          <span className="text-[#035476] font-medium">{patient.email}</span>
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => onEditPatient(patient)}
-                        className="p-1 rounded hover:bg-[#effaff] text-[#035476] hover:text-[#00aae1] transition-colors shrink-0 cursor-pointer mt-0.5"
-                        title="Editar Ficha del Paciente"
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
+                  <td className="sticky left-[100px] z-20 bg-white group-hover:bg-[#f9fafb] px-2 py-1.5 border-r border-[#e2e8eb] min-w-[240px] max-w-[240px]">
+                    <PatientCard
+                      patient={patient}
+                      onClick={() => onEditPatient(patient)}
+                    />
                   </td>
 
                   {/* Col 3: PRIORIDAD INICIAL */}

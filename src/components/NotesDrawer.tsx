@@ -156,51 +156,49 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({
               </span>
             </div>
 
-            {/* Checkbox: Marcar Rehúso (Only for Operational Notes) */}
-            {isOperational && (
-              <div className="bg-[#fff1f2] border border-[#fecdd3] rounded-lg p-2.5 space-y-2">
-                <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-[#e11d48]">
-                  <input
-                    type="checkbox"
-                    checked={isRehuso}
-                    onChange={(e) => setIsRehuso(e.target.checked)}
-                    className="rounded border-rose-300 text-[#e11d48] focus:ring-[#e11d48] cursor-pointer"
-                  />
-                  <span>Marcar Rehúso del Paciente</span>
-                </label>
+            {/* Checkbox: Marcar Rehúso */}
+            <div className="bg-[#fff1f2] border border-[#fecdd3] rounded-lg p-2.5 space-y-2">
+              <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-[#e11d48]">
+                <input
+                  type="checkbox"
+                  checked={isRehuso}
+                  onChange={(e) => setIsRehuso(e.target.checked)}
+                  className="rounded border-rose-300 text-[#e11d48] focus:ring-[#e11d48] cursor-pointer"
+                />
+                <span>Marcar Rehúso</span>
+              </label>
 
-                {isRehuso && (
-                  <div className="grid grid-cols-2 gap-2 pt-1 border-t border-rose-200">
-                    <div>
-                      <label className="block text-[10px] font-bold text-rose-800 mb-0.5">
-                        Nombre del Profesional *
-                      </label>
-                      <input
-                        type="text"
-                        required={isRehuso}
-                        value={rehusoProfessional}
-                        onChange={(e) => setRehusoProfessional(e.target.value)}
-                        placeholder="Ej: Dr. Roberto Silva"
-                        className="w-full text-xs p-1.5 bg-white border border-rose-300 rounded text-[#033d59] focus:outline-none focus:border-[#e11d48]"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-bold text-rose-800 mb-0.5">
-                        Especialidad *
-                      </label>
-                      <input
-                        type="text"
-                        required={isRehuso}
-                        value={rehusoSpecialty}
-                        onChange={(e) => setRehusoSpecialty(e.target.value)}
-                        placeholder="Ej: Cardiología"
-                        className="w-full text-xs p-1.5 bg-white border border-rose-300 rounded text-[#033d59] focus:outline-none focus:border-[#e11d48]"
-                      />
-                    </div>
+              {isRehuso && (
+                <div className="grid grid-cols-2 gap-2 pt-1 border-t border-rose-200">
+                  <div>
+                    <label className="block text-[10px] font-bold text-rose-800 mb-0.5">
+                      Nombre del Profesional *
+                    </label>
+                    <input
+                      type="text"
+                      required={isRehuso}
+                      value={rehusoProfessional}
+                      onChange={(e) => setRehusoProfessional(e.target.value)}
+                      placeholder="Ej: Dr. Roberto Silva"
+                      className="w-full text-xs p-1.5 bg-white border border-rose-300 rounded text-[#033d59] focus:outline-none focus:border-[#e11d48]"
+                    />
                   </div>
-                )}
-              </div>
-            )}
+                  <div>
+                    <label className="block text-[10px] font-bold text-rose-800 mb-0.5">
+                      Especialidad *
+                    </label>
+                    <input
+                      type="text"
+                      required={isRehuso}
+                      value={rehusoSpecialty}
+                      onChange={(e) => setRehusoSpecialty(e.target.value)}
+                      placeholder="Ej: Cardiología"
+                      className="w-full text-xs p-1.5 bg-white border border-rose-300 rounded text-[#033d59] focus:outline-none focus:border-[#e11d48]"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
 
             <textarea
               rows={3}
