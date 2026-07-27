@@ -360,36 +360,6 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         </div>
       )}
 
-      {/* Row of Fast Filter Chips */}
-      <div className="mt-3 pt-2.5 border-t border-[#e2e8eb] flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-        <span className="text-[10px] font-extrabold text-[#035476] uppercase tracking-wider shrink-0 flex items-center gap-1">
-          <Layers className="w-3 h-3 text-[#00aae1]" />
-          Filtros Rápidos:
-        </span>
-        <div className="flex items-center gap-1.5 flex-nowrap">
-          {FAST_FILTER_CHIPS.map((chip) => {
-            const isActive = activeFastFilter === chip;
-            return (
-              <button
-                key={chip}
-                type="button"
-                onClick={() => handleChange('fastFilter', chip)}
-                className={`text-xs px-3 py-1 rounded-full font-semibold transition-all shrink-0 cursor-pointer ${
-                  isActive
-                    ? 'bg-[#00aae1] text-white shadow-2xs font-bold scale-102 ring-2 ring-[#00aae1]/20'
-                    : 'bg-[#f9fafb] text-[#035476] border border-[#e2e8eb] hover:bg-[#effaff] hover:text-[#00aae1]'
-                }`}
-              >
-                {chip === '>90 días' && <span className="inline-block w-2 h-2 rounded-full bg-[#8b5cf6] mr-1"></span>}
-                {chip === 'Rehúso' && <span className="inline-block w-2 h-2 rounded-full bg-[#e11d48] mr-1"></span>}
-                {chip === 'Inconforme' && <span className="inline-block w-2 h-2 rounded-full bg-[#e11d48] mr-1"></span>}
-                {chip}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
       {/* Modal: Nueva COHORTE */}
       {isNewCohorteModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-2xs flex items-center justify-center p-4 animate-in fade-in duration-150 font-sans">

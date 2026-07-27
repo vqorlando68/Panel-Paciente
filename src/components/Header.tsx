@@ -11,7 +11,21 @@ interface HeaderProps {
   criticalCount?: number;
   onSelectMetricCard?: (metric: 'total' | 'activos' | 'vencidos') => void;
   activeMetricCard?: 'total' | 'activos' | 'vencidos';
+  fastFilter?: string;
+  onFastFilterChange?: (filter: string) => void;
 }
+
+const FAST_FILTER_CHIPS = [
+  { id: 'Todos', label: 'Todos' },
+  { id: 'Activos', label: 'Activos' },
+  { id: 'Vencidos', label: 'Vencidos' },
+  { id: 'Inconforme', label: 'Inconforme', dot: '#e11d48' },
+  { id: 'Críticos', label: 'Críticos' },
+  { id: '>90 días', label: '>90 días', dot: '#a855f7' },
+  { id: 'Rehúso', label: 'Rehuso', dot: '#e11d48' },
+  { id: 'Aceptados', label: 'Aceptados' },
+  { id: 'Sin Acta', label: 'Sin Acta' },
+];
 
 export const Header: React.FC<HeaderProps> = ({
   activeRole,
@@ -21,11 +35,13 @@ export const Header: React.FC<HeaderProps> = ({
   activeCount,
   onSelectMetricCard,
   activeMetricCard = 'total',
+  fastFilter = 'Todos',
+  onFastFilterChange,
 }) => {
   return (
-    <header className="bg-white border-b border-[#e2e8eb] px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0 max-w-[1550px] w-full mx-auto font-sans rounded-b-xl shadow-2xs">
+    <header className="bg-white border-b border-[#e2e8eb] px-6 py-3 flex flex-wrap lg:flex-nowrap items-center justify-between gap-4 shrink-0 max-w-[1550px] w-full mx-auto font-sans rounded-b-xl shadow-2xs">
       {/* Title & Brand */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 shrink-0">
         <div className="w-10 h-10 rounded-lg bg-[#effaff] border border-[#00aae1]/20 flex items-center justify-center text-[#00aae1]">
           <Activity className="w-5 h-5" />
         </div>
@@ -43,7 +59,7 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* Role Switcher Tabs */}
-      <div className="flex items-center gap-6 border-b border-transparent">
+      <div className="flex items-center gap-6 border-b border-transparent shrink-0">
         <button
           onClick={() => onRoleChange('comite_medico')}
           className={`pb-2 text-xs font-semibold transition-all cursor-pointer ${
@@ -69,49 +85,85 @@ export const Header: React.FC<HeaderProps> = ({
         </button>
       </div>
 
-      {/* Metrics Bar */}
-      <div className="flex items-center gap-3 text-xs">
-        <button
-          type="button"
-          onClick={() => onSelectMetricCard?.('total')}
-          title="Ver todos los pacientes"
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-[#033d59] cursor-pointer transition-all ${
-            activeMetricCard === 'total'
-              ? 'bg-[#effaff] border-[#00aae1] ring-2 ring-[#00aae1]/30 font-bold shadow-xs'
-              : 'bg-[#f9fafb] border-[#d0d5dd] hover:bg-gray-100'
-          }`}
-        >
-          <span className="text-[#035476]">Total:</span>
-          <span className="font-bold text-[#00aae1]">{totalPatients}</span>
-        </button>
+      {/* Right Side: Metrics Bar + Separator + Quick Filters */}
+      <div className="flex flex-wrap items-center justify-end gap-2.5 text-xs">
+        {/* Metrics Bar */}
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={() => onSelectMetricCard?.('total')}
+            title="Ver todos los pacientes"
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-md border text-[#033d59] cursor-pointer transition-all ${
+              activeMetricCard === 'total'
+                ? 'bg-[#effaff] border-[#00aae1] ring-2 ring-[#00aae1]/30 font-bold shadow-xs'
+                : 'bg-[#f9fafb] border-[#d0d5dd] hover:bg-gray-100'
+            }`}
+          >
+            <span className="text-[#035476]">Total:</span>
+            <span className="font-bold text-[#00aae1]">{totalPatients}</span>
+          </button>
 
-        <button
-          type="button"
-          onClick={() => onSelectMetricCard?.('activos')}
-          title="Filtrar pacientes Activos"
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-[#01ae6c] cursor-pointer transition-all ${
-            activeMetricCard === 'activos'
-              ? 'bg-[#d0fbe2] border-[#01ae6c] ring-2 ring-[#01ae6c]/30 font-bold shadow-xs'
-              : 'bg-[#ebfef4] border-[#01ae6c]/30 hover:bg-[#d0fbe2]/60'
-          }`}
-        >
-          <span>Activos:</span>
-          <span className="font-bold">{activeCount}</span>
-        </button>
+          <button
+            type="button"
+            onClick={() => onSelectMetricCard?.('activos')}
+            title="Filtrar pacientes Activos"
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-md border text-[#01ae6c] cursor-pointer transition-all ${
+              activeMetricCard === 'activos'
+                ? 'bg-[#d0fbe2] border-[#01ae6c] ring-2 ring-[#01ae6c]/30 font-bold shadow-xs'
+                : 'bg-[#ebfef4] border-[#01ae6c]/30 hover:bg-[#d0fbe2]/60'
+            }`}
+          >
+            <span>Activos:</span>
+            <span className="font-bold">{activeCount}</span>
+          </button>
 
-        <button
-          type="button"
-          onClick={() => onSelectMetricCard?.('vencidos')}
-          title="Filtrar pacientes con atenciones Vencidas"
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-[#b45309] cursor-pointer transition-all ${
-            activeMetricCard === 'vencidos'
-              ? 'bg-[#fef3c7] border-[#b45309] ring-2 ring-[#b45309]/30 font-bold shadow-xs'
-              : 'bg-[#fffbeb] border-[#fbbf24]/40 hover:bg-[#fef3c7]/60'
-          }`}
-        >
-          <span>Vencidos:</span>
-          <span className="font-bold">{overdueCount}</span>
-        </button>
+          <button
+            type="button"
+            onClick={() => onSelectMetricCard?.('vencidos')}
+            title="Filtrar pacientes con atenciones Vencidas"
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-md border text-[#b45309] cursor-pointer transition-all ${
+              activeMetricCard === 'vencidos'
+                ? 'bg-[#fef3c7] border-[#b45309] ring-2 ring-[#b45309]/30 font-bold shadow-xs'
+                : 'bg-[#fffbeb] border-[#fbbf24]/40 hover:bg-[#fef3c7]/60'
+            }`}
+          >
+            <span>Vencidos:</span>
+            <span className="font-bold">{overdueCount}</span>
+          </button>
+        </div>
+
+        {/* Vertical Separator */}
+        <div className="hidden sm:block h-6 w-px bg-[#e2e8eb] mx-1 shrink-0" />
+
+        {/* Quick Filter Chips */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {FAST_FILTER_CHIPS.map((chip) => {
+            const isActive =
+              fastFilter === chip.id ||
+              (chip.id === 'Rehúso' && (fastFilter === 'Rehúso' || fastFilter === 'Rehuso'));
+
+            return (
+              <button
+                key={chip.id}
+                type="button"
+                onClick={() => onFastFilterChange?.(chip.id)}
+                className={`h-[28px] px-4 py-1 rounded-full text-[13px] font-medium transition-all duration-200 cursor-pointer flex items-center justify-center shrink-0 ${
+                  isActive
+                    ? 'bg-[#00aae1] text-white shadow-xs font-bold'
+                    : 'bg-[#f3f4f6] text-[#4b5563] hover:bg-[#e5e7eb]'
+                }`}
+              >
+                {chip.dot && (
+                  <span
+                    className="w-2 h-2 rounded-full mr-1.5 shrink-0"
+                    style={{ backgroundColor: chip.dot }}
+                  />
+                )}
+                <span>{chip.label}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
     </header>
   );

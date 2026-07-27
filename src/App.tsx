@@ -382,6 +382,8 @@ export default function App() {
           activeCount={activeCount}
           onSelectMetricCard={handleSelectMetricCard}
           activeMetricCard={activeMetricCard}
+          fastFilter={filters.fastFilter || 'Todos'}
+          onFastFilterChange={(filter) => setFilters((prev) => ({ ...prev, fastFilter: filter }))}
         />
 
         {/* Filter Bar */}

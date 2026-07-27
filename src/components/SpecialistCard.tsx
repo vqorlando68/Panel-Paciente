@@ -12,14 +12,24 @@ export const SpecialistCard: React.FC<SpecialistCardProps> = ({
   patientHasRehuso,
   onClick,
 }) => {
-  if (!data || !data.professionalName || data.professionalName === '—') {
+  const isUnassigned =
+    !data ||
+    !data.professionalName ||
+    data.professionalName === '—' ||
+    data.professionalName.toLowerCase() === 'sin asignar' ||
+    data.professionalName.toLowerCase() === 'sin rellenar';
+
+  if (isUnassigned) {
     return (
       <div
         onClick={onClick}
-        className="p-2 bg-white rounded-lg border border-[#e2e8eb] hover:border-[#00aae1] transition-all cursor-pointer min-h-[92px] flex items-center justify-center text-gray-300 text-[10px] font-medium"
+        className="p-2 bg-amber-50/40 rounded-lg border border-dashed border-[#fbbf24] hover:border-[#00aae1] transition-all cursor-pointer min-h-[92px] flex items-center justify-center text-[#d97706] text-[11px] font-bold shadow-2xs"
         title="Sin especialista asignado. Clic para asignar."
       >
-        <span>Sin asignar</span>
+        <span className="flex items-center gap-1">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#f59e0b]" />
+          Sin Asignar
+        </span>
       </div>
     );
   }
@@ -27,7 +37,7 @@ export const SpecialistCard: React.FC<SpecialistCardProps> = ({
   // Purple dot: >90 days overdue
   const showPurple = Boolean(data.isOverdue);
   // Red dot: Rehúso
-  const showRed = Boolean(data.hasRehuso || patientHasRehuso);
+  const showRed = Boolean(data.hasRehuso || (patientHasRehuso && data.hasRehuso !== false));
 
   // Format date helper to ensure DD/MM/YYYY HH:MM AM/PM
   const formatWithTime = (dateStr: string) => {
@@ -40,11 +50,15 @@ export const SpecialistCard: React.FC<SpecialistCardProps> = ({
   const targetDateFormatted = formatWithTime(data.targetDate);
   const appointmentCount = data.attentionsHistory?.length || 4;
 
+  const isOverdue = Boolean(data.isOverdue);
+
   return (
     <div
       onClick={onClick}
-      className={`p-2 rounded-lg border transition-all cursor-pointer text-xs space-y-1 bg-white hover:border-[#00aae1] shadow-2xs ${
-        showPurple || showRed ? 'border-amber-200 bg-amber-50/20' : 'border-[#e2e8eb]'
+      className={`p-2 rounded-lg border transition-all cursor-pointer text-xs space-y-1 bg-white hover:border-[#00aae1] ${
+        isOverdue
+          ? 'border-[#fbbf24] bg-[#fffbeb] shadow-[0_4px_12px_rgba(251,191,36,0.35)]'
+          : 'border-[#e2e8eb] shadow-2xs'
       }`}
       title={`Especialista: ${data.professionalName}. Clic para editar.`}
     >
