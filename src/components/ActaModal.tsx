@@ -1,13 +1,14 @@
 import React from 'react';
-import { Patient } from '../types';
+import { Patient, UserRole } from '../types';
 import { X, FileText, Calendar, Users, CheckCircle } from 'lucide-react';
 
 interface ActaModalProps {
   patient: Patient;
+  activeRole?: UserRole;
   onClose: () => void;
 }
 
-export const ActaModal: React.FC<ActaModalProps> = ({ patient, onClose }) => {
+export const ActaModal: React.FC<ActaModalProps> = ({ patient, activeRole, onClose }) => {
   const { acta } = patient;
 
   return (
@@ -19,7 +20,14 @@ export const ActaModal: React.FC<ActaModalProps> = ({ patient, onClose }) => {
               <FileText className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h3 className="font-bold text-base leading-tight">Acta del Comité Médico #{acta.numero}</h3>
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-base leading-tight">Acta del Comité Médico #{acta.numero}</h3>
+                {activeRole === 'coordinadora_siau' && (
+                  <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded text-white font-medium">
+                    Consulta SIAU
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-white/80">{patient.nombre}</p>
             </div>
           </div>

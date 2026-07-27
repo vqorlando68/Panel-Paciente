@@ -157,7 +157,7 @@ export const EditPatientModal: React.FC<EditPatientModalProps> = ({
               >
                 {COHORTE_OPTIONS.map((c) => (
                   <option key={c.code} value={c.code}>
-                    {c.code} - {c.label}
+                    {c.label}
                   </option>
                 ))}
               </select>
@@ -179,19 +179,13 @@ export const EditPatientModal: React.FC<EditPatientModalProps> = ({
           {/* Row 4: Riesgo, Etiqueta, Fase, Retroalimentación */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-[#effaff] p-3.5 rounded-lg border border-[#00aae1]/20">
             <div>
-              <label className="block text-[11px] font-semibold text-[#035476] mb-1 uppercase flex items-center gap-1">
+              <label className="block text-[11px] font-semibold text-[#035476] mb-1 uppercase">
                 Nivel de Riesgo
-                {!isComite && (
-                  <span className="text-[9px] text-[#fbbf24] font-normal">(Solo Comité)</span>
-                )}
               </label>
               <select
-                disabled={!isComite}
                 value={formData.riesgo}
                 onChange={(e) => setFormData({ ...formData, riesgo: e.target.value as NivelRiesgo })}
-                className={`w-full border border-[#e2e8eb] rounded-md px-2.5 py-1.5 font-semibold ${
-                  isComite ? 'bg-white text-[#033d59]' : 'bg-[#e5e7eb] text-[#9ca3af] cursor-not-allowed'
-                }`}
+                className="w-full bg-white border border-[#e2e8eb] rounded-md px-2.5 py-1.5 font-semibold text-[#033d59]"
               >
                 <option value="Critical">Critical (Triángulo Rojo)</option>
                 <option value="High">High (Círculo Rojo)</option>
@@ -213,13 +207,19 @@ export const EditPatientModal: React.FC<EditPatientModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold text-[#035476] mb-1 uppercase">
-                Fase
+              <label className="block text-[11px] font-semibold text-[#035476] mb-1 uppercase flex items-center justify-between">
+                <span>Fase</span>
+                {!isComite && (
+                  <span className="text-[9px] text-[#b45309] font-normal lowercase">(solo lectura)</span>
+                )}
               </label>
               <select
+                disabled={!isComite}
                 value={formData.fase}
                 onChange={(e) => setFormData({ ...formData, fase: e.target.value as FasePaciente })}
-                className="w-full bg-white border border-[#e2e8eb] rounded-md px-2.5 py-1.5 text-[#033d59] font-semibold"
+                className={`w-full border border-[#e2e8eb] rounded-md px-2.5 py-1.5 font-semibold ${
+                  isComite ? 'bg-white text-[#033d59]' : 'bg-[#e5e7eb] text-[#9ca3af] cursor-not-allowed'
+                }`}
               >
                 <option value="E">E - Evaluación</option>
                 <option value="D">D - Diagnóstico</option>

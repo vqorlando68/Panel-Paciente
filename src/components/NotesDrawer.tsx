@@ -112,37 +112,48 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({
         </div>
 
         {/* Add Note Input Area */}
-        <form onSubmit={handleAdd} className="p-4 bg-white border-t border-[#e2e8eb] space-y-2">
-          <div className="flex items-center justify-between text-xs text-[#035476]">
-            <span className="font-semibold text-[#033d59]">Agregar Nueva Nota</span>
-            <span className="text-[11px]">
-              Autor: <strong className="text-[#00aae1]">{activeRole === 'comite_medico' ? 'Comité Médico' : 'Coordinación SIAU'}</strong>
-            </span>
+        {!isOperational && activeRole === 'coordinadora_siau' ? (
+          <div className="p-4 bg-[#fff1f2] border-t border-rose-200 text-xs text-rose-800 space-y-1">
+            <p className="font-bold flex items-center gap-1.5">
+              <span>Solo Consulta - Coordinadora SIAU</span>
+            </p>
+            <p className="text-[11px] text-rose-700 leading-snug">
+              Las notas clínicas son de edición y creación exclusiva del Comité Médico.
+            </p>
           </div>
+        ) : (
+          <form onSubmit={handleAdd} className="p-4 bg-white border-t border-[#e2e8eb] space-y-2">
+            <div className="flex items-center justify-between text-xs text-[#035476]">
+              <span className="font-semibold text-[#033d59]">Agregar Nueva Nota</span>
+              <span className="text-[11px]">
+                Autor: <strong className="text-[#00aae1]">{activeRole === 'comite_medico' ? 'Comité Médico' : 'Coordinación SIAU'}</strong>
+              </span>
+            </div>
 
-          <textarea
-            rows={3}
-            value={newNoteContent}
-            onChange={(e) => setNewNoteContent(e.target.value)}
-            placeholder={
-              isOperational
-                ? 'Escriba detalles de gestión de citas, autorizaciones, llamadas o novedades del paciente...'
-                : 'Escriba observaciones médicas, evoluciones, ajuste de medicamentos o decisiones del comité...'
-            }
-            className="w-full text-xs p-2.5 bg-white border border-[#e2e8eb] rounded-lg text-[#033d59] placeholder-[#035476]/60 focus:outline-none focus:border-[#00aae1] focus:ring-2 focus:ring-[#00aae1]/20 resize-none"
-          />
+            <textarea
+              rows={3}
+              value={newNoteContent}
+              onChange={(e) => setNewNoteContent(e.target.value)}
+              placeholder={
+                isOperational
+                  ? 'Escriba detalles de gestión de citas, autorizaciones, llamadas o novedades del paciente...'
+                  : 'Escriba observaciones médicas, evoluciones, ajuste de medicamentos o decisiones del comité...'
+              }
+              className="w-full text-xs p-2.5 bg-white border border-[#e2e8eb] rounded-lg text-[#033d59] placeholder-[#035476]/60 focus:outline-none focus:border-[#00aae1] focus:ring-2 focus:ring-[#00aae1]/20 resize-none"
+            />
 
-          <div className="flex items-center justify-end">
-            <button
-              type="submit"
-              disabled={!newNoteContent.trim()}
-              className="text-xs font-semibold text-white bg-[#00aae1] hover:bg-[#0196d4] disabled:bg-[#e2e8eb] disabled:text-[#9ca3af] px-4 py-2 rounded-lg shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer disabled:cursor-not-allowed"
-            >
-              <Send className="w-3.5 h-3.5" />
-              Guardar Nota
-            </button>
-          </div>
-        </form>
+            <div className="flex items-center justify-end">
+              <button
+                type="submit"
+                disabled={!newNoteContent.trim()}
+                className="text-xs font-semibold text-white bg-[#00aae1] hover:bg-[#0196d4] disabled:bg-[#e2e8eb] disabled:text-[#9ca3af] px-4 py-2 rounded-lg shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer disabled:cursor-not-allowed"
+              >
+                <Send className="w-3.5 h-3.5" />
+                Guardar Nota
+              </button>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );

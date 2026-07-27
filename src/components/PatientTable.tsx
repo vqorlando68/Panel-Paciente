@@ -4,8 +4,10 @@ import {
   UserRole,
   EstadoPaciente,
   NivelRiesgo,
+  FasePaciente,
   SpecialistKey,
   SpecialistInfo,
+  COHORTE_OPTIONS,
 } from '../types';
 import { PatientHoverPopover } from './PatientHoverPopover';
 import {
@@ -37,7 +39,7 @@ export type SortField =
   | 'tasa_r'
   | 'identificacion'
   | 'convenioNombre'
-  | 'estado'
+  | 'cohorte'
   | 'riesgo'
   | 'etiqueta'
   | 'retroalimentacion'
@@ -60,6 +62,8 @@ interface PatientTableProps {
   onEditPatient: (patient: Patient) => void;
   onUpdateStatus: (patientId: string, newStatus: EstadoPaciente) => void;
   onUpdateRisk: (patientId: string, newRisk: NivelRiesgo) => void;
+  onUpdateCohorte?: (patientId: string, newCohorte: string) => void;
+  onUpdateRetro?: (patientId: string, newRetro: string) => void;
   onOpenActa: (patient: Patient) => void;
   onOpenNotesDrawer: (patient: Patient, type: 'op' | 'cli') => void;
   onEditSpecialist: (patient: Patient, key: SpecialistKey, info: SpecialistInfo) => void;
@@ -75,6 +79,8 @@ export const PatientTable: React.FC<PatientTableProps> = ({
   onEditPatient,
   onUpdateStatus,
   onUpdateRisk,
+  onUpdateCohorte,
+  onUpdateRetro,
   onOpenActa,
   onOpenNotesDrawer,
   onEditSpecialist,
@@ -96,7 +102,8 @@ export const PatientTable: React.FC<PatientTableProps> = ({
   const [activeMenuPatientId, setActiveMenuPatientId] = useState<string | null>(null);
   const [activeAlarmTooltipPatientId, setActiveAlarmTooltipPatientId] = useState<string | null>(null);
   const [riskMenuPatientId, setRiskMenuPatientId] = useState<string | null>(null);
-  const [statusMenuPatientId, setStatusMenuPatientId] = useState<string | null>(null);
+  const [cohorteMenuPatientId, setCohorteMenuPatientId] = useState<string | null>(null);
+  const [faseMenuPatientId, setFaseMenuPatientId] = useState<string | null>(null);
   const [showRoleAlert, setShowRoleAlert] = useState(false);
 
   const isComite = activeRole === 'comite_medico';
@@ -144,10 +151,9 @@ export const PatientTable: React.FC<PatientTableProps> = ({
           valA = a.convenioNombre.toLowerCase();
           valB = b.convenioNombre.toLowerCase();
           break;
-        case 'estado':
-          const estadoWeight = { Activo: 3, Aceptado: 2, Rechazado: 1 };
-          valA = estadoWeight[a.estado] || 0;
-          valB = estadoWeight[b.estado] || 0;
+        case 'cohorte':
+          valA = (a.cohorte || '').toLowerCase();
+          valB = (b.cohorte || '').toLowerCase();
           break;
         case 'riesgo':
           const riesgoWeight = { Critical: 4, High: 3, Medium: 2, Low: 1 };
@@ -155,12 +161,12 @@ export const PatientTable: React.FC<PatientTableProps> = ({
           valB = riesgoWeight[b.riesgo] || 0;
           break;
         case 'etiqueta':
-          valA = a.etiqueta.toLowerCase();
-          valB = b.etiqueta.toLowerCase();
+          valA = (a.etiqueta || '').toLowerCase();
+          valB = (b.etiqueta || '').toLowerCase();
           break;
         case 'retroalimentacion':
-          valA = (a.etiqueta === 'Inconforme' ? 'Inconforme' : '').toLowerCase();
-          valB = (b.etiqueta === 'Inconforme' ? 'Inconforme' : '').toLowerCase();
+          valA = (a.retroalimentacion || '').toLowerCase();
+          valB = (b.retroalimentacion || '').toLowerCase();
           break;
         case 'fase':
           valA = a.fase.toLowerCase();
@@ -207,11 +213,6 @@ export const PatientTable: React.FC<PatientTableProps> = ({
   };
 
   const handleRiskClick = (patient: Patient) => {
-    if (!isComite) {
-      setShowRoleAlert(true);
-      setTimeout(() => setShowRoleAlert(false), 3000);
-      return;
-    }
     setRiskMenuPatientId(riskMenuPatientId === patient.id ? null : patient.id);
   };
 
@@ -244,44 +245,52 @@ export const PatientTable: React.FC<PatientTableProps> = ({
     }
   };
 
-  const renderEstadoBadge = (patient: Patient) => {
-    let style = '';
-    switch (patient.estado) {
-      case 'Activo':
-        style = 'bg-[#ebfef4] text-[#01ae6c] border-[#01ae6c]/30 hover:bg-[#d0fbe2]';
-        break;
-      case 'Aceptado':
-        style = 'bg-[#effaff] text-[#00aae1] border-[#00aae1]/30 hover:bg-[#dff4ff]';
-        break;
-      case 'Rechazado':
-        style = 'bg-[#fff1f2] text-[#e11d48] border-[#e11d48]/30 hover:bg-[#ffe4e6]';
-        break;
+  const renderCohorteBadge = (patient: Patient) => {
+    let style = 'bg-[#effaff] text-[#00aae1] border-[#00aae1]/30 hover:bg-[#dff4ff]';
+    if (['ACTIVO', 'ACEPTADO', 'ESTRATIFICADO'].includes(patient.cohorte)) {
+      style = 'bg-[#ebfef4] text-[#01ae6c] border-[#01ae6c]/30 hover:bg-[#d0fbe2]';
+    } else if (['RECHAZADO', 'ERRORES', 'DESERTADO', 'FALLECIDO I', 'FALLECIDO II', 'FALLECIDOS III', 'RECHAZA EL SERVICIO'].includes(patient.cohorte)) {
+      style = 'bg-[#fff1f2] text-[#e11d48] border-[#e11d48]/30 hover:bg-[#ffe4e6]';
+    } else if (['PROSPECTO', 'INTERESADO', 'PENDIENTE DE CONTACTO', 'NO RESPUESTA'].includes(patient.cohorte)) {
+      style = 'bg-[#fffbeb] text-[#b45309] border-[#fbbf24]/40 hover:bg-[#fef3c7]';
     }
+
+    const currentOption = COHORTE_OPTIONS.find((c) => c.code === patient.cohorte);
+    const displayLabel = currentOption ? currentOption.code : patient.cohorte;
 
     return (
       <div className="relative font-sans">
         <button
-          onClick={() => setStatusMenuPatientId(statusMenuPatientId === patient.id ? null : patient.id)}
+          onClick={() => setCohorteMenuPatientId(cohorteMenuPatientId === patient.id ? null : patient.id)}
           className={`px-2 py-0.5 rounded-full text-[10px] font-bold border transition-all flex items-center gap-1 cursor-pointer ${style}`}
+          title={`Estado Cohorte: ${currentOption?.label || patient.cohorte}. Clic para cambiar.`}
         >
-          <span>{patient.estado}</span>
-          <ChevronDown className="w-3 h-3 opacity-60" />
+          <span className="truncate max-w-[110px]">{displayLabel}</span>
+          <ChevronDown className="w-3 h-3 opacity-60 shrink-0" />
         </button>
 
-        {statusMenuPatientId === patient.id && (
-          <div className="absolute top-full left-0 mt-1 z-30 bg-white rounded-lg shadow-lg border border-[#e2e8eb] p-1 w-28 text-xs font-semibold">
-            {(['Activo', 'Aceptado', 'Rechazado'] as EstadoPaciente[]).map((st) => (
+        {cohorteMenuPatientId === patient.id && (
+          <div className="absolute top-full left-0 mt-1 z-30 bg-white rounded-lg shadow-xl border border-[#e2e8eb] p-1.5 w-64 max-h-56 overflow-y-auto text-xs font-medium space-y-0.5">
+            <div className="text-[10px] font-bold text-[#035476] px-2 py-1 uppercase tracking-wider border-b border-[#e2e8eb] mb-1">
+              Estado Cohorte
+            </div>
+            {COHORTE_OPTIONS.map((coh) => (
               <button
-                key={st}
+                key={coh.code}
                 onClick={() => {
-                  onUpdateStatus(patient.id, st);
-                  setStatusMenuPatientId(null);
+                  if (onUpdateCohorte) {
+                    onUpdateCohorte(patient.id, coh.code);
+                  } else {
+                    onEditPatient({ ...patient, cohorte: coh.code });
+                  }
+                  setCohorteMenuPatientId(null);
                 }}
-                className={`w-full text-left px-2 py-1 rounded-md hover:bg-[#effaff] cursor-pointer ${
-                  patient.estado === st ? 'text-[#00aae1] font-bold' : 'text-[#033d59]'
+                className={`w-full text-left px-2 py-1 rounded-md text-[11px] hover:bg-[#effaff] cursor-pointer transition-colors ${
+                  patient.cohorte === coh.code ? 'bg-[#effaff] text-[#00aae1] font-bold' : 'text-[#033d59]'
                 }`}
+                title={coh.label}
               >
-                {st}
+                {coh.label}
               </button>
             ))}
           </div>
@@ -290,18 +299,83 @@ export const PatientTable: React.FC<PatientTableProps> = ({
     );
   };
 
-  const renderFaseBadge = (fase: string) => {
-    let color = 'bg-[#f9fafb] text-[#033d59] border-[#e2e8eb]';
-    let label = fase;
-    if (fase === 'E') { color = 'bg-purple-50 text-purple-700 border-purple-200'; label = 'E: Evaluación'; }
-    if (fase === 'D') { color = 'bg-blue-50 text-blue-700 border-blue-200'; label = 'D: Diagnóstico'; }
-    if (fase === 'I') { color = 'bg-amber-50 text-amber-800 border-amber-200'; label = 'I: Intervención'; }
-    if (fase === 'M/E') { color = 'bg-teal-50 text-teal-700 border-teal-200'; label = 'M/E: Monit./Eval.'; }
+  const renderRetroBadge = (patient: Patient) => {
+    const isInconforme = patient.retroalimentacion === 'Inconforme';
+
+    const toggleRetro = () => {
+      const newRetro = isInconforme ? '' : 'Inconforme';
+      if (onUpdateRetro) {
+        onUpdateRetro(patient.id, newRetro);
+      } else {
+        onEditPatient({ ...patient, retroalimentacion: newRetro });
+      }
+    };
 
     return (
-      <span className={`px-2 py-0.5 rounded font-sans font-bold text-[10px] border whitespace-nowrap ${color}`}>
-        {label}
-      </span>
+      <button
+        onClick={toggleRetro}
+        className="group/retro focus:outline-none cursor-pointer"
+        title={isInconforme ? "Retroalimentación Inconforme. Clic para desmarcar." : "Clic para marcar como Inconforme"}
+      >
+        {isInconforme ? (
+          <span className="px-2 py-0.5 rounded bg-rose-100 text-rose-800 font-bold text-[10px] border border-rose-300 hover:bg-rose-200 transition-colors inline-block">
+            Inconforme
+          </span>
+        ) : (
+          <span className="text-gray-400 text-[10px] px-2 py-0.5 rounded border border-transparent group-hover/retro:border-rose-200 group-hover/retro:bg-rose-50 group-hover/retro:text-rose-600 transition-colors">
+            —
+          </span>
+        )}
+      </button>
+    );
+  };
+
+  const renderFaseCell = (patient: Patient) => {
+    let color = 'bg-[#f9fafb] text-[#033d59] border-[#e2e8eb]';
+    let label: string = patient.fase;
+    if (patient.fase === 'E') { color = 'bg-purple-50 text-purple-700 border-purple-200'; label = 'E: Eval.'; }
+    if (patient.fase === 'D') { color = 'bg-blue-50 text-blue-700 border-blue-200'; label = 'D: Diag.'; }
+    if (patient.fase === 'I') { color = 'bg-amber-50 text-amber-800 border-amber-200'; label = 'I: Interv.'; }
+    if (patient.fase === 'M/E') { color = 'bg-teal-50 text-teal-700 border-teal-200'; label = 'M/E: Monit.'; }
+
+    return (
+      <div className="relative font-sans text-center">
+        {isComite ? (
+          <button
+            onClick={() => setFaseMenuPatientId(faseMenuPatientId === patient.id ? null : patient.id)}
+            className={`px-2 py-0.5 rounded font-bold text-[10px] border whitespace-nowrap cursor-pointer transition-all ${color}`}
+            title="Clic para cambiar la Fase del paciente (Comité Médico)"
+          >
+            {label}
+          </button>
+        ) : (
+          <span
+            className={`px-2 py-0.5 rounded font-bold text-[10px] border whitespace-nowrap cursor-default ${color}`}
+            title="Fase del paciente (Sólo editable por Comité Médico)"
+          >
+            {label}
+          </span>
+        )}
+
+        {faseMenuPatientId === patient.id && isComite && (
+          <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 z-30 bg-white rounded-lg shadow-xl border border-[#e2e8eb] p-1.5 w-32 space-y-1">
+            {(['E', 'D', 'I', 'M/E'] as FasePaciente[]).map((f) => (
+              <button
+                key={f}
+                onClick={() => {
+                  onEditPatient({ ...patient, fase: f });
+                  setFaseMenuPatientId(null);
+                }}
+                className={`w-full text-left px-2 py-1 rounded-md text-xs font-semibold hover:bg-[#effaff] cursor-pointer ${
+                  patient.fase === f ? 'bg-[#effaff] text-[#00aae1]' : 'text-[#033d59]'
+                }`}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
     );
   };
 
@@ -456,8 +530,8 @@ export const PatientTable: React.FC<PatientTableProps> = ({
               </div>
             </th>
 
-            {/* Col 4: ID */}
-            {renderHeader('ID', 'identificacion', 'min-w-[110px]')}
+            {/* Col 4: IDENTIFICACIÓN */}
+            {renderHeader('IDENTIFICACIÓN', 'identificacion', 'min-w-[130px]')}
 
             {/* Col 5: NOMBRE CONVENIO */}
             {renderHeader('NOMBRE CONVENIO', 'convenioNombre', 'min-w-[180px]')}
@@ -465,8 +539,8 @@ export const PatientTable: React.FC<PatientTableProps> = ({
             {/* Col 6: RIESGO */}
             {renderHeader('RIESGO', 'riesgo', 'min-w-[80px] text-center')}
 
-            {/* Col 7: ESTADO */}
-            {renderHeader('ESTADO', 'estado', 'min-w-[100px]')}
+            {/* Col 7: ESTADO COHORTE */}
+            {renderHeader('ESTADO COHORTE', 'cohorte', 'min-w-[140px]')}
 
             {/* Col 8: ETIQUETA */}
             {renderHeader('ETIQUETA', 'etiqueta', 'min-w-[110px]')}
@@ -717,13 +791,13 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                     <button
                       onClick={() => handleRiskClick(patient)}
                       className="p-1 rounded-md hover:bg-[#effaff] transition-colors inline-flex items-center justify-center cursor-pointer"
-                      title={isComite ? "Clic para cambiar nivel de riesgo" : "Solo Comité Médico puede cambiar riesgo"}
+                      title="Clic para cambiar nivel de riesgo"
                     >
                       {renderRiskIcon(patient.riesgo)}
                     </button>
 
                     {/* Risk Selector Dropdown */}
-                    {riskMenuPatientId === patient.id && isComite && (
+                    {riskMenuPatientId === patient.id && (
                       <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 z-30 bg-white rounded-lg shadow-xl border border-[#e2e8eb] p-1.5 w-32 space-y-1">
                         {(['Critical', 'High', 'Medium', 'Low'] as NivelRiesgo[]).map((r) => (
                           <button
@@ -744,9 +818,9 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                     )}
                   </td>
 
-                  {/* Col 7: ESTADO */}
+                  {/* Col 7: ESTADO COHORTE */}
                   <td className="px-3 py-2">
-                    {renderEstadoBadge(patient)}
+                    {renderCohorteBadge(patient)}
                   </td>
 
                   {/* Col 8: ETIQUETA */}
@@ -758,18 +832,12 @@ export const PatientTable: React.FC<PatientTableProps> = ({
 
                   {/* Col 9: RETROALIMENTACIÓN */}
                   <td className="px-3 py-2">
-                    {patient.retroalimentacion ? (
-                      <span className="px-2 py-0.5 rounded bg-sky-50 text-[#033d59] font-medium text-[10px] border border-sky-200">
-                        {patient.retroalimentacion}
-                      </span>
-                    ) : (
-                      <span className="text-gray-400 text-[10px]">—</span>
-                    )}
+                    {renderRetroBadge(patient)}
                   </td>
 
                   {/* Col 10: FASE */}
                   <td className="px-3 py-2 text-center">
-                    {renderFaseBadge(patient.fase)}
+                    {renderFaseCell(patient)}
                   </td>
 
                   {/* Col 11: ACTA */}

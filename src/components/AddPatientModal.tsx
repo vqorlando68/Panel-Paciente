@@ -210,7 +210,7 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({ onAdd, onClose
               >
                 {COHORTE_OPTIONS.map((c) => (
                   <option key={c.code} value={c.code}>
-                    {c.code} - {c.label}
+                    {c.label}
                   </option>
                 ))}
               </select>

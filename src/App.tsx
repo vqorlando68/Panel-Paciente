@@ -186,6 +186,18 @@ export default function App() {
     );
   };
 
+  const handleUpdateCohorte = (patientId: string, newCohorte: string) => {
+    setPatients((prev) =>
+      prev.map((p) => (p.id === patientId ? { ...p, cohorte: newCohorte } : p))
+    );
+  };
+
+  const handleUpdateRetro = (patientId: string, newRetro: string) => {
+    setPatients((prev) =>
+      prev.map((p) => (p.id === patientId ? { ...p, retroalimentacion: newRetro } : p))
+    );
+  };
+
   const handleAddNote = (patientId: string, type: 'op' | 'cli', noteContent: string) => {
     const newNote = {
       id: `${type}-${Date.now()}`,
@@ -300,6 +312,8 @@ export default function App() {
           onEditPatient={(patient) => setEditingPatient(patient)}
           onUpdateStatus={handleUpdateStatus}
           onUpdateRisk={handleUpdateRisk}
+          onUpdateCohorte={handleUpdateCohorte}
+          onUpdateRetro={handleUpdateRetro}
           onOpenActa={(patient) => setActaModalPatient(patient)}
           onOpenNotesDrawer={(patient, type) => setNotesDrawerState({ patient, type })}
           onEditSpecialist={(patient, key, info) => setEditingSpecialist({ patient, key, info })}
@@ -367,6 +381,7 @@ export default function App() {
       {actaModalPatient && (
         <ActaModal
           patient={actaModalPatient}
+          activeRole={activeRole}
           onClose={() => setActaModalPatient(null)}
         />
       )}

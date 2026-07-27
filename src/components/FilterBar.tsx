@@ -114,7 +114,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               <option value="Todos">Todas las cohortes</option>
               {COHORTE_OPTIONS.map((coh) => (
                 <option key={coh.code} value={coh.code} title={coh.label}>
-                  {coh.code} - {coh.label}
+                  {coh.label}
                 </option>
               ))}
             </select>
