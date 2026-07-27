@@ -9,6 +9,8 @@ interface HeaderProps {
   overdueCount: number;
   activeCount: number;
   criticalCount?: number;
+  onSelectMetricCard?: (metric: 'total' | 'activos' | 'vencidos') => void;
+  activeMetricCard?: 'total' | 'activos' | 'vencidos';
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -17,6 +19,8 @@ export const Header: React.FC<HeaderProps> = ({
   totalPatients,
   overdueCount,
   activeCount,
+  onSelectMetricCard,
+  activeMetricCard = 'total',
 }) => {
   return (
     <header className="bg-white border-b border-[#e2e8eb] px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0 max-w-[1550px] w-full mx-auto font-sans rounded-b-xl shadow-2xs">
@@ -67,20 +71,47 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Metrics Bar */}
       <div className="flex items-center gap-3 text-xs">
-        <div className="flex items-center gap-1.5 bg-[#f9fafb] px-3 py-1.5 rounded-md border border-[#d0d5dd] text-[#033d59]">
+        <button
+          type="button"
+          onClick={() => onSelectMetricCard?.('total')}
+          title="Ver todos los pacientes"
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-[#033d59] cursor-pointer transition-all ${
+            activeMetricCard === 'total'
+              ? 'bg-[#effaff] border-[#00aae1] ring-2 ring-[#00aae1]/30 font-bold shadow-xs'
+              : 'bg-[#f9fafb] border-[#d0d5dd] hover:bg-gray-100'
+          }`}
+        >
           <span className="text-[#035476]">Total:</span>
-          <span className="font-bold">{totalPatients}</span>
-        </div>
+          <span className="font-bold text-[#00aae1]">{totalPatients}</span>
+        </button>
 
-        <div className="flex items-center gap-1.5 bg-[#ebfef4] px-3 py-1.5 rounded-md border border-[#01ae6c]/30 text-[#01ae6c]">
+        <button
+          type="button"
+          onClick={() => onSelectMetricCard?.('activos')}
+          title="Filtrar pacientes Activos"
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-[#01ae6c] cursor-pointer transition-all ${
+            activeMetricCard === 'activos'
+              ? 'bg-[#d0fbe2] border-[#01ae6c] ring-2 ring-[#01ae6c]/30 font-bold shadow-xs'
+              : 'bg-[#ebfef4] border-[#01ae6c]/30 hover:bg-[#d0fbe2]/60'
+          }`}
+        >
           <span>Activos:</span>
           <span className="font-bold">{activeCount}</span>
-        </div>
+        </button>
 
-        <div className="flex items-center gap-1.5 bg-[#fffbeb] px-3 py-1.5 rounded-md border border-[#fbbf24]/40 text-[#b45309]">
+        <button
+          type="button"
+          onClick={() => onSelectMetricCard?.('vencidos')}
+          title="Filtrar pacientes con citas Vencidas"
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-[#b45309] cursor-pointer transition-all ${
+            activeMetricCard === 'vencidos'
+              ? 'bg-[#fef3c7] border-[#b45309] ring-2 ring-[#b45309]/30 font-bold shadow-xs'
+              : 'bg-[#fffbeb] border-[#fbbf24]/40 hover:bg-[#fef3c7]/60'
+          }`}
+        >
           <span>Vencidos:</span>
           <span className="font-bold">{overdueCount}</span>
-        </div>
+        </button>
       </div>
     </header>
   );

@@ -13,8 +13,8 @@ export const INITIAL_PATIENTS: Patient[] = [
     cohorte: 'ACTIVO',
     estado: 'Activo',
     riesgo: 'Critical',
-    etiqueta: 'Inconforme',
-    retroalimentacion: 'Inconforme',
+    etiqueta: 'Prioritario',
+    retroalimentacion: 'Satisfecho',
     fase: 'I',
     acta: {
       numero: 142,
@@ -520,8 +520,8 @@ export const INITIAL_PATIENTS: Patient[] = [
     cohorte: 'PROSPECTO',
     estado: 'Rechazado',
     riesgo: 'Low',
-    etiqueta: 'Inconforme',
-    retroalimentacion: 'Inconforme',
+    etiqueta: 'Prioritario',
+    retroalimentacion: 'Neutral',
     fase: 'I',
     acta: {
       numero: 112,

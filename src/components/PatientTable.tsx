@@ -292,14 +292,15 @@ export const PatientTable: React.FC<PatientTableProps> = ({
 
   const renderFaseBadge = (fase: string) => {
     let color = 'bg-[#f9fafb] text-[#033d59] border-[#e2e8eb]';
-    if (fase === 'E') color = 'bg-purple-50 text-purple-700 border-purple-200';
-    if (fase === 'D') color = 'bg-blue-50 text-blue-700 border-blue-200';
-    if (fase === 'I') color = 'bg-amber-50 text-amber-800 border-amber-200';
-    if (fase === 'M/E') color = 'bg-teal-50 text-teal-700 border-teal-200';
+    let label = fase;
+    if (fase === 'E') { color = 'bg-purple-50 text-purple-700 border-purple-200'; label = 'E: Evaluación'; }
+    if (fase === 'D') { color = 'bg-blue-50 text-blue-700 border-blue-200'; label = 'D: Diagnóstico'; }
+    if (fase === 'I') { color = 'bg-amber-50 text-amber-800 border-amber-200'; label = 'I: Intervención'; }
+    if (fase === 'M/E') { color = 'bg-teal-50 text-teal-700 border-teal-200'; label = 'M/E: Monit./Eval.'; }
 
     return (
-      <span className={`px-2 py-0.5 rounded font-mono font-bold text-[10px] border ${color}`}>
-        {fase}
+      <span className={`px-2 py-0.5 rounded font-sans font-bold text-[10px] border whitespace-nowrap ${color}`}>
+        {label}
       </span>
     );
   };
@@ -461,11 +462,11 @@ export const PatientTable: React.FC<PatientTableProps> = ({
             {/* Col 5: NOMBRE CONVENIO */}
             {renderHeader('NOMBRE CONVENIO', 'convenioNombre', 'min-w-[180px]')}
 
-            {/* Col 6: ESTADO */}
-            {renderHeader('ESTADO', 'estado', 'min-w-[100px]')}
-
-            {/* Col 7: RIESGO */}
+            {/* Col 6: RIESGO */}
             {renderHeader('RIESGO', 'riesgo', 'min-w-[80px] text-center')}
+
+            {/* Col 7: ESTADO */}
+            {renderHeader('ESTADO', 'estado', 'min-w-[100px]')}
 
             {/* Col 8: ETIQUETA */}
             {renderHeader('ETIQUETA', 'etiqueta', 'min-w-[110px]')}
@@ -474,7 +475,7 @@ export const PatientTable: React.FC<PatientTableProps> = ({
             {renderHeader('RETROALIMENTACIÓN', 'retroalimentacion', 'min-w-[140px]')}
 
             {/* Col 10: FASE */}
-            {renderHeader('FASE', 'fase', 'min-w-[75px] text-center')}
+            {renderHeader('FASE', 'fase', 'min-w-[130px] text-center')}
 
             {/* Col 11: ACTA */}
             {renderHeader('ACTA', 'acta', 'min-w-[85px] text-center')}
@@ -711,12 +712,7 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                     {patient.convenioNombre}
                   </td>
 
-                  {/* Col 6: ESTADO */}
-                  <td className="px-3 py-2">
-                    {renderEstadoBadge(patient)}
-                  </td>
-
-                  {/* Col 7: RIESGO */}
+                  {/* Col 6: RIESGO */}
                   <td className="px-3 py-2 text-center relative">
                     <button
                       onClick={() => handleRiskClick(patient)}
@@ -748,22 +744,23 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                     )}
                   </td>
 
+                  {/* Col 7: ESTADO */}
+                  <td className="px-3 py-2">
+                    {renderEstadoBadge(patient)}
+                  </td>
+
                   {/* Col 8: ETIQUETA */}
                   <td className="px-3 py-2">
-                    <span className={`px-2 py-0.5 rounded font-bold text-[10px] border ${
-                      patient.etiqueta === 'Inconforme'
-                        ? 'bg-rose-50 text-rose-700 border-rose-200'
-                        : 'bg-[#f9fafb] text-[#033d59] border-[#e2e8eb]'
-                    }`}>
+                    <span className="px-2 py-0.5 rounded font-bold text-[10px] border bg-[#f9fafb] text-[#033d59] border-[#e2e8eb]">
                       {patient.etiqueta}
                     </span>
                   </td>
 
                   {/* Col 9: RETROALIMENTACIÓN */}
                   <td className="px-3 py-2">
-                    {patient.etiqueta === 'Inconforme' || patient.retroalimentacion === 'Inconforme' ? (
-                      <span className="px-2 py-0.5 rounded bg-rose-100 text-rose-800 font-bold text-[10px] border border-rose-300">
-                        Inconforme
+                    {patient.retroalimentacion ? (
+                      <span className="px-2 py-0.5 rounded bg-sky-50 text-[#033d59] font-medium text-[10px] border border-sky-200">
+                        {patient.retroalimentacion}
                       </span>
                     ) : (
                       <span className="text-gray-400 text-[10px]">—</span>

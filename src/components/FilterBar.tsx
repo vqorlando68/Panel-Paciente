@@ -51,21 +51,6 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Bell Toggle button for Solo Vencidas */}
-          <button
-            type="button"
-            onClick={() => handleChange('soloVencidas', !filters.soloVencidas)}
-            title={filters.soloVencidas ? "Mostrando solo atenciones vencidas" : "Filtrar por atenciones vencidas"}
-            className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg border cursor-pointer transition-all ${
-              filters.soloVencidas 
-                ? 'bg-[#fffbeb] text-[#b45309] border-[#fbbf24] shadow-2xs font-bold' 
-                : 'bg-[#f9fafb] text-[#035476] border-[#e2e8eb] hover:bg-[#effaff] hover:text-[#00aae1]'
-            }`}
-          >
-            <Bell className={`w-3.5 h-3.5 ${filters.soloVencidas ? 'text-[#b45309] fill-[#b45309]' : 'text-[#035476]'}`} />
-            <span>Vencidas</span>
-          </button>
-
           {hasActiveFilters && (
             <button
               onClick={onResetFilters}

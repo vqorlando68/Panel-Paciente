@@ -243,6 +243,24 @@ export default function App() {
     setIsAddPatientOpen(false);
   };
 
+  // Active Metric Card derived state
+  const activeMetricCard = useMemo(() => {
+    if (filters.seguimiento === 'Vencidos') return 'vencidos';
+    if (filters.estado === 'Activo' && filters.seguimiento === 'Todos') return 'activos';
+    if (filters.estado === 'Todos' && filters.seguimiento === 'Todos') return 'total';
+    return undefined;
+  }, [filters]);
+
+  const handleSelectMetricCard = (metric: 'total' | 'activos' | 'vencidos') => {
+    if (metric === 'total') {
+      setFilters((prev) => ({ ...prev, estado: 'Todos', seguimiento: 'Todos', soloVencidas: false }));
+    } else if (metric === 'activos') {
+      setFilters((prev) => ({ ...prev, estado: 'Activo', seguimiento: 'Todos', soloVencidas: false }));
+    } else if (metric === 'vencidos') {
+      setFilters((prev) => ({ ...prev, seguimiento: 'Vencidos', estado: 'Todos', soloVencidas: false }));
+    }
+  };
+
   return (
     <div className="h-screen w-screen flex flex-col overflow-hidden bg-[#fafafa] font-sans text-[#033d59]">
       <div className="flex-1 flex flex-col overflow-hidden px-4 md:px-8 py-2 max-w-[1600px] w-full mx-auto">
@@ -254,6 +272,8 @@ export default function App() {
           totalPatients={totalPatients}
           overdueCount={overdueCount}
           activeCount={activeCount}
+          onSelectMetricCard={handleSelectMetricCard}
+          activeMetricCard={activeMetricCard}
         />
 
         {/* Alarm Banner */}
