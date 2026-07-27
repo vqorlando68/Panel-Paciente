@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { FilterState, COHORTE_OPTIONS } from '../types';
-import { Search, FilterX, ChevronDown, ChevronUp, Bell } from 'lucide-react';
+import { Search, FilterX, ChevronDown, ChevronUp, Bell, Check } from 'lucide-react';
 
 interface FilterBarProps {
   filters: FilterState;
@@ -11,6 +11,13 @@ interface FilterBarProps {
   alarmCount?: number;
 }
 
+const SPECIFIC_CONVENIOS = [
+  'EPS Suramericana Cuidate360',
+  'CMP Caribe',
+  'CMP Salud Mental Cali',
+  'CMP Vive al 100 Caribe',
+];
+
 export const FilterBar: React.FC<FilterBarProps> = ({
   filters,
   onFilterChange,
@@ -20,6 +27,18 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   alarmCount,
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isConvenioMenuOpen, setIsConvenioMenuOpen] = useState(false);
+  const convenioDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (convenioDropdownRef.current && !convenioDropdownRef.current.contains(event.target as Node)) {
+        setIsConvenioMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleChange = (field: keyof FilterState, value: any) => {
     onFilterChange({
@@ -28,16 +47,62 @@ export const FilterBar: React.FC<FilterBarProps> = ({
     });
   };
 
+  const allConvenioOptions = useMemo(() => {
+    const combined = Array.from(new Set([...SPECIFIC_CONVENIOS, ...(conveniosList || [])])).filter(Boolean);
+    return combined.sort();
+  }, [conveniosList]);
+
+  const selectedConveniosArray = useMemo(() => {
+    if (Array.isArray(filters.convenioNombre)) {
+      return filters.convenioNombre;
+    }
+    if (!filters.convenioNombre || filters.convenioNombre === 'Todos') {
+      return [];
+    }
+    return [filters.convenioNombre];
+  }, [filters.convenioNombre]);
+
+  const isAllConveniosSelected = selectedConveniosArray.length === 0;
+
+  const toggleConvenioOption = (conv: string) => {
+    let next: string[];
+    if (selectedConveniosArray.includes(conv)) {
+      next = selectedConveniosArray.filter((item) => item !== conv);
+    } else {
+      next = [...selectedConveniosArray, conv];
+    }
+
+    if (next.length === 0) {
+      handleChange('convenioNombre', 'Todos');
+    } else {
+      handleChange('convenioNombre', next);
+    }
+  };
+
+  const handleSelectAllConvenios = () => {
+    handleChange('convenioNombre', 'Todos');
+  };
+
   const hasActiveFilters =
     filters.cohorte !== 'Todos' ||
     filters.seguimiento !== 'Todos' ||
     filters.coordinador !== 'Todos' ||
-    filters.convenioNombre !== 'Todos' ||
+    (Array.isArray(filters.convenioNombre) ? filters.convenioNombre.length > 0 : filters.convenioNombre !== 'Todos') ||
     filters.identificacion !== '' ||
     filters.nombresApellidos !== '' ||
     filters.numeroCarga !== '' ||
     filters.soloVencidas ||
     Boolean(filters.soloAlarmas);
+
+  const convenioButtonLabel = useMemo(() => {
+    if (isAllConveniosSelected) {
+      return 'Todos los convenios';
+    }
+    if (selectedConveniosArray.length === 1) {
+      return selectedConveniosArray[0];
+    }
+    return `${selectedConveniosArray.length} convenios sel.`;
+  }, [isAllConveniosSelected, selectedConveniosArray]);
 
   return (
     <div className="bg-white border border-[#e2e8eb] p-4 shrink-0 max-w-[1550px] w-full mx-auto font-sans rounded-xl shadow-2xs my-2 transition-all">
@@ -97,7 +162,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         </div>
       </div>
 
-      {/* Filter Fields (Single horizontal row of fields) */}
+      {/* Filter Fields (Single horizontal row of fields - all controls h-8 (32px), px-3 py-1) */}
       {!isCollapsed && (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 items-end pt-1 animate-in fade-in duration-150">
           
@@ -109,7 +174,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             <select
               value={filters.cohorte}
               onChange={(e) => handleChange('cohorte', e.target.value)}
-              className="w-full h-8 text-[11px] bg-white border border-[#e2e8eb] rounded-md px-2 text-[#033d59] focus:outline-none focus:border-[#00aae1] font-medium cursor-pointer truncate"
+              className="w-full h-8 text-xs bg-white border border-[#e2e8eb] rounded-md px-3 py-1 text-[#033d59] focus:outline-none focus:border-[#00aae1] font-medium cursor-pointer truncate"
             >
               <option value="Todos">Todas las cohortes</option>
               {COHORTE_OPTIONS.map((coh) => (
@@ -128,7 +193,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             <select
               value={filters.seguimiento}
               onChange={(e) => handleChange('seguimiento', e.target.value)}
-              className="w-full h-8 text-[11px] bg-white border border-[#e2e8eb] rounded-md px-2 text-[#033d59] focus:outline-none focus:border-[#00aae1] font-medium cursor-pointer"
+              className="w-full h-8 text-xs bg-white border border-[#e2e8eb] rounded-md px-3 py-1 text-[#033d59] focus:outline-none focus:border-[#00aae1] font-medium cursor-pointer"
             >
               <option value="Todos">Todos</option>
               <option value="Vencidos">Con Vencidos</option>
@@ -144,7 +209,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             <select
               value={filters.coordinador}
               onChange={(e) => handleChange('coordinador', e.target.value)}
-              className="w-full h-8 text-[11px] bg-white border border-[#e2e8eb] rounded-md px-2 text-[#033d59] focus:outline-none focus:border-[#00aae1] font-medium cursor-pointer truncate"
+              className="w-full h-8 text-xs bg-white border border-[#e2e8eb] rounded-md px-3 py-1 text-[#033d59] focus:outline-none focus:border-[#00aae1] font-medium cursor-pointer truncate"
             >
               <option value="Todos">Todos</option>
               {coordinatorsList.map((coord) => (
@@ -155,23 +220,73 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             </select>
           </div>
 
-          {/* Dropdown: Nombre Convenio */}
-          <div>
+          {/* Multi-Select Dropdown: Convenio */}
+          <div className="relative" ref={convenioDropdownRef}>
             <label className="block text-[10px] font-bold text-[#035476] mb-1 uppercase tracking-wider">
               Convenio
             </label>
-            <select
-              value={filters.convenioNombre}
-              onChange={(e) => handleChange('convenioNombre', e.target.value)}
-              className="w-full h-8 text-[11px] bg-white border border-[#e2e8eb] rounded-md px-2 text-[#033d59] focus:outline-none focus:border-[#00aae1] font-medium cursor-pointer truncate"
+            <button
+              type="button"
+              onClick={() => setIsConvenioMenuOpen(!isConvenioMenuOpen)}
+              className={`w-full h-8 text-xs bg-white border border-[#e2e8eb] rounded-md px-3 py-1 text-[#033d59] focus:outline-none focus:border-[#00aae1] font-medium cursor-pointer flex items-center justify-between transition-colors ${
+                !isAllConveniosSelected ? 'border-[#00aae1] bg-[#effaff]/40 font-bold text-[#00aae1]' : ''
+              }`}
+              title={selectedConveniosArray.join(', ') || 'Todos los convenios'}
             >
-              <option value="Todos">Todos</option>
-              {conveniosList.map((conv) => (
-                <option key={conv} value={conv}>
-                  {conv}
-                </option>
-              ))}
-            </select>
+              <span className="truncate pr-1 text-left">{convenioButtonLabel}</span>
+              <ChevronDown className="w-3.5 h-3.5 text-[#035476] shrink-0" />
+            </button>
+
+            {isConvenioMenuOpen && (
+              <div className="absolute top-full left-0 mt-1 z-40 bg-white border border-[#e2e8eb] rounded-lg shadow-xl w-64 p-2 text-xs space-y-1">
+                <div className="flex items-center justify-between pb-1.5 border-b border-[#e2e8eb] px-1">
+                  <span className="font-bold text-[#035476] text-[10px] uppercase">Seleccionar Convenios</span>
+                  {selectedConveniosArray.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleSelectAllConvenios}
+                      className="text-[10px] text-[#00aae1] font-bold hover:underline cursor-pointer"
+                    >
+                      Limpiar
+                    </button>
+                  )}
+                </div>
+
+                {/* Option: Todos */}
+                <button
+                  type="button"
+                  onClick={handleSelectAllConvenios}
+                  className={`w-full text-left px-2 py-1.5 rounded flex items-center justify-between cursor-pointer text-xs ${
+                    isAllConveniosSelected ? 'bg-[#effaff] font-bold text-[#00aae1]' : 'hover:bg-gray-50 text-[#033d59]'
+                  }`}
+                >
+                  <span>Todos los convenios</span>
+                  {isAllConveniosSelected && <Check className="w-3.5 h-3.5 text-[#00aae1]" />}
+                </button>
+
+                <div className="max-h-48 overflow-y-auto space-y-0.5 pt-1 border-t border-[#e2e8eb]">
+                  {allConvenioOptions.map((conv) => {
+                    const selected = selectedConveniosArray.includes(conv);
+                    return (
+                      <label
+                        key={conv}
+                        className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-colors text-xs ${
+                          selected ? 'bg-[#effaff] font-bold text-[#00aae1]' : 'hover:bg-gray-50 text-[#033d59]'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selected}
+                          onChange={() => toggleConvenioOption(conv)}
+                          className="rounded border-gray-300 text-[#00aae1] focus:ring-[#00aae1] cursor-pointer"
+                        />
+                        <span className="truncate">{conv}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Text Input: Identificación */}
@@ -185,9 +300,9 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                 placeholder="Ej: 10482..."
                 value={filters.identificacion}
                 onChange={(e) => handleChange('identificacion', e.target.value)}
-                className="w-full h-8 text-[11px] bg-white border border-[#e2e8eb] rounded-md pl-6 pr-1.5 text-[#033d59] placeholder-[#035476]/60 focus:outline-none focus:border-[#00aae1]"
+                className="w-full h-8 text-xs bg-white border border-[#e2e8eb] rounded-md pl-8 pr-3 py-1 text-[#033d59] placeholder-[#035476]/60 focus:outline-none focus:border-[#00aae1]"
               />
-              <Search className="w-3 h-3 text-[#035476] absolute left-1.5 top-1/2 -translate-y-1/2" />
+              <Search className="w-3.5 h-3.5 text-[#035476] absolute left-2.5 top-1/2 -translate-y-1/2" />
             </div>
           </div>
 
@@ -202,9 +317,9 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                 placeholder="Buscar..."
                 value={filters.nombresApellidos}
                 onChange={(e) => handleChange('nombresApellidos', e.target.value)}
-                className="w-full h-8 text-[11px] bg-white border border-[#e2e8eb] rounded-md pl-6 pr-1.5 text-[#033d59] placeholder-[#035476]/60 focus:outline-none focus:border-[#00aae1]"
+                className="w-full h-8 text-xs bg-white border border-[#e2e8eb] rounded-md pl-8 pr-3 py-1 text-[#033d59] placeholder-[#035476]/60 focus:outline-none focus:border-[#00aae1]"
               />
-              <Search className="w-3 h-3 text-[#035476] absolute left-1.5 top-1/2 -translate-y-1/2" />
+              <Search className="w-3.5 h-3.5 text-[#035476] absolute left-2.5 top-1/2 -translate-y-1/2" />
             </div>
           </div>
 
@@ -218,7 +333,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               placeholder="CARGA-..."
               value={filters.numeroCarga}
               onChange={(e) => handleChange('numeroCarga', e.target.value)}
-              className="w-full h-8 text-[11px] bg-white border border-[#e2e8eb] rounded-md px-2 text-[#033d59] placeholder-[#035476]/60 focus:outline-none focus:border-[#00aae1]"
+              className="w-full h-8 text-xs bg-white border border-[#e2e8eb] rounded-md px-3 py-1 text-[#033d59] placeholder-[#035476]/60 focus:outline-none focus:border-[#00aae1]"
             />
           </div>
 

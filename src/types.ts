@@ -107,7 +107,7 @@ export interface FilterState {
   estado: string; // 'Todos' | EstadoPaciente
   seguimiento: string; // 'Todos' | 'Vencidos' | 'Al Día'
   coordinador: string; // 'Todos' | specific name
-  convenioNombre: string; // 'Todos' | specific convenio
+  convenioNombre: string | string[]; // 'Todos' | specific convenio or array of convenios for multi-select
   cohorte: string; // 'Todos' | specific cohorte
   identificacion: string;
   nombresApellidos: string;

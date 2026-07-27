@@ -8,6 +8,7 @@ import {
   SpecialistKey,
   SpecialistInfo,
   COHORTE_OPTIONS,
+  COORDINADORES_LIST,
 } from '../types';
 import { PatientHoverPopover } from './PatientHoverPopover';
 import {
@@ -63,6 +64,7 @@ interface PatientTableProps {
   onUpdateStatus: (patientId: string, newStatus: EstadoPaciente) => void;
   onUpdateRisk: (patientId: string, newRisk: NivelRiesgo) => void;
   onUpdateCohorte?: (patientId: string, newCohorte: string) => void;
+  onUpdateCoordinador?: (patientId: string, newCoordinador: string) => void;
   onUpdateRetro?: (patientId: string, newRetro: string) => void;
   onOpenActa: (patient: Patient) => void;
   onOpenNotesDrawer: (patient: Patient, type: 'op' | 'cli') => void;
@@ -80,6 +82,7 @@ export const PatientTable: React.FC<PatientTableProps> = ({
   onUpdateStatus,
   onUpdateRisk,
   onUpdateCohorte,
+  onUpdateCoordinador,
   onUpdateRetro,
   onOpenActa,
   onOpenNotesDrawer,
@@ -103,6 +106,7 @@ export const PatientTable: React.FC<PatientTableProps> = ({
   const [activeAlarmTooltipPatientId, setActiveAlarmTooltipPatientId] = useState<string | null>(null);
   const [riskMenuPatientId, setRiskMenuPatientId] = useState<string | null>(null);
   const [cohorteMenuPatientId, setCohorteMenuPatientId] = useState<string | null>(null);
+  const [coordinadorMenuPatientId, setCoordinadorMenuPatientId] = useState<string | null>(null);
   const [faseMenuPatientId, setFaseMenuPatientId] = useState<string | null>(null);
   const [showRoleAlert, setShowRoleAlert] = useState(false);
 
@@ -225,29 +229,82 @@ export const PatientTable: React.FC<PatientTableProps> = ({
     switch (risk) {
       case 'Critical':
         return (
-          <div className="flex items-center justify-center text-[#e11d48]" title="Riesgo Crítico (Triángulo Rojo)">
+          <div className="group relative flex items-center justify-center text-[#e11d48]" title="Riesgo Crítico">
             <AlertTriangle className="w-4 h-4 fill-[#e11d48]/20 stroke-[2.5]" />
+            <span className="absolute bottom-full mb-1.5 hidden group-hover:block bg-[#033d59] text-white text-[10px] font-bold py-0.5 px-2 rounded shadow-md whitespace-nowrap z-50 pointer-events-none">
+              Riesgo Crítico
+            </span>
           </div>
         );
       case 'High':
         return (
-          <div className="flex items-center justify-center text-[#e11d48]" title="Riesgo Alto (Círculo Rojo)">
+          <div className="group relative flex items-center justify-center text-[#e11d48]" title="Riesgo Alto">
             <Circle className="w-3.5 h-3.5 fill-[#e11d48] stroke-none" />
+            <span className="absolute bottom-full mb-1.5 hidden group-hover:block bg-[#033d59] text-white text-[10px] font-bold py-0.5 px-2 rounded shadow-md whitespace-nowrap z-50 pointer-events-none">
+              Riesgo Alto
+            </span>
           </div>
         );
       case 'Medium':
         return (
-          <div className="flex items-center justify-center text-[#fbbf24]" title="Riesgo Medio (Círculo Amarillo)">
+          <div className="group relative flex items-center justify-center text-[#fbbf24]" title="Riesgo Medio">
             <Circle className="w-3.5 h-3.5 fill-[#fbbf24] stroke-none" />
+            <span className="absolute bottom-full mb-1.5 hidden group-hover:block bg-[#033d59] text-white text-[10px] font-bold py-0.5 px-2 rounded shadow-md whitespace-nowrap z-50 pointer-events-none">
+              Riesgo Medio
+            </span>
           </div>
         );
       case 'Low':
         return (
-          <div className="flex items-center justify-center text-[#01ae6c]" title="Riesgo Bajo (Círculo Verde)">
+          <div className="group relative flex items-center justify-center text-[#01ae6c]" title="Riesgo Bajo">
             <Circle className="w-3.5 h-3.5 fill-[#01ae6c] stroke-none" />
+            <span className="absolute bottom-full mb-1.5 hidden group-hover:block bg-[#033d59] text-white text-[10px] font-bold py-0.5 px-2 rounded shadow-md whitespace-nowrap z-50 pointer-events-none">
+              Riesgo Bajo
+            </span>
           </div>
         );
     }
+  };
+
+  const renderCoordinadorBadge = (patient: Patient) => {
+    return (
+      <div className="relative font-sans inline-block">
+        <button
+          onClick={() => setCoordinadorMenuPatientId(coordinadorMenuPatientId === patient.id ? null : patient.id)}
+          className="px-2 py-0.5 rounded-full text-[11px] font-semibold border transition-all flex items-center gap-1 cursor-pointer bg-[#effaff] text-[#033d59] border-[#00aae1]/30 hover:bg-[#dff4ff]"
+          title={`Coordinador: ${patient.coordinador}. Clic para cambiar.`}
+        >
+          <span className="truncate max-w-[125px]">{patient.coordinador || 'Sin asignar'}</span>
+          <ChevronDown className="w-3 h-3 text-[#00aae1] shrink-0" />
+        </button>
+
+        {coordinadorMenuPatientId === patient.id && (
+          <div className="absolute top-full left-0 mt-1 z-30 bg-white rounded-lg shadow-xl border border-[#e2e8eb] p-1.5 w-48 max-h-56 overflow-y-auto text-xs font-medium space-y-0.5">
+            <div className="text-[10px] font-bold text-[#035476] px-2 py-1 uppercase tracking-wider border-b border-[#e2e8eb] mb-1">
+              Coordinador
+            </div>
+            {COORDINADORES_LIST.map((coord) => (
+              <button
+                key={coord}
+                onClick={() => {
+                  if (onUpdateCoordinador) {
+                    onUpdateCoordinador(patient.id, coord);
+                  } else {
+                    onEditPatient({ ...patient, coordinador: coord });
+                  }
+                  setCoordinadorMenuPatientId(null);
+                }}
+                className={`w-full text-left px-2 py-1.5 rounded-md text-[11px] hover:bg-[#effaff] cursor-pointer transition-colors ${
+                  patient.coordinador === coord ? 'bg-[#effaff] text-[#00aae1] font-bold' : 'text-[#033d59]'
+                }`}
+              >
+                {coord}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
   };
 
   const renderCohorteBadge = (patient: Patient) => {
@@ -882,8 +939,8 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                   </td>
 
                   {/* Col 12: COORDINADOR */}
-                  <td className="px-3 py-2 text-[#033d59] font-medium text-[11px]">
-                    {patient.coordinador}
+                  <td className="px-3 py-2">
+                    {renderCoordinadorBadge(patient)}
                   </td>
 
                   {/* Cols 13 to 19: ESPECIALISTAS (7 Columns) */}

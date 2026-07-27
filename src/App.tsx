@@ -120,9 +120,15 @@ export default function App() {
         return false;
       }
 
-      // Convenio Nombre Filter
-      if (filters.convenioNombre !== 'Todos' && patient.convenioNombre !== filters.convenioNombre) {
-        return false;
+      // Convenio Nombre Filter (supports multi-select array or single string)
+      if (filters.convenioNombre !== 'Todos') {
+        if (Array.isArray(filters.convenioNombre)) {
+          if (filters.convenioNombre.length > 0 && !filters.convenioNombre.includes(patient.convenioNombre)) {
+            return false;
+          }
+        } else if (patient.convenioNombre !== filters.convenioNombre) {
+          return false;
+        }
       }
 
       // Identificacion Filter
@@ -205,6 +211,12 @@ export default function App() {
   const handleUpdateCohorte = (patientId: string, newCohorte: string) => {
     setPatients((prev) =>
       prev.map((p) => (p.id === patientId ? { ...p, cohorte: newCohorte } : p))
+    );
+  };
+
+  const handleUpdateCoordinador = (patientId: string, newCoordinador: string) => {
+    setPatients((prev) =>
+      prev.map((p) => (p.id === patientId ? { ...p, coordinador: newCoordinador } : p))
     );
   };
 
@@ -329,6 +341,7 @@ export default function App() {
           onUpdateStatus={handleUpdateStatus}
           onUpdateRisk={handleUpdateRisk}
           onUpdateCohorte={handleUpdateCohorte}
+          onUpdateCoordinador={handleUpdateCoordinador}
           onUpdateRetro={handleUpdateRetro}
           onOpenActa={(patient) => setActaModalPatient(patient)}
           onOpenNotesDrawer={(patient, type) => setNotesDrawerState({ patient, type })}

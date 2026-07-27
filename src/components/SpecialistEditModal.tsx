@@ -81,19 +81,20 @@ export const SpecialistEditModal: React.FC<SpecialistEditModalProps> = ({
                 {/* FECHA DE ÚLTIMA ATENCIÓN */}
                 <div>
                   <label className="block text-[11px] font-semibold text-[#035476] mb-1 uppercase tracking-wide">
-                    Fecha de Última Atención (DD/MM/YYYY HH:MM AM/PM)
+                    Fecha de Última Atención (Fecha y Hora)
                   </label>
                   <div className="relative">
                     <input
                       type="text"
-                      placeholder="Ej: 10/05/2026 09:00 AM"
+                      placeholder="DD/MM/YYYY HH:MM AM/PM (Ej: 18/07/2026 10:30 AM)"
                       value={formData.lastAttentionDate}
                       onChange={(e) => setFormData({ ...formData, lastAttentionDate: e.target.value })}
-                      className="w-full bg-[#f9fafb] border border-[#e2e8eb] rounded-md pl-8 pr-3 py-2 text-[#033d59] font-medium focus:outline-none focus:border-[#00aae1] focus:bg-white"
+                      className="w-full bg-[#f9fafb] border border-[#e2e8eb] rounded-md pl-8 pr-3 py-2 text-[#033d59] font-medium focus:outline-none focus:border-[#00aae1] focus:bg-white text-xs"
                       required
                     />
                     <Calendar className="w-3.5 h-3.5 text-[#00aae1] absolute left-2.5 top-1/2 -translate-y-1/2" />
                   </div>
+                  <span className="text-[10px] text-[#035476]/70 mt-0.5 block">Formato: DD/MM/YYYY HH:MM AM/PM</span>
                 </div>
 
                 {/* FRECUENCIA / PERIODICIDAD */}
@@ -107,29 +108,30 @@ export const SpecialistEditModal: React.FC<SpecialistEditModalProps> = ({
                       placeholder="Ej: Quincenal, Cada 30 días..."
                       value={formData.frequency}
                       onChange={(e) => setFormData({ ...formData, frequency: e.target.value })}
-                      className="w-full bg-[#f9fafb] border border-[#e2e8eb] rounded-md pl-8 pr-3 py-2 text-[#033d59] font-medium focus:outline-none focus:border-[#00aae1] focus:bg-white"
+                      className="w-full bg-[#f9fafb] border border-[#e2e8eb] rounded-md pl-8 pr-3 py-2 text-[#033d59] font-medium focus:outline-none focus:border-[#00aae1] focus:bg-white text-xs"
                       required
                     />
                     <Clock className="w-3.5 h-3.5 text-[#00aae1] absolute left-2.5 top-1/2 -translate-y-1/2" />
                   </div>
                 </div>
 
-                {/* FECHA OBJETIVO (PRÓXIMA ATENCIÓN) */}
+                {/* FECHA OBJETIVO (PRÓXIMA CITA) */}
                 <div>
                   <label className="block text-[11px] font-semibold text-[#035476] mb-1 uppercase tracking-wide">
-                    Fecha Objetivo (Próxima Atención) (DD/MM/YYYY HH:MM AM/PM)
+                    Fecha Objetivo (Próxima Cita)
                   </label>
                   <div className="relative">
                     <input
                       type="text"
-                      placeholder="Ej: 10/06/2026 09:00 AM"
+                      placeholder="DD/MM/YYYY HH:MM AM/PM (Ej: 18/07/2026 10:30 AM)"
                       value={formData.targetDate}
                       onChange={(e) => setFormData({ ...formData, targetDate: e.target.value })}
-                      className="w-full bg-[#f9fafb] border border-[#e2e8eb] rounded-md pl-8 pr-3 py-2 text-[#033d59] font-medium focus:outline-none focus:border-[#00aae1] focus:bg-white"
+                      className="w-full bg-[#f9fafb] border border-[#e2e8eb] rounded-md pl-8 pr-3 py-2 text-[#033d59] font-medium focus:outline-none focus:border-[#00aae1] focus:bg-white text-xs"
                       required
                     />
                     <Calendar className="w-3.5 h-3.5 text-[#00aae1] absolute left-2.5 top-1/2 -translate-y-1/2" />
                   </div>
+                  <span className="text-[10px] text-[#035476]/70 mt-0.5 block">Formato: DD/MM/YYYY HH:MM AM/PM</span>
                 </div>
 
                 {/* BUTTON: Detalle de Atenciones... */}
