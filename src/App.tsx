@@ -138,6 +138,11 @@ export default function App() {
         return false;
       }
 
+      // Solo Alarmas Filter
+      if (filters.soloAlarmas && !patient.hasAlarm) {
+        return false;
+      }
+
       return true;
     });
   }, [patients, filters]);
@@ -146,6 +151,7 @@ export default function App() {
   const totalPatients = patients.length;
   const overdueCount = patients.filter(patientHasOverdueSpecialist).length;
   const activeCount = patients.filter((p) => p.estado === 'Activo').length;
+  const alarmCount = patients.filter((p) => p.hasAlarm).length;
 
   // Handlers for state updates
   const handleResetFilters = () => {
@@ -159,6 +165,7 @@ export default function App() {
       nombresApellidos: '',
       numeroCarga: '',
       soloVencidas: false,
+      soloAlarmas: false,
     });
   };
 
@@ -276,12 +283,6 @@ export default function App() {
           activeMetricCard={activeMetricCard}
         />
 
-        {/* Alarm Banner */}
-        <AlarmBanner
-          patients={patients}
-          onActivateAlarmFilter={() => setFilters((f) => ({ ...f, soloVencidas: true }))}
-        />
-
         {/* Filter Bar */}
         <FilterBar
           filters={filters}
@@ -289,6 +290,7 @@ export default function App() {
           coordinatorsList={coordinatorsList}
           conveniosList={conveniosList}
           onResetFilters={handleResetFilters}
+          alarmCount={alarmCount}
         />
 
         {/* Main Table Section (19 Columns) */}

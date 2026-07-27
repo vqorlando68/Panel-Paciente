@@ -38,7 +38,7 @@ export const EditPatientModal: React.FC<EditPatientModalProps> = ({
                 Editar Ficha del Paciente
               </h3>
               <p className="text-xs text-[#035476]">
-                {patient.nombre} • ID: {patient.identificacion}
+                {formData.nombre} • Identificación: {formData.identificacion}
               </p>
             </div>
           </div>
@@ -52,8 +52,20 @@ export const EditPatientModal: React.FC<EditPatientModalProps> = ({
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1 text-xs">
-          {/* Row 1: Nombre & Identificacion */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Row 1: ID, Nombre Completo, Identificación */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-[11px] font-semibold text-[#035476] mb-1 uppercase">
+                ID Paciente
+              </label>
+              <input
+                type="text"
+                value={formData.id}
+                readOnly
+                className="w-full bg-[#e5e7eb]/60 border border-[#e2e8eb] rounded-md px-3 py-2 text-gray-600 font-mono font-bold cursor-not-allowed"
+              />
+            </div>
+
             <div>
               <label className="block text-[11px] font-semibold text-[#035476] mb-1 uppercase">
                 Nombre Completo
@@ -69,7 +81,7 @@ export const EditPatientModal: React.FC<EditPatientModalProps> = ({
 
             <div>
               <label className="block text-[11px] font-semibold text-[#035476] mb-1 uppercase">
-                Identificación (5 dígitos)
+                Identificación
               </label>
               <input
                 type="text"
@@ -120,7 +132,7 @@ export const EditPatientModal: React.FC<EditPatientModalProps> = ({
 
           <hr className="border-[#e2e8eb]" />
 
-          {/* Row 3: Convenio, Cohorte, Carga */}
+          {/* Row 3: ID Convenio, Estado Cohorte, N° Carga */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-[11px] font-semibold text-[#035476] mb-1 uppercase">
@@ -136,7 +148,7 @@ export const EditPatientModal: React.FC<EditPatientModalProps> = ({
 
             <div>
               <label className="block text-[11px] font-semibold text-[#035476] mb-1 uppercase">
-                Cohorte
+                Estado Cohorte
               </label>
               <select
                 value={formData.cohorte}
@@ -164,23 +176,8 @@ export const EditPatientModal: React.FC<EditPatientModalProps> = ({
             </div>
           </div>
 
-          {/* Row 4: Estado, Riesgo, Etiqueta, Fase */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-[#effaff] p-3 rounded-lg border border-[#00aae1]/20">
-            <div>
-              <label className="block text-[11px] font-semibold text-[#035476] mb-1 uppercase">
-                Estado
-              </label>
-              <select
-                value={formData.estado}
-                onChange={(e) => setFormData({ ...formData, estado: e.target.value as EstadoPaciente })}
-                className="w-full bg-white border border-[#e2e8eb] rounded-md px-2.5 py-1.5 text-[#033d59] font-semibold"
-              >
-                <option value="Activo">Activo (Verde)</option>
-                <option value="Aceptado">Aceptado (Azul)</option>
-                <option value="Rechazado">Rechazado (Rojo)</option>
-              </select>
-            </div>
-
+          {/* Row 4: Riesgo, Etiqueta, Fase, Retroalimentación */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-[#effaff] p-3.5 rounded-lg border border-[#00aae1]/20">
             <div>
               <label className="block text-[11px] font-semibold text-[#035476] mb-1 uppercase flex items-center gap-1">
                 Nivel de Riesgo
@@ -230,6 +227,32 @@ export const EditPatientModal: React.FC<EditPatientModalProps> = ({
                 <option value="M/E">M/E - Mantenimiento/Egreso</option>
               </select>
             </div>
+          </div>
+
+          {/* Retroalimentación Checkbox */}
+          <div className="bg-[#fff1f2] p-3 rounded-lg border border-rose-200 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <input
+                type="checkbox"
+                id="retroInconforme"
+                checked={formData.retroalimentacion === 'Inconforme'}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    retroalimentacion: e.target.checked ? 'Inconforme' : '',
+                  })
+                }
+                className="w-4 h-4 text-[#00aae1] rounded border-rose-300 focus:ring-[#00aae1] cursor-pointer"
+              />
+              <label htmlFor="retroInconforme" className="text-xs font-semibold text-[#033d59] cursor-pointer select-none">
+                Marcar Retroalimentación como <span className="text-rose-700 font-bold uppercase">Inconforme</span>
+              </label>
+            </div>
+            {formData.retroalimentacion === 'Inconforme' && (
+              <span className="px-2 py-0.5 rounded bg-rose-100 text-rose-800 font-bold text-[10px] border border-rose-300">
+                Inconforme
+              </span>
+            )}
           </div>
 
           {/* Coordinador */}

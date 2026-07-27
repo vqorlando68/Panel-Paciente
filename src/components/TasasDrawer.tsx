@@ -47,7 +47,7 @@ export const TasasDrawer: React.FC<TasasDrawerProps> = ({ patient, onClose }) =>
                 <span className="text-lg font-black">{tasas.cancelacionesPct}%</span>
               </div>
               <p className="text-[10px] text-rose-600/90 font-medium">
-                {tasas.cancelacionesNum} cita(s) canceladas en el período
+                {tasas.cancelacionesNum} atención(es) canceladas en el período
               </p>
             </div>
 
@@ -58,7 +58,7 @@ export const TasasDrawer: React.FC<TasasDrawerProps> = ({ patient, onClose }) =>
                 <span className="text-lg font-black">{tasas.inasistenciasPct}%</span>
               </div>
               <p className="text-[10px] text-amber-700/90 font-medium">
-                {tasas.inasistenciasNum} cita(s) con inasistencia registrada
+                {tasas.inasistenciasNum} atención(es) con inasistencia registrada
               </p>
             </div>
 
@@ -69,7 +69,7 @@ export const TasasDrawer: React.FC<TasasDrawerProps> = ({ patient, onClose }) =>
                 <span className="text-lg font-black">{tasas.reprogramacionesPct}%</span>
               </div>
               <p className="text-[10px] text-[#035476]/90 font-medium">
-                {tasas.reprogramacionesNum} cita(s) reprogramadas
+                {tasas.reprogramacionesNum} atención(es) reprogramadas
               </p>
             </div>
           </div>
@@ -100,43 +100,6 @@ export const TasasDrawer: React.FC<TasasDrawerProps> = ({ patient, onClose }) =>
               <span className="text-rose-600">■ Canc ({tasas.cancelacionesPct}%)</span>
               <span className="text-amber-600">■ Inas ({tasas.inasistenciasPct}%)</span>
               <span className="text-[#00aae1]">■ Repr ({tasas.reprogramacionesPct}%)</span>
-            </div>
-          </div>
-
-          {/* History of Last 5 Appointments */}
-          <div className="space-y-2">
-            <h4 className="font-bold text-[11px] text-[#035476] uppercase tracking-wide flex items-center gap-1">
-              <Calendar className="w-3.5 h-3.5 text-[#00aae1]" />
-              Historial Últimas Citas
-            </h4>
-
-            <div className="border border-[#e2e8eb] rounded-xl overflow-hidden divide-y divide-[#e2e8eb]">
-              {tasas.history.length === 0 ? (
-                <p className="text-gray-400 text-[11px] p-3 text-center italic">Sin registros históricos.</p>
-              ) : (
-                tasas.history.map((h) => (
-                  <div key={h.id} className="p-2.5 bg-white hover:bg-[#f9fafb] transition-colors flex items-center justify-between">
-                    <div>
-                      <p className="font-bold text-[#033d59] text-[11px]">{h.specialty}</p>
-                      <p className="text-[10px] text-gray-500 font-mono">{h.date} — {h.professional}</p>
-                    </div>
-
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
-                        h.status === 'Atendida'
-                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                          : h.status === 'Cancelada'
-                          ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                          : h.status === 'Inasistida'
-                          ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                          : 'bg-sky-50 text-sky-700 border border-sky-200'
-                      }`}
-                    >
-                      {h.status}
-                    </span>
-                  </div>
-                ))
-              )}
             </div>
           </div>
 

@@ -8,6 +8,7 @@ interface FilterBarProps {
   coordinatorsList: string[];
   conveniosList: string[];
   onResetFilters: () => void;
+  alarmCount?: number;
 }
 
 export const FilterBar: React.FC<FilterBarProps> = ({
@@ -16,6 +17,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   coordinatorsList,
   conveniosList,
   onResetFilters,
+  alarmCount,
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -27,7 +29,6 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   };
 
   const hasActiveFilters =
-    filters.estado !== 'Todos' ||
     filters.cohorte !== 'Todos' ||
     filters.seguimiento !== 'Todos' ||
     filters.coordinador !== 'Todos' ||
@@ -35,7 +36,8 @@ export const FilterBar: React.FC<FilterBarProps> = ({
     filters.identificacion !== '' ||
     filters.nombresApellidos !== '' ||
     filters.numeroCarga !== '' ||
-    filters.soloVencidas;
+    filters.soloVencidas ||
+    Boolean(filters.soloAlarmas);
 
   return (
     <div className="bg-white border border-[#e2e8eb] p-4 shrink-0 max-w-[1550px] w-full mx-auto font-sans rounded-xl shadow-2xs my-2 transition-all">
@@ -51,6 +53,28 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Campana de Alarmas Button */}
+          <button
+            type="button"
+            onClick={() => handleChange('soloAlarmas', !filters.soloAlarmas)}
+            title={filters.soloAlarmas ? "Mostrando solo pacientes con alarmas" : "Filtrar por pacientes con alarmas de seguimiento"}
+            className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg border cursor-pointer transition-all ${
+              filters.soloAlarmas 
+                ? 'bg-[#fffbeb] text-[#b45309] border-[#fbbf24] shadow-2xs font-bold ring-2 ring-[#fbbf24]/30' 
+                : 'bg-[#f9fafb] text-[#035476] border-[#e2e8eb] hover:bg-[#fffbeb] hover:text-[#b45309]'
+            }`}
+          >
+            <Bell className={`w-3.5 h-3.5 ${filters.soloAlarmas ? 'text-[#b45309] fill-[#b45309]' : 'text-[#035476]'}`} />
+            <span>Alarmas</span>
+            {alarmCount !== undefined && alarmCount > 0 && (
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-extrabold ${
+                filters.soloAlarmas ? 'bg-[#b45309] text-white' : 'bg-[#fffbeb] text-[#b45309] border border-[#fbbf24]'
+              }`}>
+                {alarmCount}
+              </span>
+            )}
+          </button>
+
           {hasActiveFilters && (
             <button
               onClick={onResetFilters}
@@ -73,38 +97,21 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         </div>
       </div>
 
-      {/* Filter Fields (Single horizontal row of 8 fields) */}
+      {/* Filter Fields (Single horizontal row of fields) */}
       {!isCollapsed && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2 items-end pt-1 animate-in fade-in duration-150">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 items-end pt-1 animate-in fade-in duration-150">
           
-          {/* Dropdown: Estado */}
-          <div>
+          {/* Dropdown: Estado Cohorte */}
+          <div className="lg:col-span-1">
             <label className="block text-[10px] font-bold text-[#035476] mb-1 uppercase tracking-wider">
-              Estado
-            </label>
-            <select
-              value={filters.estado}
-              onChange={(e) => handleChange('estado', e.target.value)}
-              className="w-full h-8 text-[11px] bg-white border border-[#e2e8eb] rounded-md px-2 text-[#033d59] focus:outline-none focus:border-[#00aae1] font-medium cursor-pointer"
-            >
-              <option value="Todos">Todos</option>
-              <option value="Activo">Activo</option>
-              <option value="Aceptado">Aceptado</option>
-              <option value="Rechazado">Rechazado</option>
-            </select>
-          </div>
-
-          {/* Dropdown: Cohorte */}
-          <div>
-            <label className="block text-[10px] font-bold text-[#035476] mb-1 uppercase tracking-wider">
-              Cohorte
+              Estado Cohorte
             </label>
             <select
               value={filters.cohorte}
               onChange={(e) => handleChange('cohorte', e.target.value)}
               className="w-full h-8 text-[11px] bg-white border border-[#e2e8eb] rounded-md px-2 text-[#033d59] focus:outline-none focus:border-[#00aae1] font-medium cursor-pointer truncate"
             >
-              <option value="Todos">Todas</option>
+              <option value="Todos">Todas las cohortes</option>
               {COHORTE_OPTIONS.map((coh) => (
                 <option key={coh.code} value={coh.code} title={coh.label}>
                   {coh.code} - {coh.label}

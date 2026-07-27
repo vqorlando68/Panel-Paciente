@@ -114,10 +114,10 @@ export const SpecialistEditModal: React.FC<SpecialistEditModalProps> = ({
                   </div>
                 </div>
 
-                {/* FECHA OBJETIVO (PRÓXIMA CITA) */}
+                {/* FECHA OBJETIVO (PRÓXIMA ATENCIÓN) */}
                 <div>
                   <label className="block text-[11px] font-semibold text-[#035476] mb-1 uppercase tracking-wide">
-                    Fecha Objetivo (Próxima Cita) (DD/MM/YYYY HH:MM AM/PM)
+                    Fecha Objetivo (Próxima Atención) (DD/MM/YYYY HH:MM AM/PM)
                   </label>
                   <div className="relative">
                     <input
@@ -209,7 +209,7 @@ export const SpecialistEditModal: React.FC<SpecialistEditModalProps> = ({
                   <div className="border border-[#e2e8eb] rounded-lg overflow-hidden divide-y divide-[#e2e8eb] bg-white shadow-2xs">
                     <div className="bg-[#f9fafb] px-3 py-2 font-bold text-[10px] text-[#035476] grid grid-cols-2 gap-2 uppercase tracking-wider">
                       <span>Fecha y Hora</span>
-                      <span>Estado Cita</span>
+                      <span>Estado Atención</span>
                     </div>
 
                     {historyList.map((item, idx) => (

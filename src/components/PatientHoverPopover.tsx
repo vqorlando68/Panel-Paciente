@@ -27,10 +27,15 @@ export const PatientHoverPopover: React.FC<PatientHoverPopoverProps> = ({
       <div className="flex items-start justify-between pb-2 mb-2 border-b border-[#e2e8eb]">
         <div>
           <h4 className="font-bold text-[#033d59] leading-snug">{patient.nombre}</h4>
-          <span className="text-[10px] text-[#035476] flex items-center gap-1 font-mono">
-            <CreditCard className="w-3 h-3 text-[#00aae1]" />
-            {patient.identificacion}
-          </span>
+          <div className="flex flex-col gap-0.5 mt-0.5">
+            <span className="text-[10px] text-[#035476] font-mono font-semibold">
+              <span className="text-gray-400">ID:</span> {patient.id}
+            </span>
+            <span className="text-[10px] text-[#035476] flex items-center gap-1 font-mono">
+              <CreditCard className="w-3 h-3 text-[#00aae1]" />
+              Identificación: {patient.identificacion}
+            </span>
+          </div>
         </div>
 
         <button

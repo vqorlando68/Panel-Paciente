@@ -102,7 +102,7 @@ export const Header: React.FC<HeaderProps> = ({
         <button
           type="button"
           onClick={() => onSelectMetricCard?.('vencidos')}
-          title="Filtrar pacientes con citas Vencidas"
+          title="Filtrar pacientes con atenciones Vencidas"
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-[#b45309] cursor-pointer transition-all ${
             activeMetricCard === 'vencidos'
               ? 'bg-[#fef3c7] border-[#b45309] ring-2 ring-[#b45309]/30 font-bold shadow-xs'

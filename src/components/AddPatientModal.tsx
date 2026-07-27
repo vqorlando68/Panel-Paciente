@@ -15,9 +15,9 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({ onAdd, onClose
   const [direccion, setDireccion] = useState('');
   const [idConvenio, setIdConvenio] = useState('SURA-8492');
   const [cohorte, setCohorte] = useState(COHORTE_OPTIONS[0].code);
-  const [estado, setEstado] = useState<EstadoPaciente>('Activo');
   const [riesgo, setRiesgo] = useState<NivelRiesgo>('Medium');
   const [etiqueta, setEtiqueta] = useState('Prioritario');
+  const [retroalimentacion, setRetroalimentacion] = useState('');
   const [fase, setFase] = useState<FasePaciente>('E');
   const [coordinador, setCoordinador] = useState(COORDINADORES_LIST[0]);
   const [numeroCarga, setNumeroCarga] = useState('CARGA-104');
@@ -35,9 +35,10 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({ onAdd, onClose
       direccion: direccion || 'Sin dirección registrada',
       idConvenio,
       cohorte,
-      estado,
+      estado: 'Activo',
       riesgo,
       etiqueta,
+      retroalimentacion,
       fase,
       acta: {
         numero: Math.floor(Math.random() * 100) + 100,
@@ -200,7 +201,7 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({ onAdd, onClose
             </div>
             <div>
               <label className="block text-[11px] font-semibold text-[#035476] mb-1 uppercase">
-                Cohorte
+                Estado Cohorte
               </label>
               <select
                 value={cohorte}
@@ -216,21 +217,7 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({ onAdd, onClose
             </div>
           </div>
 
-          <div className="grid grid-cols-4 gap-3 bg-[#effaff] p-3 rounded-lg border border-[#00aae1]/20">
-            <div>
-              <label className="block text-[11px] font-semibold text-[#035476] mb-1 uppercase">
-                Estado
-              </label>
-              <select
-                value={estado}
-                onChange={(e) => setEstado(e.target.value as EstadoPaciente)}
-                className="w-full bg-white border border-[#e2e8eb] rounded-md px-2 py-1 text-[#033d59]"
-              >
-                <option value="Activo">Activo</option>
-                <option value="Aceptado">Aceptado</option>
-                <option value="Rechazado">Rechazado</option>
-              </select>
-            </div>
+          <div className="grid grid-cols-3 gap-3 bg-[#effaff] p-3 rounded-lg border border-[#00aae1]/20">
             <div>
               <label className="block text-[11px] font-semibold text-[#035476] mb-1 uppercase">
                 Riesgo
@@ -266,12 +253,33 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({ onAdd, onClose
                 onChange={(e) => setFase(e.target.value as FasePaciente)}
                 className="w-full bg-white border border-[#e2e8eb] rounded-md px-2 py-1 text-[#033d59]"
               >
-                <option value="E">E</option>
-                <option value="D">D</option>
-                <option value="I">I</option>
-                <option value="M/E">M/E</option>
+                <option value="E">E - Evaluación</option>
+                <option value="D">D - Diagnóstico</option>
+                <option value="I">I - Intervención</option>
+                <option value="M/E">M/E - Monit./Eval.</option>
               </select>
             </div>
+          </div>
+
+          {/* Retroalimentación Checkbox */}
+          <div className="bg-[#fff1f2] p-3 rounded-lg border border-rose-200 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <input
+                type="checkbox"
+                id="addRetroInconforme"
+                checked={retroalimentacion === 'Inconforme'}
+                onChange={(e) => setRetroalimentacion(e.target.checked ? 'Inconforme' : '')}
+                className="w-4 h-4 text-[#00aae1] rounded border-rose-300 focus:ring-[#00aae1] cursor-pointer"
+              />
+              <label htmlFor="addRetroInconforme" className="text-xs font-semibold text-[#033d59] cursor-pointer select-none">
+                Marcar Retroalimentación como <span className="text-rose-700 font-bold uppercase">Inconforme</span>
+              </label>
+            </div>
+            {retroalimentacion === 'Inconforme' && (
+              <span className="px-2 py-0.5 rounded bg-rose-100 text-rose-800 font-bold text-[10px] border border-rose-300">
+                Inconforme
+              </span>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">

@@ -113,6 +113,7 @@ export interface FilterState {
   nombresApellidos: string;
   numeroCarga: string;
   soloVencidas: boolean;
+  soloAlarmas?: boolean;
 }
 
 export const COHORTE_OPTIONS = [
