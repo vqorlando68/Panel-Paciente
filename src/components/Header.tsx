@@ -16,7 +16,6 @@ interface HeaderProps {
 }
 
 const FAST_FILTER_CHIPS = [
-  { id: 'Todos', label: 'Todos' },
   { id: 'Activos', label: 'Activos' },
   { id: 'Vencidos', label: 'Vencidos' },
   { id: 'Inconforme', label: 'Inconforme', dot: '#e11d48' },
@@ -85,16 +84,22 @@ export const Header: React.FC<HeaderProps> = ({
         </button>
       </div>
 
-      {/* Right Side: Metrics Bar + Separator + Quick Filters */}
-      <div className="flex flex-wrap items-center justify-end gap-2.5 text-xs">
-        {/* Metrics Bar */}
+      {/* Right Side: Metrics Bar & Quick Filters arranged strictly in 2 lines */}
+      <div className="flex flex-col items-end gap-2 text-xs shrink-0">
+        {/* Line 1: Counters (Total, Activos, Vencidos) */}
         <div className="flex items-center gap-2 shrink-0">
+          <span className="text-[10px] font-bold text-[#035476] uppercase tracking-wider mr-0.5">
+            Resumen:
+          </span>
           <button
             type="button"
-            onClick={() => onSelectMetricCard?.('total')}
+            onClick={() => {
+              onSelectMetricCard?.('total');
+              onFastFilterChange?.('Todos');
+            }}
             title="Ver todos los pacientes"
             className={`flex items-center gap-1.5 px-3 py-1 rounded-md border text-[#033d59] cursor-pointer transition-all ${
-              activeMetricCard === 'total'
+              activeMetricCard === 'total' && (fastFilter === 'Todos' || !fastFilter)
                 ? 'bg-[#effaff] border-[#00aae1] ring-2 ring-[#00aae1]/30 font-bold shadow-xs'
                 : 'bg-[#f9fafb] border-[#d0d5dd] hover:bg-gray-100'
             }`}
@@ -105,10 +110,13 @@ export const Header: React.FC<HeaderProps> = ({
 
           <button
             type="button"
-            onClick={() => onSelectMetricCard?.('activos')}
+            onClick={() => {
+              onSelectMetricCard?.('activos');
+              onFastFilterChange?.('Activos');
+            }}
             title="Filtrar pacientes Activos"
             className={`flex items-center gap-1.5 px-3 py-1 rounded-md border text-[#01ae6c] cursor-pointer transition-all ${
-              activeMetricCard === 'activos'
+              activeMetricCard === 'activos' || fastFilter === 'Activos'
                 ? 'bg-[#d0fbe2] border-[#01ae6c] ring-2 ring-[#01ae6c]/30 font-bold shadow-xs'
                 : 'bg-[#ebfef4] border-[#01ae6c]/30 hover:bg-[#d0fbe2]/60'
             }`}
@@ -119,10 +127,13 @@ export const Header: React.FC<HeaderProps> = ({
 
           <button
             type="button"
-            onClick={() => onSelectMetricCard?.('vencidos')}
+            onClick={() => {
+              onSelectMetricCard?.('vencidos');
+              onFastFilterChange?.('Vencidos');
+            }}
             title="Filtrar pacientes con atenciones Vencidas"
             className={`flex items-center gap-1.5 px-3 py-1 rounded-md border text-[#b45309] cursor-pointer transition-all ${
-              activeMetricCard === 'vencidos'
+              activeMetricCard === 'vencidos' || fastFilter === 'Vencidos'
                 ? 'bg-[#fef3c7] border-[#b45309] ring-2 ring-[#b45309]/30 font-bold shadow-xs'
                 : 'bg-[#fffbeb] border-[#fbbf24]/40 hover:bg-[#fef3c7]/60'
             }`}
@@ -132,11 +143,11 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         </div>
 
-        {/* Vertical Separator */}
-        <div className="hidden sm:block h-6 w-px bg-[#e2e8eb] mx-1 shrink-0" />
-
-        {/* Quick Filter Chips */}
-        <div className="flex items-center gap-1.5 flex-wrap">
+        {/* Line 2: Quick Filter Chips (Activos, Vencidos, Inconforme, Críticos, >90 días, Rehuso, Aceptados, Sin Acta) */}
+        <div className="flex items-center gap-1.5 flex-wrap justify-end">
+          <span className="text-[10px] font-bold text-[#035476] uppercase tracking-wider mr-0.5">
+            Filtros Rápidos:
+          </span>
           {FAST_FILTER_CHIPS.map((chip) => {
             const isActive =
               fastFilter === chip.id ||
@@ -146,8 +157,17 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 key={chip.id}
                 type="button"
-                onClick={() => onFastFilterChange?.(chip.id)}
-                className={`h-[28px] px-4 py-1 rounded-full text-[13px] font-medium transition-all duration-200 cursor-pointer flex items-center justify-center shrink-0 ${
+                onClick={() => {
+                  if (isActive) {
+                    onFastFilterChange?.('Todos');
+                    onSelectMetricCard?.('total');
+                  } else {
+                    onFastFilterChange?.(chip.id);
+                    if (chip.id === 'Activos') onSelectMetricCard?.('activos');
+                    else if (chip.id === 'Vencidos') onSelectMetricCard?.('vencidos');
+                  }
+                }}
+                className={`h-[26px] px-3 py-0.5 rounded-full text-[12px] font-medium transition-all duration-200 cursor-pointer flex items-center justify-center shrink-0 ${
                   isActive
                     ? 'bg-[#00aae1] text-white shadow-xs font-bold'
                     : 'bg-[#f3f4f6] text-[#4b5563] hover:bg-[#e5e7eb]'
