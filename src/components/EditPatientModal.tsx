@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Patient, EstadoPaciente, NivelRiesgo, FasePaciente, UserRole } from '../types';
+import { Patient, EstadoPaciente, NivelRiesgo, FasePaciente, UserRole, COHORTE_OPTIONS, COORDINADORES_LIST } from '../types';
 import { X, Save, User, ShieldAlert, CheckCircle2, FileText } from 'lucide-react';
 
 interface EditPatientModalProps {
@@ -69,7 +69,7 @@ export const EditPatientModal: React.FC<EditPatientModalProps> = ({
 
             <div>
               <label className="block text-[11px] font-semibold text-[#035476] mb-1 uppercase">
-                Identificación (CC / CE)
+                Identificación (5 dígitos)
               </label>
               <input
                 type="text"
@@ -138,12 +138,17 @@ export const EditPatientModal: React.FC<EditPatientModalProps> = ({
               <label className="block text-[11px] font-semibold text-[#035476] mb-1 uppercase">
                 Cohorte
               </label>
-              <input
-                type="text"
+              <select
                 value={formData.cohorte}
                 onChange={(e) => setFormData({ ...formData, cohorte: e.target.value })}
                 className="w-full bg-[#f9fafb] border border-[#e2e8eb] rounded-md px-3 py-2 text-[#033d59] focus:outline-none focus:border-[#00aae1]"
-              />
+              >
+                {COHORTE_OPTIONS.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.code} - {c.label}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>
@@ -232,12 +237,17 @@ export const EditPatientModal: React.FC<EditPatientModalProps> = ({
             <label className="block text-[11px] font-semibold text-[#035476] mb-1 uppercase">
               Coordinador Asignado
             </label>
-            <input
-              type="text"
+            <select
               value={formData.coordinador}
               onChange={(e) => setFormData({ ...formData, coordinador: e.target.value })}
               className="w-full bg-[#f9fafb] border border-[#e2e8eb] rounded-md px-3 py-2 text-[#033d59] focus:outline-none focus:border-[#00aae1]"
-            />
+            >
+              {COORDINADORES_LIST.map((coord) => (
+                <option key={coord} value={coord}>
+                  {coord}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Footer Actions */}

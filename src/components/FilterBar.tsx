@@ -1,11 +1,12 @@
-import React from 'react';
-import { FilterState } from '../types';
-import { Search, FilterX } from 'lucide-react';
+import React, { useState } from 'react';
+import { FilterState, COHORTE_OPTIONS } from '../types';
+import { Search, FilterX, ChevronDown, ChevronUp, Bell } from 'lucide-react';
 
 interface FilterBarProps {
   filters: FilterState;
   onFilterChange: (newFilters: FilterState) => void;
   coordinatorsList: string[];
+  conveniosList: string[];
   onResetFilters: () => void;
 }
 
@@ -13,8 +14,11 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   filters,
   onFilterChange,
   coordinatorsList,
+  conveniosList,
   onResetFilters,
 }) => {
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
   const handleChange = (field: keyof FilterState, value: any) => {
     onFilterChange({
       ...filters,
@@ -24,141 +28,208 @@ export const FilterBar: React.FC<FilterBarProps> = ({
 
   const hasActiveFilters =
     filters.estado !== 'Todos' ||
+    filters.cohorte !== 'Todos' ||
     filters.seguimiento !== 'Todos' ||
     filters.coordinador !== 'Todos' ||
+    filters.convenioNombre !== 'Todos' ||
     filters.identificacion !== '' ||
     filters.nombresApellidos !== '' ||
     filters.numeroCarga !== '' ||
     filters.soloVencidas;
 
   return (
-    <div className="bg-white border-b border-[#e2e8eb] px-6 py-4 shrink-0 space-y-3 max-w-[1550px] w-full mx-auto font-sans rounded-xl shadow-xs border my-3">
-      {/* Top Filter Controls Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3 items-end">
-        {/* Dropdown: Estado */}
-        <div>
-          <label className="block text-[11px] font-semibold text-[#035476] mb-1 uppercase tracking-wider">
-            Estado
-          </label>
-          <select
-            value={filters.estado}
-            onChange={(e) => handleChange('estado', e.target.value)}
-            className="w-full h-9 text-xs bg-white border border-[#e2e8eb] rounded-md px-2.5 text-[#033d59] focus:outline-none focus:border-[#00aae1] focus:ring-2 focus:ring-[#00aae1]/20 font-medium cursor-pointer"
+    <div className="bg-white border border-[#e2e8eb] p-4 shrink-0 max-w-[1550px] w-full mx-auto font-sans rounded-xl shadow-2xs my-2 transition-all">
+      {/* Header bar with bell toggle and collapse button on same alignment */}
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-bold text-[#033d59] uppercase tracking-wide">Filtros de Búsqueda</span>
+          {hasActiveFilters && (
+            <span className="bg-[#00aae1]/10 text-[#00aae1] text-[10px] font-bold px-2 py-0.5 rounded-full">
+              Filtros activos
+            </span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* Bell Toggle button for Solo Vencidas */}
+          <button
+            type="button"
+            onClick={() => handleChange('soloVencidas', !filters.soloVencidas)}
+            title={filters.soloVencidas ? "Mostrando solo atenciones vencidas" : "Filtrar por atenciones vencidas"}
+            className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg border cursor-pointer transition-all ${
+              filters.soloVencidas 
+                ? 'bg-[#fffbeb] text-[#b45309] border-[#fbbf24] shadow-2xs font-bold' 
+                : 'bg-[#f9fafb] text-[#035476] border-[#e2e8eb] hover:bg-[#effaff] hover:text-[#00aae1]'
+            }`}
           >
-            <option value="Todos">Todos los estados</option>
-            <option value="Activo">Activo</option>
-            <option value="Aceptado">Aceptado</option>
-            <option value="Rechazado">Rechazado</option>
-          </select>
-        </div>
+            <Bell className={`w-3.5 h-3.5 ${filters.soloVencidas ? 'text-[#b45309] fill-[#b45309]' : 'text-[#035476]'}`} />
+            <span>Vencidas</span>
+          </button>
 
-        {/* Dropdown: Seguimiento */}
-        <div>
-          <label className="block text-[11px] font-semibold text-[#035476] mb-1 uppercase tracking-wider">
-            Seguimiento
-          </label>
-          <select
-            value={filters.seguimiento}
-            onChange={(e) => handleChange('seguimiento', e.target.value)}
-            className="w-full h-9 text-xs bg-white border border-[#e2e8eb] rounded-md px-2.5 text-[#033d59] focus:outline-none focus:border-[#00aae1] focus:ring-2 focus:ring-[#00aae1]/20 font-medium cursor-pointer"
+          {hasActiveFilters && (
+            <button
+              onClick={onResetFilters}
+              className="text-xs text-[#e11d48] hover:text-[#be123c] font-semibold flex items-center gap-1 hover:underline cursor-pointer transition-colors px-1"
+            >
+              <FilterX className="w-3.5 h-3.5" />
+              <span>✕ Limpiar</span>
+            </button>
+          )}
+
+          {/* Toggle - / + Filtros */}
+          <button
+            type="button"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="text-xs font-semibold text-[#035476] hover:text-[#00aae1] flex items-center gap-1 bg-[#f9fafb] hover:bg-[#effaff] border border-[#e2e8eb] px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
           >
-            <option value="Todos">Todos los seguimientos</option>
-            <option value="Vencidos">Con Atenciones Vencidas</option>
-            <option value="Al Día">Al Día</option>
-          </select>
-        </div>
-
-        {/* Dropdown: Coordinador */}
-        <div>
-          <label className="block text-[11px] font-semibold text-[#035476] mb-1 uppercase tracking-wider">
-            Coordinador
-          </label>
-          <select
-            value={filters.coordinador}
-            onChange={(e) => handleChange('coordinador', e.target.value)}
-            className="w-full h-9 text-xs bg-white border border-[#e2e8eb] rounded-md px-2.5 text-[#033d59] focus:outline-none focus:border-[#00aae1] focus:ring-2 focus:ring-[#00aae1]/20 font-medium cursor-pointer"
-          >
-            <option value="Todos">Todos los coordinadores</option>
-            {coordinatorsList.map((coord) => (
-              <option key={coord} value={coord}>
-                {coord}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Text Input: Identificación */}
-        <div>
-          <label className="block text-[11px] font-semibold text-[#035476] mb-1 uppercase tracking-wider">
-            Identificación
-          </label>
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Ej: CC 1.020..."
-              value={filters.identificacion}
-              onChange={(e) => handleChange('identificacion', e.target.value)}
-              className="w-full h-9 text-xs bg-white border border-[#e2e8eb] rounded-md pl-8 pr-2.5 text-[#033d59] placeholder-[#035476]/60 focus:outline-none focus:border-[#00aae1] focus:ring-2 focus:ring-[#00aae1]/20"
-            />
-            <Search className="w-3.5 h-3.5 text-[#035476] absolute left-2.5 top-1/2 -translate-y-1/2" />
-          </div>
-        </div>
-
-        {/* Text Input: Nombres y Apellidos */}
-        <div>
-          <label className="block text-[11px] font-semibold text-[#035476] mb-1 uppercase tracking-wider">
-            Nombres y Apellidos
-          </label>
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Buscar por nombre..."
-              value={filters.nombresApellidos}
-              onChange={(e) => handleChange('nombresApellidos', e.target.value)}
-              className="w-full h-9 text-xs bg-white border border-[#e2e8eb] rounded-md pl-8 pr-2.5 text-[#033d59] placeholder-[#035476]/60 focus:outline-none focus:border-[#00aae1] focus:ring-2 focus:ring-[#00aae1]/20"
-            />
-            <Search className="w-3.5 h-3.5 text-[#035476] absolute left-2.5 top-1/2 -translate-y-1/2" />
-          </div>
-        </div>
-
-        {/* Text Input: Número de Carga */}
-        <div>
-          <label className="block text-[11px] font-semibold text-[#035476] mb-1 uppercase tracking-wider">
-            Número de Carga
-          </label>
-          <input
-            type="text"
-            placeholder="Ej: CARGA-104"
-            value={filters.numeroCarga}
-            onChange={(e) => handleChange('numeroCarga', e.target.value)}
-            className="w-full h-9 text-xs bg-white border border-[#e2e8eb] rounded-md px-2.5 text-[#033d59] placeholder-[#035476]/60 focus:outline-none focus:border-[#00aae1] focus:ring-2 focus:ring-[#00aae1]/20"
-          />
-        </div>
-
-        {/* Checkbox / Toggle Button: Solo Vencidas */}
-        <div className="flex items-center h-9 justify-start">
-          <label className="flex items-center gap-2 text-xs font-bold text-[#b45309] bg-[#fffbeb] px-3 py-2 rounded-md border border-[#fbbf24]/50 cursor-pointer select-none hover:bg-[#fef3c7] transition-colors w-full justify-center">
-            <input
-              type="checkbox"
-              checked={filters.soloVencidas}
-              onChange={(e) => handleChange('soloVencidas', e.target.checked)}
-              className="w-4 h-4 accent-[#b45309] rounded cursor-pointer border-[#e2e8eb]"
-            />
-            <span>Solo Vencidas</span>
-          </label>
+            <span>{isCollapsed ? '+ Filtros' : '- Filtros'}</span>
+            {isCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
+          </button>
         </div>
       </div>
 
-      {/* Action Strip: Reset Filters button if active */}
-      {hasActiveFilters && (
-        <div className="flex items-center justify-between pt-2 border-t border-[#e2e8eb]">
-          <button
-            onClick={onResetFilters}
-            className="text-xs text-[#00aae1] hover:text-[#0196d4] font-medium flex items-center gap-1 px-2.5 py-1 rounded-md hover:bg-[#effaff] transition-colors cursor-pointer"
-          >
-            <FilterX className="w-3.5 h-3.5" />
-            Limpiar Filtros
-          </button>
+      {/* Filter Fields (Single horizontal row of 8 fields) */}
+      {!isCollapsed && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2 items-end pt-1 animate-in fade-in duration-150">
+          
+          {/* Dropdown: Estado */}
+          <div>
+            <label className="block text-[10px] font-bold text-[#035476] mb-1 uppercase tracking-wider">
+              Estado
+            </label>
+            <select
+              value={filters.estado}
+              onChange={(e) => handleChange('estado', e.target.value)}
+              className="w-full h-8 text-[11px] bg-white border border-[#e2e8eb] rounded-md px-2 text-[#033d59] focus:outline-none focus:border-[#00aae1] font-medium cursor-pointer"
+            >
+              <option value="Todos">Todos</option>
+              <option value="Activo">Activo</option>
+              <option value="Aceptado">Aceptado</option>
+              <option value="Rechazado">Rechazado</option>
+            </select>
+          </div>
+
+          {/* Dropdown: Cohorte */}
+          <div>
+            <label className="block text-[10px] font-bold text-[#035476] mb-1 uppercase tracking-wider">
+              Cohorte
+            </label>
+            <select
+              value={filters.cohorte}
+              onChange={(e) => handleChange('cohorte', e.target.value)}
+              className="w-full h-8 text-[11px] bg-white border border-[#e2e8eb] rounded-md px-2 text-[#033d59] focus:outline-none focus:border-[#00aae1] font-medium cursor-pointer truncate"
+            >
+              <option value="Todos">Todas</option>
+              {COHORTE_OPTIONS.map((coh) => (
+                <option key={coh.code} value={coh.code} title={coh.label}>
+                  {coh.code} - {coh.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Dropdown: Seguimiento */}
+          <div>
+            <label className="block text-[10px] font-bold text-[#035476] mb-1 uppercase tracking-wider">
+              Seguimiento
+            </label>
+            <select
+              value={filters.seguimiento}
+              onChange={(e) => handleChange('seguimiento', e.target.value)}
+              className="w-full h-8 text-[11px] bg-white border border-[#e2e8eb] rounded-md px-2 text-[#033d59] focus:outline-none focus:border-[#00aae1] font-medium cursor-pointer"
+            >
+              <option value="Todos">Todos</option>
+              <option value="Vencidos">Con Vencidos</option>
+              <option value="Al Día">Al Día</option>
+            </select>
+          </div>
+
+          {/* Dropdown: Coordinador */}
+          <div>
+            <label className="block text-[10px] font-bold text-[#035476] mb-1 uppercase tracking-wider">
+              Coordinador
+            </label>
+            <select
+              value={filters.coordinador}
+              onChange={(e) => handleChange('coordinador', e.target.value)}
+              className="w-full h-8 text-[11px] bg-white border border-[#e2e8eb] rounded-md px-2 text-[#033d59] focus:outline-none focus:border-[#00aae1] font-medium cursor-pointer truncate"
+            >
+              <option value="Todos">Todos</option>
+              {coordinatorsList.map((coord) => (
+                <option key={coord} value={coord}>
+                  {coord}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Dropdown: Nombre Convenio */}
+          <div>
+            <label className="block text-[10px] font-bold text-[#035476] mb-1 uppercase tracking-wider">
+              Convenio
+            </label>
+            <select
+              value={filters.convenioNombre}
+              onChange={(e) => handleChange('convenioNombre', e.target.value)}
+              className="w-full h-8 text-[11px] bg-white border border-[#e2e8eb] rounded-md px-2 text-[#033d59] focus:outline-none focus:border-[#00aae1] font-medium cursor-pointer truncate"
+            >
+              <option value="Todos">Todos</option>
+              {conveniosList.map((conv) => (
+                <option key={conv} value={conv}>
+                  {conv}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Text Input: Identificación */}
+          <div>
+            <label className="block text-[10px] font-bold text-[#035476] mb-1 uppercase tracking-wider">
+              Identificación
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Ej: 10482..."
+                value={filters.identificacion}
+                onChange={(e) => handleChange('identificacion', e.target.value)}
+                className="w-full h-8 text-[11px] bg-white border border-[#e2e8eb] rounded-md pl-6 pr-1.5 text-[#033d59] placeholder-[#035476]/60 focus:outline-none focus:border-[#00aae1]"
+              />
+              <Search className="w-3 h-3 text-[#035476] absolute left-1.5 top-1/2 -translate-y-1/2" />
+            </div>
+          </div>
+
+          {/* Text Input: Nombres y Apellidos */}
+          <div>
+            <label className="block text-[10px] font-bold text-[#035476] mb-1 uppercase tracking-wider">
+              Nombres / Apellidos
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Buscar..."
+                value={filters.nombresApellidos}
+                onChange={(e) => handleChange('nombresApellidos', e.target.value)}
+                className="w-full h-8 text-[11px] bg-white border border-[#e2e8eb] rounded-md pl-6 pr-1.5 text-[#033d59] placeholder-[#035476]/60 focus:outline-none focus:border-[#00aae1]"
+              />
+              <Search className="w-3 h-3 text-[#035476] absolute left-1.5 top-1/2 -translate-y-1/2" />
+            </div>
+          </div>
+
+          {/* Text Input: Número de Carga */}
+          <div>
+            <label className="block text-[10px] font-bold text-[#035476] mb-1 uppercase tracking-wider">
+              N° Carga
+            </label>
+            <input
+              type="text"
+              placeholder="CARGA-..."
+              value={filters.numeroCarga}
+              onChange={(e) => handleChange('numeroCarga', e.target.value)}
+              className="w-full h-8 text-[11px] bg-white border border-[#e2e8eb] rounded-md px-2 text-[#033d59] placeholder-[#035476]/60 focus:outline-none focus:border-[#00aae1]"
+            />
+          </div>
+
         </div>
       )}
     </div>

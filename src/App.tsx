@@ -7,6 +7,7 @@ import {
   NivelRiesgo,
   SpecialistKey,
   SpecialistInfo,
+  COORDINADORES_LIST,
 } from './types';
 import { INITIAL_PATIENTS } from './mockData';
 import { Header } from './components/Header';
@@ -17,6 +18,11 @@ import { NotesDrawer } from './components/NotesDrawer';
 import { ActaModal } from './components/ActaModal';
 import { SpecialistEditModal } from './components/SpecialistEditModal';
 import { AddPatientModal } from './components/AddPatientModal';
+import { AlarmBanner } from './components/AlarmBanner';
+import { CostAnalysisModal } from './components/CostAnalysisModal';
+import { CuadroMedicoDrawer } from './components/CuadroMedicoDrawer';
+import { AgendaDrawer } from './components/AgendaDrawer';
+import { TasasDrawer } from './components/TasasDrawer';
 
 export default function App() {
   const [patients, setPatients] = useState<Patient[]>(INITIAL_PATIENTS);
@@ -25,8 +31,10 @@ export default function App() {
   // Filter State
   const [filters, setFilters] = useState<FilterState>({
     estado: 'Todos',
+    cohorte: 'Todos',
     seguimiento: 'Todos',
     coordinador: 'Todos',
+    convenioNombre: 'Todos',
     identificacion: '',
     nombresApellidos: '',
     numeroCarga: '',
@@ -47,6 +55,12 @@ export default function App() {
   } | null>(null);
   const [isAddPatientOpen, setIsAddPatientOpen] = useState(false);
 
+  // New Modals/Drawers
+  const [costAnalysisPatient, setCostAnalysisPatient] = useState<Patient | null>(null);
+  const [cuadroMedicoPatient, setCuadroMedicoPatient] = useState<Patient | null>(null);
+  const [agendaPatient, setAgendaPatient] = useState<Patient | null>(null);
+  const [tasasPatient, setTasasPatient] = useState<Patient | null>(null);
+
   // Helper: check if a patient has any overdue specialist
   const patientHasOverdueSpecialist = (patient: Patient): boolean => {
     return Object.values(patient.specialists).some((spec) => Boolean(spec?.isOverdue));
@@ -54,7 +68,13 @@ export default function App() {
 
   // Extract unique coordinators list
   const coordinatorsList = useMemo(() => {
-    const list = Array.from(new Set(patients.map((p) => p.coordinador))).filter(Boolean);
+    const list = Array.from(new Set([...COORDINADORES_LIST, ...patients.map((p) => p.coordinador)])).filter(Boolean);
+    return list.sort();
+  }, [patients]);
+
+  // Extract unique convenios list
+  const conveniosList = useMemo(() => {
+    const list = Array.from(new Set(patients.map((p) => p.convenioNombre))).filter(Boolean);
     return list.sort();
   }, [patients]);
 
@@ -63,6 +83,11 @@ export default function App() {
     return patients.filter((patient) => {
       // Estado Filter
       if (filters.estado !== 'Todos' && patient.estado !== filters.estado) {
+        return false;
+      }
+
+      // Cohorte Filter
+      if (filters.cohorte !== 'Todos' && patient.cohorte !== filters.cohorte) {
         return false;
       }
 
@@ -76,6 +101,11 @@ export default function App() {
 
       // Coordinador Filter
       if (filters.coordinador !== 'Todos' && patient.coordinador !== filters.coordinador) {
+        return false;
+      }
+
+      // Convenio Nombre Filter
+      if (filters.convenioNombre !== 'Todos' && patient.convenioNombre !== filters.convenioNombre) {
         return false;
       }
 
@@ -121,8 +151,10 @@ export default function App() {
   const handleResetFilters = () => {
     setFilters({
       estado: 'Todos',
+      cohorte: 'Todos',
       seguimiento: 'Todos',
       coordinador: 'Todos',
+      convenioNombre: 'Todos',
       identificacion: '',
       nombresApellidos: '',
       numeroCarga: '',
@@ -169,7 +201,6 @@ export default function App() {
       })
     );
 
-    // Refresh active drawer patient reference
     if (notesDrawerState) {
       const updatedP = patients.find((p) => p.id === patientId);
       if (updatedP) {
@@ -214,9 +245,9 @@ export default function App() {
 
   return (
     <div className="h-screen w-screen flex flex-col overflow-hidden bg-[#fafafa] font-sans text-[#033d59]">
-      {/* Container with horizontal padding to leave margin on desktop */}
       <div className="flex-1 flex flex-col overflow-hidden px-4 md:px-8 py-2 max-w-[1600px] w-full mx-auto">
-        {/* 1. TOP SECTION: Header with Role Switcher Tabs */}
+        
+        {/* Header */}
         <Header
           activeRole={activeRole}
           onRoleChange={setActiveRole}
@@ -225,15 +256,22 @@ export default function App() {
           activeCount={activeCount}
         />
 
-        {/* 2. TOP SECTION: Filter Bar */}
+        {/* Alarm Banner */}
+        <AlarmBanner
+          patients={patients}
+          onActivateAlarmFilter={() => setFilters((f) => ({ ...f, soloVencidas: true }))}
+        />
+
+        {/* Filter Bar */}
         <FilterBar
           filters={filters}
           onFilterChange={setFilters}
           coordinatorsList={coordinatorsList}
+          conveniosList={conveniosList}
           onResetFilters={handleResetFilters}
         />
 
-        {/* 3. MAIN TABLE SECTION */}
+        {/* Main Table Section (19 Columns) */}
         <PatientTable
           patients={filteredPatients}
           activeRole={activeRole}
@@ -243,6 +281,10 @@ export default function App() {
           onOpenActa={(patient) => setActaModalPatient(patient)}
           onOpenNotesDrawer={(patient, type) => setNotesDrawerState({ patient, type })}
           onEditSpecialist={(patient, key, info) => setEditingSpecialist({ patient, key, info })}
+          onOpenCostAnalysis={(patient) => setCostAnalysisPatient(patient)}
+          onOpenCuadroMedico={(patient) => setCuadroMedicoPatient(patient)}
+          onOpenAgenda={(patient) => setAgendaPatient(patient)}
+          onOpenTasas={(patient) => setTasasPatient(patient)}
         />
 
         {/* Footer Status Bar */}
@@ -321,6 +363,35 @@ export default function App() {
         <AddPatientModal
           onAdd={handleAddPatient}
           onClose={() => setIsAddPatientOpen(false)}
+        />
+      )}
+
+      {/* New Feature Modals/Drawers */}
+      {costAnalysisPatient && (
+        <CostAnalysisModal
+          patient={costAnalysisPatient}
+          onClose={() => setCostAnalysisPatient(null)}
+        />
+      )}
+
+      {cuadroMedicoPatient && (
+        <CuadroMedicoDrawer
+          patient={cuadroMedicoPatient}
+          onClose={() => setCuadroMedicoPatient(null)}
+        />
+      )}
+
+      {agendaPatient && (
+        <AgendaDrawer
+          patient={agendaPatient}
+          onClose={() => setAgendaPatient(null)}
+        />
+      )}
+
+      {tasasPatient && (
+        <TasasDrawer
+          patient={tasasPatient}
+          onClose={() => setTasasPatient(null)}
         />
       )}
     </div>

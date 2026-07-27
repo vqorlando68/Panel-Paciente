@@ -24,15 +24,23 @@ import {
   Plus,
   Activity,
   Eye,
+  BarChart3,
+  Users,
+  Calendar,
+  Bell,
 } from 'lucide-react';
 
 export type SortField =
   | 'nombre'
+  | 'tasa_c'
+  | 'tasa_i'
+  | 'tasa_r'
   | 'identificacion'
-  | 'cohorte'
+  | 'convenioNombre'
   | 'estado'
   | 'riesgo'
   | 'etiqueta'
+  | 'retroalimentacion'
   | 'fase'
   | 'acta'
   | 'coordinador'
@@ -41,7 +49,8 @@ export type SortField =
   | 'psicol'
   | 'esp_1'
   | 'esp_2'
-  | 'esp_3';
+  | 'esp_3'
+  | 'esp_4';
 
 export type SortDirection = 'asc' | 'desc';
 
@@ -54,6 +63,10 @@ interface PatientTableProps {
   onOpenActa: (patient: Patient) => void;
   onOpenNotesDrawer: (patient: Patient, type: 'op' | 'cli') => void;
   onEditSpecialist: (patient: Patient, key: SpecialistKey, info: SpecialistInfo) => void;
+  onOpenCostAnalysis: (patient: Patient) => void;
+  onOpenCuadroMedico: (patient: Patient) => void;
+  onOpenAgenda: (patient: Patient) => void;
+  onOpenTasas: (patient: Patient) => void;
 }
 
 export const PatientTable: React.FC<PatientTableProps> = ({
@@ -65,6 +78,10 @@ export const PatientTable: React.FC<PatientTableProps> = ({
   onOpenActa,
   onOpenNotesDrawer,
   onEditSpecialist,
+  onOpenCostAnalysis,
+  onOpenCuadroMedico,
+  onOpenAgenda,
+  onOpenTasas,
 }) => {
   // Sort State
   const [sortField, setSortField] = useState<SortField | null>('nombre');
@@ -77,6 +94,7 @@ export const PatientTable: React.FC<PatientTableProps> = ({
   } | null>(null);
 
   const [activeMenuPatientId, setActiveMenuPatientId] = useState<string | null>(null);
+  const [activeAlarmTooltipPatientId, setActiveAlarmTooltipPatientId] = useState<string | null>(null);
   const [riskMenuPatientId, setRiskMenuPatientId] = useState<string | null>(null);
   const [statusMenuPatientId, setStatusMenuPatientId] = useState<string | null>(null);
   const [showRoleAlert, setShowRoleAlert] = useState(false);
@@ -106,22 +124,32 @@ export const PatientTable: React.FC<PatientTableProps> = ({
           valA = a.nombre.toLowerCase();
           valB = b.nombre.toLowerCase();
           break;
+        case 'tasa_c':
+          valA = a.tasas.cancelacionesPct;
+          valB = b.tasas.cancelacionesPct;
+          break;
+        case 'tasa_i':
+          valA = a.tasas.inasistenciasPct;
+          valB = b.tasas.inasistenciasPct;
+          break;
+        case 'tasa_r':
+          valA = a.tasas.reprogramacionesPct;
+          valB = b.tasas.reprogramacionesPct;
+          break;
         case 'identificacion':
           valA = a.identificacion.toLowerCase();
           valB = b.identificacion.toLowerCase();
           break;
-        case 'cohorte':
-          valA = a.cohorte.toLowerCase();
-          valB = b.cohorte.toLowerCase();
+        case 'convenioNombre':
+          valA = a.convenioNombre.toLowerCase();
+          valB = b.convenioNombre.toLowerCase();
           break;
         case 'estado':
-          // Sort order: Activo = 3, Aceptado = 2, Rechazado = 1
           const estadoWeight = { Activo: 3, Aceptado: 2, Rechazado: 1 };
           valA = estadoWeight[a.estado] || 0;
           valB = estadoWeight[b.estado] || 0;
           break;
         case 'riesgo':
-          // Sort order: Critical = 4, High = 3, Medium = 2, Low = 1
           const riesgoWeight = { Critical: 4, High: 3, Medium: 2, Low: 1 };
           valA = riesgoWeight[a.riesgo] || 0;
           valB = riesgoWeight[b.riesgo] || 0;
@@ -129,6 +157,10 @@ export const PatientTable: React.FC<PatientTableProps> = ({
         case 'etiqueta':
           valA = a.etiqueta.toLowerCase();
           valB = b.etiqueta.toLowerCase();
+          break;
+        case 'retroalimentacion':
+          valA = (a.etiqueta === 'Inconforme' ? 'Inconforme' : '').toLowerCase();
+          valB = (b.etiqueta === 'Inconforme' ? 'Inconforme' : '').toLowerCase();
           break;
         case 'fase':
           valA = a.fase.toLowerCase();
@@ -148,9 +180,9 @@ export const PatientTable: React.FC<PatientTableProps> = ({
         case 'esp_1':
         case 'esp_2':
         case 'esp_3':
+        case 'esp_4':
           const specA = a.specialists[sortField];
           const specB = b.specialists[sortField];
-          // Sort by overdue status first, then by targetDate string
           valA = (specA?.isOverdue ? '1_' : '0_') + (specA?.targetDate || '9999-99-99');
           valB = (specB?.isOverdue ? '1_' : '0_') + (specB?.targetDate || '9999-99-99');
           break;
@@ -188,25 +220,25 @@ export const PatientTable: React.FC<PatientTableProps> = ({
       case 'Critical':
         return (
           <div className="flex items-center justify-center text-[#e11d48]" title="Riesgo Crítico (Triángulo Rojo)">
-            <AlertTriangle className="w-5 h-5 fill-[#e11d48]/20 stroke-[2.5]" />
+            <AlertTriangle className="w-4 h-4 fill-[#e11d48]/20 stroke-[2.5]" />
           </div>
         );
       case 'High':
         return (
           <div className="flex items-center justify-center text-[#e11d48]" title="Riesgo Alto (Círculo Rojo)">
-            <Circle className="w-4 h-4 fill-[#e11d48] stroke-none" />
+            <Circle className="w-3.5 h-3.5 fill-[#e11d48] stroke-none" />
           </div>
         );
       case 'Medium':
         return (
           <div className="flex items-center justify-center text-[#fbbf24]" title="Riesgo Medio (Círculo Amarillo)">
-            <Circle className="w-4 h-4 fill-[#fbbf24] stroke-none" />
+            <Circle className="w-3.5 h-3.5 fill-[#fbbf24] stroke-none" />
           </div>
         );
       case 'Low':
         return (
           <div className="flex items-center justify-center text-[#01ae6c]" title="Riesgo Bajo (Círculo Verde)">
-            <Circle className="w-4 h-4 fill-[#01ae6c] stroke-none" />
+            <Circle className="w-3.5 h-3.5 fill-[#01ae6c] stroke-none" />
           </div>
         );
     }
@@ -230,7 +262,7 @@ export const PatientTable: React.FC<PatientTableProps> = ({
       <div className="relative font-sans">
         <button
           onClick={() => setStatusMenuPatientId(statusMenuPatientId === patient.id ? null : patient.id)}
-          className={`px-2.5 py-1 rounded-full text-[11px] font-bold border transition-all flex items-center gap-1 cursor-pointer ${style}`}
+          className={`px-2 py-0.5 rounded-full text-[10px] font-bold border transition-all flex items-center gap-1 cursor-pointer ${style}`}
         >
           <span>{patient.estado}</span>
           <ChevronDown className="w-3 h-3 opacity-60" />
@@ -266,7 +298,7 @@ export const PatientTable: React.FC<PatientTableProps> = ({
     if (fase === 'M/E') color = 'bg-teal-50 text-teal-700 border-teal-200';
 
     return (
-      <span className={`px-2 py-0.5 rounded font-mono font-bold text-xs border ${color}`}>
+      <span className={`px-2 py-0.5 rounded font-mono font-bold text-[10px] border ${color}`}>
         {fase}
       </span>
     );
@@ -288,25 +320,21 @@ export const PatientTable: React.FC<PatientTableProps> = ({
         }`}
         title={`Atención de ${data.specialistTitle}. Clic para editar.`}
       >
-        {/* Line 1: Professional Name */}
-        <div className="font-semibold truncate text-[11px] leading-tight text-[#033d59]">
+        <div className="font-semibold truncate text-[10px] leading-tight text-[#033d59]">
           {data.professionalName}
         </div>
 
-        {/* Line 2: Last Attention Date */}
-        <div className="text-[10px] flex items-center justify-between opacity-90">
+        <div className="text-[9px] flex items-center justify-between opacity-90">
           <span className="text-[#035476]">Última:</span>
           <span className="font-mono text-[#033d59]">{data.lastAttentionDate}</span>
         </div>
 
-        {/* Line 3: Frequency */}
-        <div className="text-[10px] flex items-center justify-between opacity-80">
+        <div className="text-[9px] flex items-center justify-between opacity-80">
           <span className="text-[#035476]">Frec:</span>
           <span className="truncate max-w-[80px] text-[#033d59]">{data.frequency}</span>
         </div>
 
-        {/* Line 4: Target Date */}
-        <div className={`text-[10px] flex items-center justify-between font-mono font-medium ${
+        <div className={`text-[9px] flex items-center justify-between font-mono font-medium ${
           isOverdue ? 'text-[#b45309] font-bold' : 'text-[#035476]'
         }`}>
           <span>Obj:</span>
@@ -316,13 +344,12 @@ export const PatientTable: React.FC<PatientTableProps> = ({
     );
   };
 
-  // Render clickable header column with sorting indicator
   const renderHeader = (label: string, field: SortField, className: string = '') => {
     const isActive = sortField === field;
     return (
       <th
         onClick={() => handleSort(field)}
-        className={`px-3 h-11 cursor-pointer transition-colors hover:bg-[#effaff] select-none ${className}`}
+        className={`px-3 h-10 cursor-pointer transition-colors hover:bg-[#effaff] select-none ${className}`}
         title={`Clic para ordenar por ${label}`}
       >
         <div className="flex items-center gap-1.5 justify-between">
@@ -344,7 +371,7 @@ export const PatientTable: React.FC<PatientTableProps> = ({
   };
 
   return (
-    <div className="flex-1 overflow-auto relative w-full bg-white font-sans max-w-[1550px] mx-auto rounded-xl shadow-xs border border-[#e2e8eb] my-2">
+    <div className="flex-1 overflow-auto relative w-full bg-white font-sans max-w-[1550px] mx-auto rounded-xl shadow-2xs border border-[#e2e8eb] my-2">
       {/* Toast Notification when SIAU tries to change Risk */}
       {showRoleAlert && (
         <div className="fixed bottom-4 right-4 z-50 bg-[#fffbeb] border border-[#fbbf24] text-[#b45309] px-4 py-2.5 rounded-lg shadow-lg text-xs font-semibold flex items-center gap-2">
@@ -353,30 +380,74 @@ export const PatientTable: React.FC<PatientTableProps> = ({
         </div>
       )}
 
-      {/* Main Table Structure (18 Columns) */}
-      <table className="w-full text-left border-collapse min-w-[2000px]">
+      {/* Main Table Structure (21 Columns) */}
+      <table className="w-full text-left border-collapse min-w-[2500px]">
         {/* Table Header */}
         <thead>
-          <tr className="bg-[#f9fafb] border-b border-[#e2e8eb] text-[11px] font-bold text-[#035476] uppercase tracking-wider select-none h-11">
-            {/* Col 1: Acciones (Sticky Left) */}
+          <tr className="bg-[#f9fafb] border-b border-[#e2e8eb] text-[10px] font-bold text-[#035476] uppercase tracking-wider select-none h-10">
+            {/* Col 1: ACCIONES (Sticky Left) */}
             <th className="sticky left-0 z-20 bg-[#f9fafb] px-2 text-center border-r border-[#e2e8eb] min-w-[110px] max-w-[110px]">
-              Acciones
+              ACCIONES
             </th>
 
-            {/* Col 2: Nombre (Sticky Left) */}
+            {/* Col 2: TASA (Sticky Left-[110px]) */}
+            <th className="sticky left-[110px] z-20 bg-[#f9fafb] px-2 py-1 border-r border-[#e2e8eb] min-w-[170px] max-w-[170px] select-none">
+              <div className="flex items-center justify-between gap-1 mb-0.5">
+                <span className="font-bold text-[#035476] text-[10px]">TASA</span>
+              </div>
+              <div className="flex items-center justify-between gap-1">
+                <button
+                  type="button"
+                  onClick={() => handleSort('tasa_c')}
+                  className={`px-1 py-0.5 rounded text-[9px] font-bold border flex items-center gap-0.5 cursor-pointer transition-colors ${
+                    sortField === 'tasa_c'
+                      ? 'bg-rose-100 border-rose-300 text-rose-800'
+                      : 'bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100'
+                  }`}
+                  title="Ordenar por % Cancelaciones"
+                >
+                  <span>%C</span>
+                  {sortField === 'tasa_c' && (sortDirection === 'asc' ? <ArrowUp className="w-2.5 h-2.5" /> : <ArrowDown className="w-2.5 h-2.5" />)}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSort('tasa_i')}
+                  className={`px-1 py-0.5 rounded text-[9px] font-bold border flex items-center gap-0.5 cursor-pointer transition-colors ${
+                    sortField === 'tasa_i'
+                      ? 'bg-amber-100 border-amber-300 text-amber-900'
+                      : 'bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100'
+                  }`}
+                  title="Ordenar por % Inasistencias"
+                >
+                  <span>%I</span>
+                  {sortField === 'tasa_i' && (sortDirection === 'asc' ? <ArrowUp className="w-2.5 h-2.5" /> : <ArrowDown className="w-2.5 h-2.5" />)}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSort('tasa_r')}
+                  className={`px-1 py-0.5 rounded text-[9px] font-bold border flex items-center gap-0.5 cursor-pointer transition-colors ${
+                    sortField === 'tasa_r'
+                      ? 'bg-sky-100 border-sky-300 text-sky-900'
+                      : 'bg-sky-50 border-sky-200 text-sky-700 hover:bg-sky-100'
+                  }`}
+                  title="Ordenar por % Reprogramaciones"
+                >
+                  <span>%R</span>
+                  {sortField === 'tasa_r' && (sortDirection === 'asc' ? <ArrowUp className="w-2.5 h-2.5" /> : <ArrowDown className="w-2.5 h-2.5" />)}
+                </button>
+              </div>
+            </th>
+
+            {/* Col 3: NOMBRE DEL PACIENTE (Sticky Left-[280px]) */}
             <th
               onClick={() => handleSort('nombre')}
-              className="sticky left-[110px] z-20 bg-[#f9fafb] px-3 border-r border-[#e2e8eb] min-w-[220px] max-w-[220px] cursor-pointer hover:bg-[#effaff] transition-colors"
+              className="sticky left-[280px] z-20 bg-[#f9fafb] px-3 border-r border-[#e2e8eb] min-w-[220px] max-w-[220px] cursor-pointer hover:bg-[#effaff] transition-colors"
             >
               <div className="flex items-center gap-1.5 justify-between">
-                <span>Nombre del Paciente</span>
+                <span>NOMBRE DEL PACIENTE</span>
                 <span className="text-[#00aae1]">
                   {sortField === 'nombre' ? (
-                    sortDirection === 'asc' ? (
-                      <ArrowUp className="w-3.5 h-3.5" />
-                    ) : (
-                      <ArrowDown className="w-3.5 h-3.5" />
-                    )
+                    sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />
                   ) : (
                     <ArrowUpDown className="w-3 h-3 text-[#035476]/40" />
                   )}
@@ -384,46 +455,50 @@ export const PatientTable: React.FC<PatientTableProps> = ({
               </div>
             </th>
 
-            {/* Col 2: ID */}
+            {/* Col 4: ID */}
             {renderHeader('ID', 'identificacion', 'min-w-[110px]')}
 
-            {/* Col 3: Cohorte */}
-            {renderHeader('Cohorte', 'cohorte', 'min-w-[150px]')}
+            {/* Col 5: NOMBRE CONVENIO */}
+            {renderHeader('NOMBRE CONVENIO', 'convenioNombre', 'min-w-[180px]')}
 
-            {/* Col 4: Estado */}
-            {renderHeader('Estado', 'estado', 'min-w-[110px]')}
+            {/* Col 6: ESTADO */}
+            {renderHeader('ESTADO', 'estado', 'min-w-[100px]')}
 
-            {/* Col 5: Riesgo */}
-            {renderHeader('Riesgo', 'riesgo', 'min-w-[90px] text-center')}
+            {/* Col 7: RIESGO */}
+            {renderHeader('RIESGO', 'riesgo', 'min-w-[80px] text-center')}
 
-            {/* Col 6: Etiqueta */}
-            {renderHeader('Etiqueta', 'etiqueta', 'min-w-[120px]')}
+            {/* Col 8: ETIQUETA */}
+            {renderHeader('ETIQUETA', 'etiqueta', 'min-w-[110px]')}
 
-            {/* Col 7: Fase */}
-            {renderHeader('Fase', 'fase', 'min-w-[80px] text-center')}
+            {/* Col 9: RETROALIMENTACIÓN */}
+            {renderHeader('RETROALIMENTACIÓN', 'retroalimentacion', 'min-w-[140px]')}
 
-            {/* Col 8: Acta */}
-            {renderHeader('Acta', 'acta', 'min-w-[85px] text-center')}
+            {/* Col 10: FASE */}
+            {renderHeader('FASE', 'fase', 'min-w-[75px] text-center')}
 
-            {/* Col 9: Coord */}
-            {renderHeader('Coordinador', 'coordinador', 'min-w-[130px]')}
+            {/* Col 11: ACTA */}
+            {renderHeader('ACTA', 'acta', 'min-w-[85px] text-center')}
 
-            {/* Columns 10 to 15 (Specialists) */}
-            {renderHeader('MEDICO GEN.', 'med_gen', 'min-w-[165px] bg-[#f9fafb] border-l border-[#e2e8eb] text-[#033d59]')}
-            {renderHeader('NUTRICIONISTA', 'nutri', 'min-w-[165px] bg-[#f9fafb] text-[#033d59]')}
-            {renderHeader('Psicologia', 'psicol', 'min-w-[165px] bg-[#f9fafb] text-[#033d59]')}
-            {renderHeader('Esp. 1', 'esp_1', 'min-w-[165px] bg-[#f9fafb] text-[#033d59]')}
-            {renderHeader('Esp. 2', 'esp_2', 'min-w-[165px] bg-[#f9fafb] text-[#033d59]')}
-            {renderHeader('Esp. 3', 'esp_3', 'min-w-[165px] bg-[#f9fafb] border-r border-[#e2e8eb] text-[#033d59]')}
+            {/* Col 12: COORDINADOR */}
+            {renderHeader('COORDINADOR', 'coordinador', 'min-w-[130px]')}
 
-            {/* Col 16: Nota Op. (Sticky Right) */}
+            {/* Cols 13 to 19: ESPECIALISTAS (7 Columns) */}
+            {renderHeader('MEDICO GEN.', 'med_gen', 'min-w-[160px] bg-[#f9fafb] border-l border-[#e2e8eb] text-[#033d59]')}
+            {renderHeader('NUTRICIONISTA', 'nutri', 'min-w-[160px] bg-[#f9fafb] text-[#033d59]')}
+            {renderHeader('PSICOLOGIA', 'psicol', 'min-w-[160px] bg-[#f9fafb] text-[#033d59]')}
+            {renderHeader('ESP. 1', 'esp_1', 'min-w-[160px] bg-[#f9fafb] text-[#033d59]')}
+            {renderHeader('ESP. 2', 'esp_2', 'min-w-[160px] bg-[#f9fafb] text-[#033d59]')}
+            {renderHeader('ESP. 3', 'esp_3', 'min-w-[160px] bg-[#f9fafb] text-[#033d59]')}
+            {renderHeader('ESP. 4', 'esp_4', 'min-w-[160px] bg-[#f9fafb] border-r border-[#e2e8eb] text-[#033d59]')}
+
+            {/* Col 20: NOTA OP (Sticky Right) */}
             <th className="sticky right-[56px] z-20 bg-[#f9fafb] px-2 text-center border-l border-[#e2e8eb] min-w-[56px] max-w-[56px]">
-              Nota Op.
+              NOTA OP
             </th>
 
-            {/* Col 17: Nota Clí. (Sticky Right) */}
+            {/* Col 21: NOTA CLI (Sticky Right) */}
             <th className="sticky right-0 z-20 bg-[#f9fafb] px-2 text-center border-l border-[#e2e8eb] min-w-[56px] max-w-[56px]">
-              Nota Clí.
+              NOTA CLI
             </th>
           </tr>
         </thead>
@@ -432,61 +507,186 @@ export const PatientTable: React.FC<PatientTableProps> = ({
         <tbody className="divide-y divide-[#e2e8eb] text-xs bg-white">
           {sortedPatients.length === 0 ? (
             <tr>
-              <td colSpan={18} className="py-12 text-center text-[#035476] font-medium">
+              <td colSpan={21} className="py-12 text-center text-[#035476] font-medium">
                 No se encontraron pacientes que coincidan con los criterios de búsqueda.
               </td>
             </tr>
           ) : (
             sortedPatients.map((patient) => {
+              const isMenuOpen = activeMenuPatientId === patient.id;
+              const isAlarmOpen = activeAlarmTooltipPatientId === patient.id;
+
               return (
                 <tr
                   key={patient.id}
                   className="hover:bg-[#f9fafb] transition-colors group h-[72px]"
                 >
-                  {/* Col 1: Acciones (Sticky Left - 3 Buttons) */}
-                  <td className="sticky left-0 z-20 bg-white group-hover:bg-[#f9fafb] px-2 py-2 border-r border-[#e2e8eb] min-w-[110px] max-w-[110px]">
+                  {/* Col 1: ACCIONES (Sticky Left) */}
+                  <td className={`sticky left-0 bg-white group-hover:bg-[#f9fafb] px-2 py-2 border-r border-[#e2e8eb] min-w-[110px] max-w-[110px] ${
+                    isMenuOpen || isAlarmOpen ? 'z-40' : 'z-20'
+                  }`}>
                     <div className="flex items-center justify-center gap-1.5">
-                      {/* Button 1: Ver Acta */}
-                      <button
-                        onClick={() => onOpenActa(patient)}
-                        className="p-1.5 rounded-lg bg-[#effaff] hover:bg-[#00aae1] text-[#00aae1] hover:text-white transition-all border border-[#00aae1]/20 cursor-pointer shadow-2xs"
-                        title="Ver Acta"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                      </button>
+                      
+                      {/* Bell Icon if alarm active */}
+                      {patient.hasAlarm ? (
+                        <div className="relative">
+                          <button
+                            type="button"
+                            onClick={() => setActiveAlarmTooltipPatientId(isAlarmOpen ? null : patient.id)}
+                            className="p-1 rounded-md bg-amber-50 text-amber-600 hover:bg-amber-100 border border-amber-300 transition-colors cursor-pointer"
+                            title="Ver Alerta de Gestión"
+                          >
+                            <Bell className="w-3.5 h-3.5 fill-amber-500 text-amber-600" />
+                          </button>
 
-                      {/* Button 2 (Mitad): Evolución */}
-                      <button
-                        onClick={() => onOpenNotesDrawer(patient, 'cli')}
-                        className="p-1.5 rounded-lg bg-teal-50 hover:bg-teal-600 text-teal-600 hover:text-white transition-all border border-teal-200 cursor-pointer shadow-2xs"
-                        title="Evolución"
-                      >
-                        <Activity className="w-3.5 h-3.5" />
-                      </button>
-
-                      {/* Button 3 (Último): Nueva Acta */}
-                      {activeRole === 'coordinadora_siau' ? (
-                        <button
-                          disabled
-                          className="p-1.5 rounded-lg bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed opacity-60"
-                          title="Nueva Acta (Deshabilitado para Coordinadora SIAU)"
-                        >
-                          <Lock className="w-3.5 h-3.5 text-amber-500" />
-                        </button>
+                          {/* Alarm Tooltip */}
+                          {isAlarmOpen && (
+                            <div className="absolute top-full left-0 mt-1 z-50 bg-[#fffbeb] border border-[#fbbf24] text-[#b45309] p-2.5 rounded-lg shadow-xl w-56 text-[10px] space-y-1 animate-in fade-in zoom-in-95 duration-150">
+                              <span className="font-bold block text-amber-900 uppercase">Motivo de Alerta:</span>
+                              <ul className="list-disc pl-3 space-y-0.5">
+                                {patient.alarmReasons.map((r, i) => (
+                                  <li key={i}>{r}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
                       ) : (
-                        <button
-                          onClick={() => onOpenActa(patient)}
-                          className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-600 text-emerald-600 hover:text-white transition-all border border-emerald-200 cursor-pointer shadow-2xs"
-                          title="Nueva Acta"
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                        </button>
+                        <div className="w-6" /> // spacer
                       )}
+
+                      {/* 3 Vertical Dots Menu Button */}
+                      <div className="relative">
+                        <button
+                          onClick={() => setActiveMenuPatientId(isMenuOpen ? null : patient.id)}
+                          className={`p-1.5 rounded-lg text-[#035476] hover:text-[#00aae1] hover:bg-[#effaff] transition-colors cursor-pointer ${
+                            isMenuOpen ? 'bg-[#effaff] text-[#00aae1]' : ''
+                          }`}
+                          title="Menú de Opciones"
+                        >
+                          <MoreVertical className="w-4 h-4" />
+                        </button>
+
+                        {/* Dropdown Menu */}
+                        {isMenuOpen && (
+                          <div className="absolute top-full left-0 mt-1 z-50 bg-white rounded-xl shadow-xl border border-[#e2e8eb] p-1.5 w-48 text-xs font-semibold space-y-1 animate-in fade-in zoom-in-95 duration-150">
+                            {/* Option 1: Ver Acta */}
+                            <button
+                              onClick={() => {
+                                onOpenActa(patient);
+                                setActiveMenuPatientId(null);
+                              }}
+                              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[#033d59] hover:bg-[#effaff] hover:text-[#00aae1] transition-colors cursor-pointer text-left"
+                            >
+                              <Eye className="w-3.5 h-3.5 text-[#00aae1]" />
+                              <span>📄 Ver Acta</span>
+                            </button>
+
+                            {/* Option 2: Evolución */}
+                            <button
+                              onClick={() => {
+                                onOpenNotesDrawer(patient, 'cli');
+                                setActiveMenuPatientId(null);
+                              }}
+                              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[#033d59] hover:bg-[#effaff] hover:text-[#00aae1] transition-colors cursor-pointer text-left"
+                            >
+                              <Activity className="w-3.5 h-3.5 text-[#00aae1]" />
+                              <span>Evolución</span>
+                            </button>
+
+                            {/* Option 3: Nueva Acta */}
+                            {activeRole === 'coordinadora_siau' ? (
+                              <button
+                                disabled
+                                title="Solo el Comité Médico puede crear actas"
+                                className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-gray-400 bg-gray-50 cursor-not-allowed text-left opacity-70"
+                              >
+                                <span className="flex items-center gap-2">
+                                  <Plus className="w-3.5 h-3.5 text-gray-400" />
+                                  <span>➕ Nueva Acta</span>
+                                </span>
+                                <Lock className="w-3 h-3 text-amber-500" />
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  onOpenActa(patient);
+                                  setActiveMenuPatientId(null);
+                                }}
+                                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[#033d59] hover:bg-[#effaff] hover:text-[#00aae1] transition-colors cursor-pointer text-left"
+                              >
+                                <Plus className="w-3.5 h-3.5 text-[#00aae1]" />
+                                <span>➕ Nueva Acta</span>
+                              </button>
+                            )}
+
+                            {/* DIVIDER */}
+                            <div className="border-t border-[#e2e8eb] my-1" />
+
+                            {/* Option 4: Costos */}
+                            <button
+                              onClick={() => {
+                                onOpenCostAnalysis(patient);
+                                setActiveMenuPatientId(null);
+                              }}
+                              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[#033d59] hover:bg-[#effaff] hover:text-[#00aae1] transition-colors cursor-pointer text-left"
+                            >
+                              <BarChart3 className="w-3.5 h-3.5 text-[#00aae1]" />
+                              <span>💰 Costos</span>
+                            </button>
+
+                            {/* Option 5: Cuadro Médico */}
+                            <button
+                              onClick={() => {
+                                onOpenCuadroMedico(patient);
+                                setActiveMenuPatientId(null);
+                              }}
+                              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[#033d59] hover:bg-[#effaff] hover:text-[#00aae1] transition-colors cursor-pointer text-left"
+                            >
+                              <Users className="w-3.5 h-3.5 text-[#00aae1]" />
+                              <span>👥 Cuadro Médico</span>
+                            </button>
+
+                            {/* Option 6: Agenda */}
+                            <button
+                              onClick={() => {
+                                onOpenAgenda(patient);
+                                setActiveMenuPatientId(null);
+                              }}
+                              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[#033d59] hover:bg-[#effaff] hover:text-[#00aae1] transition-colors cursor-pointer text-left"
+                            >
+                              <Calendar className="w-3.5 h-3.5 text-[#00aae1]" />
+                              <span>📅 Agenda</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
                     </div>
                   </td>
 
-                  {/* Col 2: Nombre del Paciente (Sticky Left-[110px]) */}
-                  <td className="sticky left-[110px] z-20 bg-white group-hover:bg-[#f9fafb] px-3 py-2 border-r border-[#e2e8eb] min-w-[220px] max-w-[220px]">
+                  {/* Col 2: TASA (Sticky Left-[110px]) */}
+                  <td className="sticky left-[110px] z-20 bg-white group-hover:bg-[#f9fafb] px-2 py-2 border-r border-[#e2e8eb] min-w-[170px] max-w-[170px]">
+                    <button
+                      type="button"
+                      onClick={() => onOpenTasas(patient)}
+                      className="flex items-center justify-center gap-1 w-full hover:opacity-80 transition-opacity cursor-pointer"
+                      title="Ver Detalle de Tasas"
+                    >
+                      <span className="px-1 py-0.5 rounded bg-rose-50 text-rose-700 font-bold text-[10px] border border-rose-200">
+                        %C {patient.tasas.cancelacionesPct}%
+                      </span>
+                      <span className="px-1 py-0.5 rounded bg-amber-50 text-amber-800 font-bold text-[10px] border border-amber-200">
+                        %I {patient.tasas.inasistenciasPct}%
+                      </span>
+                      <span className="px-1 py-0.5 rounded bg-sky-50 text-[#0284c7] font-bold text-[10px] border border-sky-200">
+                        %R {patient.tasas.reprogramacionesPct}%
+                      </span>
+                    </button>
+                  </td>
+
+                  {/* Col 3: NOMBRE DEL PACIENTE (Sticky Left-[280px]) */}
+                  <td className="sticky left-[280px] z-20 bg-white group-hover:bg-[#f9fafb] px-3 py-2 border-r border-[#e2e8eb] min-w-[220px] max-w-[220px]">
                     <div className="overflow-hidden">
                       <button
                         onClick={() => onEditPatient(patient)}
@@ -501,22 +701,22 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                     </div>
                   </td>
 
-                  {/* Col 2: ID Convenio */}
-                  <td className="px-3 py-2 font-mono text-[#033d59] font-semibold">
-                    {patient.idConvenio}
+                  {/* Col 4: ID */}
+                  <td className="px-3 py-2 font-mono text-[#033d59] font-semibold text-[11px]">
+                    {patient.identificacion}
                   </td>
 
-                  {/* Col 3: Cohorte */}
-                  <td className="px-3 py-2 text-[#033d59] font-medium truncate max-w-[150px]">
-                    {patient.cohorte}
+                  {/* Col 5: NOMBRE CONVENIO */}
+                  <td className="px-3 py-2 text-[#033d59] font-medium text-[11px] truncate max-w-[180px]">
+                    {patient.convenioNombre}
                   </td>
 
-                  {/* Col 4: Estado */}
+                  {/* Col 6: ESTADO */}
                   <td className="px-3 py-2">
                     {renderEstadoBadge(patient)}
                   </td>
 
-                  {/* Col 5: Riesgo (Icon Only) */}
+                  {/* Col 7: RIESGO */}
                   <td className="px-3 py-2 text-center relative">
                     <button
                       onClick={() => handleRiskClick(patient)}
@@ -548,81 +748,99 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                     )}
                   </td>
 
-                  {/* Col 6: Etiqueta */}
+                  {/* Col 8: ETIQUETA */}
                   <td className="px-3 py-2">
-                    <span className="px-2 py-0.5 rounded bg-[#f9fafb] text-[#033d59] font-medium border border-[#e2e8eb] text-[11px]">
+                    <span className={`px-2 py-0.5 rounded font-bold text-[10px] border ${
+                      patient.etiqueta === 'Inconforme'
+                        ? 'bg-rose-50 text-rose-700 border-rose-200'
+                        : 'bg-[#f9fafb] text-[#033d59] border-[#e2e8eb]'
+                    }`}>
                       {patient.etiqueta}
                     </span>
                   </td>
 
-                  {/* Col 7: Fase */}
+                  {/* Col 9: RETROALIMENTACIÓN */}
+                  <td className="px-3 py-2">
+                    {patient.etiqueta === 'Inconforme' || patient.retroalimentacion === 'Inconforme' ? (
+                      <span className="px-2 py-0.5 rounded bg-rose-100 text-rose-800 font-bold text-[10px] border border-rose-300">
+                        Inconforme
+                      </span>
+                    ) : (
+                      <span className="text-gray-400 text-[10px]">—</span>
+                    )}
+                  </td>
+
+                  {/* Col 10: FASE */}
                   <td className="px-3 py-2 text-center">
                     {renderFaseBadge(patient.fase)}
                   </td>
 
-                  {/* Col 8: Acta */}
+                  {/* Col 11: ACTA */}
                   <td className="px-3 py-2 text-center">
                     <button
                       onClick={() => onOpenActa(patient)}
-                      className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-[#effaff] hover:bg-[#00aae1] hover:text-white text-[#00aae1] border border-[#00aae1]/20 font-semibold text-[11px] transition-colors cursor-pointer"
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#effaff] hover:bg-[#00aae1] hover:text-white text-[#00aae1] border border-[#00aae1]/20 font-semibold text-[10px] transition-colors cursor-pointer"
                       title="Ver Acta del Comité Médico"
                     >
-                      <FileText className="w-3.5 h-3.5" />
+                      <FileText className="w-3 h-3" />
                       <span>#{patient.acta.numero}</span>
                     </button>
                   </td>
 
-                  {/* Col 9: Coord */}
-                  <td className="px-3 py-2 text-[#033d59] font-medium">
+                  {/* Col 12: COORDINADOR */}
+                  <td className="px-3 py-2 text-[#033d59] font-medium text-[11px]">
                     {patient.coordinador}
                   </td>
 
-                  {/* Cols 10 to 15: Specialists */}
-                  <td className="px-1.5 py-1 min-w-[165px]">
+                  {/* Cols 13 to 19: ESPECIALISTAS (7 Columns) */}
+                  <td className="px-1.5 py-1 min-w-[160px]">
                     {renderSpecialistCell(patient, 'med_gen')}
                   </td>
-                  <td className="px-1.5 py-1 min-w-[165px]">
+                  <td className="px-1.5 py-1 min-w-[160px]">
                     {renderSpecialistCell(patient, 'nutri')}
                   </td>
-                  <td className="px-1.5 py-1 min-w-[165px]">
+                  <td className="px-1.5 py-1 min-w-[160px]">
                     {renderSpecialistCell(patient, 'psicol')}
                   </td>
-                  <td className="px-1.5 py-1 min-w-[165px]">
+                  <td className="px-1.5 py-1 min-w-[160px]">
                     {renderSpecialistCell(patient, 'esp_1')}
                   </td>
-                  <td className="px-1.5 py-1 min-w-[165px]">
+                  <td className="px-1.5 py-1 min-w-[160px]">
                     {renderSpecialistCell(patient, 'esp_2')}
                   </td>
-                  <td className="px-1.5 py-1 min-w-[165px]">
+                  <td className="px-1.5 py-1 min-w-[160px]">
                     {renderSpecialistCell(patient, 'esp_3')}
                   </td>
+                  <td className="px-1.5 py-1 min-w-[160px]">
+                    {renderSpecialistCell(patient, 'esp_4')}
+                  </td>
 
-                  {/* Col 16: Nota Op. (Sticky Right) */}
+                  {/* Col 20: NOTA OP (Sticky Right) */}
                   <td className="sticky right-[56px] z-20 bg-white group-hover:bg-[#f9fafb] px-2 py-2 text-center border-l border-[#e2e8eb] min-w-[56px] max-w-[56px]">
                     <button
                       onClick={() => onOpenNotesDrawer(patient, 'op')}
-                      className="relative p-2 rounded-lg bg-[#f9fafb] hover:bg-[#033d59] text-[#033d59] hover:text-white transition-all border border-[#e2e8eb] cursor-pointer"
+                      className="relative p-1.5 rounded-lg bg-[#f9fafb] hover:bg-[#033d59] text-[#033d59] hover:text-white transition-all border border-[#e2e8eb] cursor-pointer"
                       title="Ver/Agregar Nota Operativa"
                     >
-                      <Pencil className="w-4 h-4" />
+                      <Pencil className="w-3.5 h-3.5" />
                       {patient.operationalNotes.length > 0 && (
-                        <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#033d59] text-white text-[9px] font-bold flex items-center justify-center border border-white">
+                        <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-[#033d59] text-white text-[8px] font-bold flex items-center justify-center border border-white">
                           {patient.operationalNotes.length}
                         </span>
                       )}
                     </button>
                   </td>
 
-                  {/* Col 17: Nota Clí. (Sticky Right) */}
+                  {/* Col 21: NOTA CLI (Sticky Right) */}
                   <td className="sticky right-0 z-20 bg-white group-hover:bg-[#f9fafb] px-2 py-2 text-center border-l border-[#e2e8eb] min-w-[56px] max-w-[56px]">
                     <button
                       onClick={() => onOpenNotesDrawer(patient, 'cli')}
-                      className="relative p-2 rounded-lg bg-[#effaff] hover:bg-[#00aae1] text-[#00aae1] hover:text-white transition-all border border-[#00aae1]/30 cursor-pointer"
+                      className="relative p-1.5 rounded-lg bg-[#effaff] hover:bg-[#00aae1] text-[#00aae1] hover:text-white transition-all border border-[#00aae1]/30 cursor-pointer"
                       title="Ver/Agregar Nota Clínica"
                     >
-                      <Stethoscope className="w-4 h-4" />
+                      <Stethoscope className="w-3.5 h-3.5" />
                       {patient.clinicalNotes.length > 0 && (
-                        <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#00aae1] text-white text-[9px] font-bold flex items-center justify-center border border-white">
+                        <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-[#00aae1] text-white text-[8px] font-bold flex items-center justify-center border border-white">
                           {patient.clinicalNotes.length}
                         </span>
                       )}

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Patient, EstadoPaciente, NivelRiesgo, FasePaciente } from '../types';
+import { Patient, EstadoPaciente, NivelRiesgo, FasePaciente, COHORTE_OPTIONS, COORDINADORES_LIST } from '../types';
 import { X, UserPlus, Plus } from 'lucide-react';
 
 interface AddPatientModalProps {
@@ -14,12 +14,12 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({ onAdd, onClose
   const [email, setEmail] = useState('');
   const [direccion, setDireccion] = useState('');
   const [idConvenio, setIdConvenio] = useState('SURA-8492');
-  const [cohorte, setCohorte] = useState('Riesgo Cardiovascular');
+  const [cohorte, setCohorte] = useState(COHORTE_OPTIONS[0].code);
   const [estado, setEstado] = useState<EstadoPaciente>('Activo');
   const [riesgo, setRiesgo] = useState<NivelRiesgo>('Medium');
   const [etiqueta, setEtiqueta] = useState('Prioritario');
   const [fase, setFase] = useState<FasePaciente>('E');
-  const [coordinador, setCoordinador] = useState('Dra. Sofía López');
+  const [coordinador, setCoordinador] = useState(COORDINADORES_LIST[0]);
   const [numeroCarga, setNumeroCarga] = useState('CARGA-104');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -95,7 +95,32 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({ onAdd, onClose
           targetDate: new Date(Date.now() + 365 * 86400000).toISOString().split('T')[0],
           isOverdue: false,
         },
+        esp_4: {
+          specialistTitle: 'Especialidad 4',
+          professionalName: 'Dr. Pendiente',
+          lastAttentionDate: new Date().toISOString().split('T')[0],
+          frequency: 'Anual',
+          targetDate: new Date(Date.now() + 365 * 86400000).toISOString().split('T')[0],
+          isOverdue: false,
+        },
       },
+      convenioNombre: 'EPS Suramericana Cuidate360',
+      tasas: {
+        cancelacionesPct: 0,
+        cancelacionesNum: 0,
+        inasistenciasPct: 0,
+        inasistenciasNum: 0,
+        reprogramacionesPct: 0,
+        reprogramacionesNum: 0,
+        history: [],
+      },
+      hasAlarm: false,
+      alarmReasons: [],
+      cuadroMedico: [
+        { id: 'cm-1', specialty: 'Medicina General', professional: 'Dr. Carlos Mendoza', inNetwork: true, phone: '+57 300 111 2233' },
+        { id: 'cm-2', specialty: 'Nutrición', professional: 'Lic. Mariana Gómez', inNetwork: true, phone: '+57 300 444 5566' },
+      ],
+      agenda: [],
       operationalNotes: [],
       clinicalNotes: [],
     };
@@ -177,12 +202,17 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({ onAdd, onClose
               <label className="block text-[11px] font-semibold text-[#035476] mb-1 uppercase">
                 Cohorte
               </label>
-              <input
-                type="text"
+              <select
                 value={cohorte}
                 onChange={(e) => setCohorte(e.target.value)}
                 className="w-full bg-[#f9fafb] border border-[#e2e8eb] rounded-md px-2.5 py-1.5 text-[#033d59] focus:outline-none focus:border-[#00aae1]"
-              />
+              >
+                {COHORTE_OPTIONS.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.code} - {c.label}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
@@ -249,12 +279,17 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({ onAdd, onClose
               <label className="block text-[11px] font-semibold text-[#035476] mb-1 uppercase">
                 Coordinador
               </label>
-              <input
-                type="text"
+              <select
                 value={coordinador}
                 onChange={(e) => setCoordinador(e.target.value)}
                 className="w-full bg-[#f9fafb] border border-[#e2e8eb] rounded-md px-2.5 py-1.5 text-[#033d59] focus:outline-none focus:border-[#00aae1]"
-              />
+              >
+                {COORDINADORES_LIST.map((coord) => (
+                  <option key={coord} value={coord}>
+                    {coord}
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="block text-[11px] font-semibold text-[#035476] mb-1 uppercase">
