@@ -9,6 +9,7 @@ import {
   SpecialistKey,
   SpecialistInfo,
   ActaInfo,
+  CuadroMedicoItem,
   COORDINADORES_LIST,
   COHORTE_OPTIONS,
 } from './types';
@@ -363,6 +364,20 @@ export default function App() {
     setEditingSpecialist(null);
   };
 
+  const handleSaveCuadroMedico = (patientId: string, updatedItems: CuadroMedicoItem[]) => {
+    setPatients((prev) =>
+      prev.map((p) =>
+        p.id === patientId ? { ...p, cuadroMedico: updatedItems } : p
+      )
+    );
+    if (cuadroMedicoPatient && cuadroMedicoPatient.id === patientId) {
+      setCuadroMedicoPatient({
+        ...cuadroMedicoPatient,
+        cuadroMedico: updatedItems,
+      });
+    }
+  };
+
   const handleAddPatient = (newPatient: Patient) => {
     setPatients([newPatient, ...patients]);
     setIsAddPatientOpen(false);
@@ -528,6 +543,8 @@ export default function App() {
       {cuadroMedicoPatient && (
         <CuadroMedicoDrawer
           patient={cuadroMedicoPatient}
+          activeRole={activeRole}
+          onSaveCuadroMedico={handleSaveCuadroMedico}
           onClose={() => setCuadroMedicoPatient(null)}
         />
       )}
