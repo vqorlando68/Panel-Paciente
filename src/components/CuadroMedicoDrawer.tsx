@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Patient, CuadroMedicoItem, UserRole } from '../types';
 import { X, Users, Phone, CheckCircle2, AlertTriangle, ShieldCheck, Plus, Trash2, Edit3, Save, Lock } from 'lucide-react';
+import CUADRO_MEDICO_DATA from '../data/cuadroMedicoData.json';
 
 interface CuadroMedicoDrawerProps {
   patient: Patient;
@@ -9,19 +10,18 @@ interface CuadroMedicoDrawerProps {
   onClose: () => void;
 }
 
-const PROFESSIONAL_DIRECTORY: Record<string, { specialty: string; phone: string }> = {
-  "Dr. Roberto Silva": { specialty: "Cardiología", phone: "(604) 444-1234" },
-  "Dra. María Fernanda Gómez": { specialty: "Medicina General", phone: "(601) 333-5678" },
-  "Dr. Carlos Mendoza": { specialty: "Neurología", phone: "(602) 222-9012" },
-  "Dra. Ana Patricia Ruiz": { specialty: "Endocrinología", phone: "(605) 555-7890" },
-  "Dr. Jorge Alejandro Torres": { specialty: "Psiquiatría", phone: "(604) 777-4321" },
-  "Dra. Luisa Fernanda Ospina": { specialty: "Nefrología", phone: "(601) 888-3456" },
-  "Dr. Ricardo Henao": { specialty: "Ortopedia", phone: "(602) 333-1122" },
-  "IPS CardioSalud": { specialty: "Cardiología", phone: "(604) 444-9988" },
-  "Centro Médico Vitalis": { specialty: "Medicina Interna", phone: "(601) 222-6655" },
-  "Clínica Especializada del Norte": { specialty: "Neumología", phone: "(602) 666-4433" },
-  "IPS Vida Sana": { specialty: "Nutrición", phone: "(605) 999-2211" },
-};
+// Extract the 10 specialties and build a quick directory of professionals with phone numbers
+const SPECIALTY_OPTIONS = CUADRO_MEDICO_DATA.map((item) => item.specialty);
+
+const PROFESSIONAL_DIRECTORY: Record<string, { specialty: string; phone: string }> = {};
+CUADRO_MEDICO_DATA.forEach((specItem) => {
+  specItem.professionals.forEach((prof) => {
+    PROFESSIONAL_DIRECTORY[prof.name] = {
+      specialty: specItem.specialty,
+      phone: prof.phone,
+    };
+  });
+});
 
 export const CuadroMedicoDrawer: React.FC<CuadroMedicoDrawerProps> = ({
   patient,
@@ -33,28 +33,69 @@ export const CuadroMedicoDrawer: React.FC<CuadroMedicoDrawerProps> = ({
   const [items, setItems] = useState<CuadroMedicoItem[]>(patient.cuadroMedico || []);
   const [hasSaved, setHasSaved] = useState(false);
 
+  const getProfessionalsForSpecialty = (specialtyName: string) => {
+    const found = CUADRO_MEDICO_DATA.find(
+      (s) => s.specialty.toLowerCase() === specialtyName.toLowerCase()
+    );
+    if (found) return found.professionals;
+    return CUADRO_MEDICO_DATA.flatMap((s) => s.professionals);
+  };
+
+  const handleSpecialtyChange = (id: string, newSpecialty: string) => {
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item.id !== id) return item;
+        const profs = getProfessionalsForSpecialty(newSpecialty);
+        const profExists = profs.some((p) => p.name === item.professional);
+        const newProf = profExists ? item.professional : (profs[0]?.name || '');
+        const newPhone = PROFESSIONAL_DIRECTORY[newProf]?.phone || (profs[0]?.phone || '');
+
+        return {
+          ...item,
+          specialty: newSpecialty,
+          professional: newProf,
+          phone: newPhone,
+        };
+      })
+    );
+    setHasSaved(false);
+  };
+
+  const handleProfessionalChange = (id: string, newProf: string) => {
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item.id !== id) return item;
+        const directoryMatch = PROFESSIONAL_DIRECTORY[newProf];
+        return {
+          ...item,
+          professional: newProf,
+          specialty: directoryMatch ? directoryMatch.specialty : item.specialty,
+          phone: directoryMatch ? directoryMatch.phone : item.phone,
+        };
+      })
+    );
+    setHasSaved(false);
+  };
+
   const handleItemChange = (id: string, field: keyof CuadroMedicoItem, value: any) => {
     setItems((prev) =>
       prev.map((item) => {
         if (item.id !== id) return item;
-        const updated = { ...item, [field]: value };
-        if (field === 'professional' && PROFESSIONAL_DIRECTORY[value]) {
-          updated.specialty = PROFESSIONAL_DIRECTORY[value].specialty;
-          updated.phone = PROFESSIONAL_DIRECTORY[value].phone;
-        }
-        return updated;
+        return { ...item, [field]: value };
       })
     );
     setHasSaved(false);
   };
 
   const handleAddItem = () => {
+    const defaultSpec = 'Medicina General';
+    const profs = getProfessionalsForSpecialty(defaultSpec);
     const newItem: CuadroMedicoItem = {
       id: `cm-${Date.now()}`,
-      specialty: 'Medicina General',
-      professional: '',
+      specialty: defaultSpec,
+      professional: profs[0]?.name || '',
       inNetwork: true,
-      phone: '',
+      phone: profs[0]?.phone || '',
     };
     setItems((prev) => [...prev, newItem]);
     setHasSaved(false);
@@ -150,159 +191,151 @@ export const CuadroMedicoDrawer: React.FC<CuadroMedicoDrawerProps> = ({
             {items.length === 0 ? (
               <p className="text-gray-500 py-6 text-center italic">No hay profesionales registrados en el cuadro médico.</p>
             ) : (
-              items.map((item) => (
-                <div
-                  key={item.id}
-                  className="p-3.5 bg-white border border-[#e2e8eb] rounded-xl hover:border-[#00aae1]/40 shadow-2xs transition-all space-y-2.5"
-                >
-                  {isEditable ? (
-                    /* Editable Item Controls */
-                    <div className="space-y-2">
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label className="block text-[10px] font-bold text-[#035476] mb-0.5">
-                            Especialidad / Rol *
-                          </label>
-                          <input
-                            type="text"
-                            list="cm-specialties"
-                            value={item.specialty}
-                            onChange={(e) => handleItemChange(item.id, 'specialty', e.target.value)}
-                            placeholder="Ej: Cardiología"
-                            className="w-full text-xs p-1.5 bg-white border border-[#e2e8eb] rounded text-[#033d59] focus:outline-none focus:border-[#00aae1] font-medium"
-                          />
-                          <datalist id="cm-specialties">
-                            <option value="Cardiología" />
-                            <option value="Medicina General" />
-                            <option value="Neurología" />
-                            <option value="Endocrinología" />
-                            <option value="Psiquiatría" />
-                            <option value="Nefrología" />
-                            <option value="Ortopedia" />
-                            <option value="Medicina Interna" />
-                            <option value="Nutrición" />
-                            <option value="Neumología" />
-                            <option value="Oncología" />
-                          </datalist>
+              items.map((item) => {
+                const availableProfessionals = getProfessionalsForSpecialty(item.specialty);
+                return (
+                  <div
+                    key={item.id}
+                    className="p-3.5 bg-white border border-[#e2e8eb] rounded-xl hover:border-[#00aae1]/40 shadow-2xs transition-all space-y-2.5"
+                  >
+                    {isEditable ? (
+                      /* Editable Item Controls with Dropdowns */
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-[10px] font-bold text-[#035476] mb-0.5">
+                              Especialidad / Rol *
+                            </label>
+                            <select
+                              value={item.specialty}
+                              onChange={(e) => handleSpecialtyChange(item.id, e.target.value)}
+                              className="w-full text-xs p-1.5 bg-white border border-[#e2e8eb] rounded text-[#033d59] focus:outline-none focus:border-[#00aae1] font-medium"
+                            >
+                              <option value="">Seleccionar Especialidad...</option>
+                              {SPECIALTY_OPTIONS.map((spec) => (
+                                <option key={spec} value={spec}>
+                                  {spec}
+                                </option>
+                              ))}
+                              {!SPECIALTY_OPTIONS.includes(item.specialty) && item.specialty && (
+                                <option value={item.specialty}>{item.specialty}</option>
+                              )}
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-bold text-[#035476] mb-0.5">
+                              Nombre del Profesional / IPS *
+                            </label>
+                            <select
+                              value={item.professional}
+                              onChange={(e) => handleProfessionalChange(item.id, e.target.value)}
+                              className="w-full text-xs p-1.5 bg-white border border-[#e2e8eb] rounded text-[#033d59] focus:outline-none focus:border-[#00aae1] font-bold"
+                            >
+                              <option value="">Seleccionar Profesional...</option>
+                              {availableProfessionals.map((prof) => (
+                                <option key={prof.name} value={prof.name}>
+                                  {prof.name}
+                                </option>
+                              ))}
+                              {!availableProfessionals.some((p) => p.name === item.professional) && item.professional && (
+                                <option value={item.professional}>{item.professional}</option>
+                              )}
+                            </select>
+                          </div>
                         </div>
-                        <div>
-                          <label className="block text-[10px] font-bold text-[#035476] mb-0.5">
-                            Nombre del Profesional / IPS *
-                          </label>
-                          <input
-                            type="text"
-                            list="cm-professionals"
-                            value={item.professional}
-                            onChange={(e) => handleItemChange(item.id, 'professional', e.target.value)}
-                            placeholder="Ej: Dr. Roberto Silva"
-                            className="w-full text-xs p-1.5 bg-white border border-[#e2e8eb] rounded text-[#033d59] focus:outline-none focus:border-[#00aae1] font-bold"
-                          />
-                          <datalist id="cm-professionals">
-                            <option value="Dr. Roberto Silva" />
-                            <option value="Dra. María Fernanda Gómez" />
-                            <option value="Dr. Carlos Mendoza" />
-                            <option value="Dra. Ana Patricia Ruiz" />
-                            <option value="Dr. Jorge Alejandro Torres" />
-                            <option value="Dra. Luisa Fernanda Ospina" />
-                            <option value="Dr. Ricardo Henao" />
-                            <option value="IPS CardioSalud" />
-                            <option value="Centro Médico Vitalis" />
-                            <option value="Clínica Especializada del Norte" />
-                            <option value="IPS Vida Sana" />
-                          </datalist>
+
+                        <div className="grid grid-cols-2 gap-2 items-end pt-1">
+                          <div>
+                            <label className="block text-[10px] font-bold text-[#035476] mb-0.5">
+                              Teléfono de Contacto
+                            </label>
+                            <input
+                              type="text"
+                              value={item.phone || ''}
+                              onChange={(e) => handleItemChange(item.id, 'phone', e.target.value)}
+                              placeholder="Ej: (604) 444-1234"
+                              className="w-full text-xs p-1.5 bg-white border border-[#e2e8eb] rounded text-[#033d59] font-mono focus:outline-none focus:border-[#00aae1]"
+                            />
+                          </div>
+
+                          <div className="flex items-center justify-between gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handleItemChange(item.id, 'inNetwork', !item.inNetwork)}
+                              className={`flex-1 text-[10px] font-bold py-1.5 px-2 rounded-lg border flex items-center justify-center gap-1 transition-colors cursor-pointer ${
+                                item.inNetwork
+                                  ? 'bg-[#ebfef4] text-[#01ae6c] border-[#01ae6c]/30'
+                                  : 'bg-rose-50 text-rose-600 border-rose-200'
+                              }`}
+                            >
+                              {item.inNetwork ? (
+                                <>
+                                  <CheckCircle2 className="w-3 h-3" />
+                                  <span>Dentro Red</span>
+                                </>
+                              ) : (
+                                <>
+                                  <AlertTriangle className="w-3 h-3" />
+                                  <span>Fuera Red</span>
+                                </>
+                              )}
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveItem(item.id)}
+                              className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg border border-transparent hover:border-rose-200 transition-colors cursor-pointer"
+                              title="Eliminar profesional"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
                       </div>
+                    ) : (
+                      /* Read-Only Item View (SIAU) */
+                      <>
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <span className="text-[10px] font-bold text-[#00aae1] uppercase tracking-wider block">
+                              {item.specialty}
+                            </span>
+                            <h5 className="font-bold text-sm text-[#033d59]">{item.professional || 'Sin asignar'}</h5>
+                          </div>
 
-                      <div className="grid grid-cols-2 gap-2 items-end pt-1">
-                        <div>
-                          <label className="block text-[10px] font-bold text-[#035476] mb-0.5">
-                            Teléfono de Contacto
-                          </label>
-                          <input
-                            type="text"
-                            value={item.phone || ''}
-                            onChange={(e) => handleItemChange(item.id, 'phone', e.target.value)}
-                            placeholder="Ej: (604) 444-1234"
-                            className="w-full text-xs p-1.5 bg-white border border-[#e2e8eb] rounded text-[#033d59] font-mono focus:outline-none focus:border-[#00aae1]"
-                          />
-                        </div>
-
-                        <div className="flex items-center justify-between gap-1">
-                          <button
-                            type="button"
-                            onClick={() => handleItemChange(item.id, 'inNetwork', !item.inNetwork)}
-                            className={`flex-1 text-[10px] font-bold py-1.5 px-2 rounded-lg border flex items-center justify-center gap-1 transition-colors cursor-pointer ${
+                          <span
+                            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
                               item.inNetwork
-                                ? 'bg-[#ebfef4] text-[#01ae6c] border-[#01ae6c]/30'
-                                : 'bg-rose-50 text-rose-600 border-rose-200'
+                                ? 'bg-[#ebfef4] text-[#01ae6c] border border-[#01ae6c]/20'
+                                : 'bg-rose-50 text-rose-600 border border-rose-200'
                             }`}
                           >
                             {item.inNetwork ? (
                               <>
                                 <CheckCircle2 className="w-3 h-3" />
-                                <span>Dentro Red</span>
+                                <span>Dentro de Red</span>
                               </>
                             ) : (
                               <>
                                 <AlertTriangle className="w-3 h-3" />
-                                <span>Fuera Red</span>
+                                <span>Fuera de Red</span>
                               </>
                             )}
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveItem(item.id)}
-                            className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg border border-transparent hover:border-rose-200 transition-colors cursor-pointer"
-                            title="Eliminar profesional"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    /* Read-Only Item View (SIAU) */
-                    <>
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <span className="text-[10px] font-bold text-[#00aae1] uppercase tracking-wider block">
-                            {item.specialty}
                           </span>
-                          <h5 className="font-bold text-sm text-[#033d59]">{item.professional || 'Sin asignar'}</h5>
                         </div>
 
-                        <span
-                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                            item.inNetwork
-                              ? 'bg-[#ebfef4] text-[#01ae6c] border border-[#01ae6c]/20'
-                              : 'bg-rose-50 text-rose-600 border border-rose-200'
-                          }`}
-                        >
-                          {item.inNetwork ? (
-                            <>
-                              <CheckCircle2 className="w-3 h-3" />
-                              <span>Dentro de Red</span>
-                            </>
-                          ) : (
-                            <>
-                              <AlertTriangle className="w-3 h-3" />
-                              <span>Fuera de Red</span>
-                            </>
-                          )}
-                        </span>
-                      </div>
-
-                      {item.phone && (
-                        <div className="pt-2 border-t border-[#e2e8eb] flex items-center gap-2 text-[11px] text-[#035476]">
-                          <Phone className="w-3.5 h-3.5 text-[#00aae1]" />
-                          <span className="font-mono">{item.phone}</span>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              ))
+                        {item.phone && (
+                          <div className="pt-2 border-t border-[#e2e8eb] flex items-center gap-2 text-[11px] text-[#035476]">
+                            <Phone className="w-3.5 h-3.5 text-[#00aae1]" />
+                            <span className="font-mono">{item.phone}</span>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                );
+              })
             )}
           </div>
         </div>
@@ -344,4 +377,3 @@ export const CuadroMedicoDrawer: React.FC<CuadroMedicoDrawerProps> = ({
     </div>
   );
 };
-

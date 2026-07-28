@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Patient, UserRole, ActaInfo } from '../types';
-import { X, FileText, Calendar, Users, CheckCircle, Plus, Save, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, FileText, Calendar, Users, CheckCircle, Plus, Save, ChevronDown, ChevronUp, Lock } from 'lucide-react';
 
 interface ActaModalProps {
   patient: Patient;
@@ -113,7 +113,7 @@ export const ActaModal: React.FC<ActaModalProps> = ({
             }`}
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>Nueva Acta (Cuadro Médico)</span>
+            <span>+ Nueva Acta</span>
           </button>
         </div>
 
@@ -286,9 +286,16 @@ export const ActaModal: React.FC<ActaModalProps> = ({
           </div>
         )}
 
-        {/* Tab 2: Create New Acta */}
+        {/* Tab 2: Create / View New Acta */}
         {activeTab === 'create' && (
           <form onSubmit={handleCreateSubmit} className="p-5 space-y-3.5 text-xs text-[#033d59]">
+            {!isComite && (
+              <div className="p-3 bg-amber-50 border border-amber-200 text-amber-800 font-medium rounded-lg flex items-center gap-2">
+                <Lock className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>Modo Consulta: La edición y registro de actas está reservada únicamente para el Comité Médico.</span>
+              </div>
+            )}
+
             {savedSuccess && (
               <div className="p-3 bg-[#ebfef4] border border-[#01ae6c]/30 text-[#01ae6c] font-bold rounded-lg flex items-center gap-2">
                 <CheckCircle className="w-4 h-4" />
@@ -301,9 +308,10 @@ export const ActaModal: React.FC<ActaModalProps> = ({
                 <label className="block text-[10px] font-bold text-[#035476] uppercase mb-1">N° de Acta</label>
                 <input
                   type="number"
+                  disabled={!isComite}
                   value={actaNumero}
                   onChange={(e) => setActaNumero(parseInt(e.target.value, 10))}
-                  className="w-full bg-[#f9fafb] border border-[#e2e8eb] rounded-md px-2.5 py-1.5 font-bold font-mono text-[#033d59]"
+                  className="w-full bg-[#f9fafb] border border-[#e2e8eb] rounded-md px-2.5 py-1.5 font-bold font-mono text-[#033d59] disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
                   required
                 />
               </div>
@@ -312,9 +320,10 @@ export const ActaModal: React.FC<ActaModalProps> = ({
                 <label className="block text-[10px] font-bold text-[#035476] uppercase mb-1">Fecha Sesión</label>
                 <input
                   type="text"
+                  disabled={!isComite}
                   value={actaFecha}
                   onChange={(e) => setActaFecha(e.target.value)}
-                  className="w-full bg-[#f9fafb] border border-[#e2e8eb] rounded-md px-2.5 py-1.5 text-[#033d59]"
+                  className="w-full bg-[#f9fafb] border border-[#e2e8eb] rounded-md px-2.5 py-1.5 text-[#033d59] disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
                   required
                 />
               </div>
@@ -326,10 +335,11 @@ export const ActaModal: React.FC<ActaModalProps> = ({
               </label>
               <textarea
                 rows={4}
+                disabled={!isComite}
                 value={actaResumen}
                 onChange={(e) => setActaResumen(e.target.value)}
-                placeholder="Escriba los acuerdos, decisiones clínicas y plan de seguimiento aprobado por el cuadro médico..."
-                className="w-full bg-[#f9fafb] border border-[#e2e8eb] rounded-md p-2.5 text-[#033d59] focus:outline-none focus:border-[#00aae1]"
+                placeholder={isComite ? "Escriba los acuerdos, decisiones clínicas y plan de seguimiento aprobado por el cuadro médico..." : "Sin acta redatada (Solo consulta)"}
+                className="w-full bg-[#f9fafb] border border-[#e2e8eb] rounded-md p-2.5 text-[#033d59] focus:outline-none focus:border-[#00aae1] disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
                 required
               />
             </div>
@@ -340,9 +350,10 @@ export const ActaModal: React.FC<ActaModalProps> = ({
               </label>
               <input
                 type="text"
+                disabled={!isComite}
                 value={actaIntegrantes}
                 onChange={(e) => setActaIntegrantes(e.target.value)}
-                className="w-full bg-[#f9fafb] border border-[#e2e8eb] rounded-md px-2.5 py-1.5 text-[#033d59]"
+                className="w-full bg-[#f9fafb] border border-[#e2e8eb] rounded-md px-2.5 py-1.5 text-[#033d59] disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
               />
             </div>
 
@@ -352,11 +363,17 @@ export const ActaModal: React.FC<ActaModalProps> = ({
                 onClick={onClose}
                 className="px-4 py-2 text-xs font-medium text-[#035476] hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
               >
-                Cancelar
+                Cerrar
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 text-xs font-semibold text-white bg-[#00aae1] hover:bg-[#0196d4] rounded-lg shadow-xs flex items-center gap-1.5 cursor-pointer"
+                disabled={!isComite}
+                title={!isComite ? "Acceso deshabilitado para Coordinadora SIAU" : "Registrar esta acta"}
+                className={`px-4 py-2 text-xs font-semibold rounded-lg shadow-xs flex items-center gap-1.5 ${
+                  isComite
+                    ? 'text-white bg-[#00aae1] hover:bg-[#0196d4] cursor-pointer'
+                    : 'text-gray-400 bg-gray-200 border border-gray-300 cursor-not-allowed opacity-60'
+                }`}
               >
                 <Save className="w-4 h-4" />
                 Registrar Acta

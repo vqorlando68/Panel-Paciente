@@ -358,12 +358,9 @@ export const PatientTable: React.FC<PatientTableProps> = ({
 
     const currentOption = COHORTE_OPTIONS.find((c) => c.code === patient.cohorte || c.label === patient.cohorte);
     const displayCode = currentOption ? currentOption.code : patient.cohorte;
-    const interpretationText = currentOption
-      ? (currentOption.label.includes(' - ') ? currentOption.label.split(' - ')[1] : currentOption.label)
-      : '';
 
     return (
-      <div className="relative font-sans flex flex-col items-start gap-0.5">
+      <div className="relative font-sans inline-block">
         <button
           onClick={() => setCohorteMenuPatientId(cohorteMenuPatientId === patient.id ? null : patient.id)}
           className={`px-2 py-0.5 rounded-full text-[10px] font-bold border transition-all flex items-center gap-1 cursor-pointer ${style}`}
@@ -372,14 +369,6 @@ export const PatientTable: React.FC<PatientTableProps> = ({
           <span className="truncate max-w-[110px]">{displayCode}</span>
           <ChevronDown className="w-3 h-3 opacity-60 shrink-0" />
         </button>
-        {interpretationText && (
-          <span
-            className="text-[9.5px] text-[#035476]/80 font-normal truncate max-w-[130px] leading-tight"
-            title={`Interpretación: ${interpretationText}`}
-          >
-            {interpretationText}
-          </span>
-        )}
 
         {cohorteMenuPatientId === patient.id && (
           <div className="absolute top-full left-0 mt-1 z-30 bg-white rounded-lg shadow-xl border border-[#e2e8eb] p-1.5 w-72 max-h-60 overflow-y-auto text-xs font-medium space-y-0.5">
@@ -507,7 +496,7 @@ export const PatientTable: React.FC<PatientTableProps> = ({
   };
 
   return (
-    <div className="flex-1 overflow-auto relative w-full bg-white font-sans max-w-[1550px] mx-auto rounded-xl shadow-2xs border border-[#e2e8eb] my-2">
+    <div className="flex-1 overflow-x-auto overflow-y-auto touch-pan-x relative w-full bg-white font-sans max-w-[1550px] mx-auto rounded-xl shadow-2xs border border-[#e2e8eb] my-2" style={{ WebkitOverflowScrolling: 'touch' }}>
       {/* Toast Notification when SIAU tries to change Risk */}
       {showRoleAlert && (
         <div className="fixed bottom-4 right-4 z-50 bg-[#fffbeb] border border-[#fbbf24] text-[#b45309] px-4 py-2.5 rounded-lg shadow-lg text-xs font-semibold flex items-center gap-2">
@@ -521,15 +510,16 @@ export const PatientTable: React.FC<PatientTableProps> = ({
         {/* Table Header */}
         <thead>
           <tr className="bg-[#f9fafb] border-b border-[#e2e8eb] text-[10px] font-bold text-[#035476] uppercase tracking-wider select-none h-10">
-            {/* Col 1: ACCIONES (Sticky Left) */}
-            <th className="sticky left-0 z-20 bg-[#f9fafb] px-2 text-center border-r border-[#e2e8eb] min-w-[100px] max-w-[100px]">
-              ACCIONES
+            {/* Col 1: ACCIONES (Sticky on sm+) */}
+            <th className="sm:sticky sm:left-0 z-30 bg-[#f9fafb] px-2 text-center border-r border-[#e2e8eb] min-w-[80px] sm:min-w-[100px] max-w-[80px] sm:max-w-[100px]">
+              <span className="hidden sm:inline">ACCIONES</span>
+              <span className="inline sm:hidden">ACC.</span>
             </th>
 
-            {/* Col 2: PACIENTE (Sticky Left-[100px]) */}
+            {/* Col 2: PACIENTE (Sticky on sm+) */}
             <th
               onClick={() => handleSort('nombre')}
-              className="sticky left-[100px] z-20 bg-[#f9fafb] px-3 border-r border-[#e2e8eb] min-w-[240px] max-w-[240px] cursor-pointer hover:bg-[#effaff] transition-colors"
+              className="sm:sticky sm:left-[100px] z-30 bg-[#f9fafb] px-3 border-r border-[#e2e8eb] min-w-[240px] max-w-[240px] cursor-pointer hover:bg-[#effaff] transition-colors"
             >
               <div className="flex items-center gap-1.5 justify-between">
                 <span>PACIENTE</span>
@@ -547,10 +537,10 @@ export const PatientTable: React.FC<PatientTableProps> = ({
             {renderHeader('PRIORIDAD INICIAL', 'prioridadInicial', 'min-w-[110px] text-center')}
 
             {/* Col 4: CONVENIO */}
-            {renderHeader('CONVENIO', 'convenioNombre', 'min-w-[170px]')}
+            {renderHeader('CONV.', 'convenioNombre', 'min-w-[120px] sm:min-w-[170px]')}
 
             {/* Col 5: ESTADO / COHORTE */}
-            {renderHeader('ESTADO', 'cohorte', 'min-w-[140px]')}
+            {renderHeader('ESTADO', 'cohorte', 'min-w-[100px] sm:min-w-[140px]')}
 
             {/* Col 6: RIESGO */}
             {renderHeader('RIESGO', 'riesgo', 'min-w-[90px] text-center')}
@@ -579,13 +569,13 @@ export const PatientTable: React.FC<PatientTableProps> = ({
             {renderHeader('ESP. 3', 'esp_3', 'min-w-[155px] bg-[#f9fafb] text-[#033d59]')}
             {renderHeader('ESP. 4', 'esp_4', 'min-w-[155px] bg-[#f9fafb] border-r border-[#e2e8eb] text-[#033d59]')}
 
-            {/* Col 13: NOTA OP (Sticky Right) */}
-            <th className="sticky right-[56px] z-20 bg-[#f9fafb] px-2 text-center border-l border-[#e2e8eb] min-w-[56px] max-w-[56px]">
+            {/* Col 13: NOTA OP (Sticky on sm+) */}
+            <th className="sm:sticky sm:right-[56px] z-20 bg-[#f9fafb] px-2 text-center border-l border-[#e2e8eb] min-w-[56px] max-w-[56px]">
               NOTA OP
             </th>
 
-            {/* Col 14: NOTA CLI (Sticky Right) */}
-            <th className="sticky right-0 z-20 bg-[#f9fafb] px-2 text-center border-l border-[#e2e8eb] min-w-[56px] max-w-[56px]">
+            {/* Col 14: NOTA CLI (Sticky on sm+) */}
+            <th className="sm:sticky sm:right-0 z-20 bg-[#f9fafb] px-2 text-center border-l border-[#e2e8eb] min-w-[56px] max-w-[56px]">
               NOTA CLI
             </th>
           </tr>
@@ -610,9 +600,9 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                     key={patient.id}
                     className="hover:bg-[#f9fafb] transition-colors group h-[72px]"
                   >
-                  {/* Col 1: ACCIONES (Sticky Left) */}
-                  <td className={`sticky left-0 bg-white group-hover:bg-[#f9fafb] px-2 py-2 border-r border-[#e2e8eb] min-w-[100px] max-w-[100px] ${
-                    isMenuOpen || isAlarmOpen ? 'z-40' : 'z-20'
+                  {/* Col 1: ACCIONES (Sticky on sm+) */}
+                  <td className={`bg-white sm:sticky sm:left-0 group-hover:bg-[#f9fafb] px-2 py-2 border-r border-[#e2e8eb] min-w-[80px] sm:min-w-[100px] max-w-[80px] sm:max-w-[100px] ${
+                    isMenuOpen || isAlarmOpen ? 'z-40' : 'z-30'
                   }`}>
                     <div className="flex items-center justify-center gap-1">
                       
@@ -662,8 +652,8 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                     </div>
                   </td>
 
-                  {/* Col 2: PACIENTE (Compact Card: Sticky Left-[100px]) */}
-                  <td className="sticky left-[100px] z-20 bg-white group-hover:bg-[#f9fafb] px-2 py-1.5 border-r border-[#e2e8eb] min-w-[240px] max-w-[240px] relative">
+                  {/* Col 2: PACIENTE (Sticky on sm+) */}
+                  <td className="bg-white sm:sticky sm:left-[100px] z-30 group-hover:bg-[#f9fafb] px-2 py-1.5 border-r border-[#e2e8eb] min-w-[240px] max-w-[240px] relative">
                     {adherenciaPatientId === patient.id && (
                       <AdherencePopover
                         patient={patient}
@@ -682,12 +672,12 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                   </td>
 
                   {/* Col 4: CONVENIO */}
-                  <td className="px-3 py-2 text-[#033d59] font-medium text-[11px] truncate max-w-[170px]">
+                  <td className="px-3 py-2 text-[#033d59] font-medium text-[11px] truncate min-w-[120px] max-w-[120px] sm:min-w-[170px] sm:max-w-[170px]">
                     {patient.convenioNombre}
                   </td>
 
                   {/* Col 5: ESTADO / COHORTE */}
-                  <td className="px-3 py-2">
+                  <td className="px-3 py-2 min-w-[100px] sm:min-w-[140px]">
                     {renderCohorteBadge(patient)}
                   </td>
 
@@ -777,8 +767,8 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                     {renderSpecialistCell(patient, 'esp_4')}
                   </td>
 
-                  {/* Col 13: NOTA OP (Sticky Right) */}
-                  <td className="sticky right-[56px] z-20 bg-white group-hover:bg-[#f9fafb] px-2 py-2 text-center border-l border-[#e2e8eb] min-w-[56px] max-w-[56px]">
+                  {/* Col 13: NOTA OP (Sticky on sm+) */}
+                  <td className="bg-white sm:sticky sm:right-[56px] z-20 group-hover:bg-[#f9fafb] px-2 py-2 text-center border-l border-[#e2e8eb] min-w-[56px] max-w-[56px]">
                     <button
                       onClick={() => onOpenNotesDrawer(patient, 'op')}
                       className="relative p-1.5 rounded-lg bg-[#f9fafb] hover:bg-[#033d59] text-[#033d59] hover:text-white transition-all border border-[#e2e8eb] cursor-pointer"
@@ -793,8 +783,8 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                     </button>
                   </td>
 
-                  {/* Col 14: NOTA CLI (Sticky Right) */}
-                  <td className="sticky right-0 z-20 bg-white group-hover:bg-[#f9fafb] px-2 py-2 text-center border-l border-[#e2e8eb] min-w-[56px] max-w-[56px]">
+                  {/* Col 14: NOTA CLI (Sticky on sm+) */}
+                  <td className="bg-white sm:sticky sm:right-0 z-20 group-hover:bg-[#f9fafb] px-2 py-2 text-center border-l border-[#e2e8eb] min-w-[56px] max-w-[56px]">
                     <button
                       onClick={() => onOpenNotesDrawer(patient, 'cli')}
                       className="relative p-1.5 rounded-lg bg-[#effaff] hover:bg-[#00aae1] text-[#00aae1] hover:text-white transition-all border border-[#00aae1]/30 cursor-pointer"

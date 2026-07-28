@@ -84,33 +84,23 @@ export const ThreeDotsMenu: React.FC<ThreeDotsMenuProps> = ({
             <span>Evolución</span>
           </button>
 
-          {/* 3. Nueva Acta */}
-          {isComite ? (
-            <button
-              type="button"
-              onClick={() => {
-                onOpenNuevaActa(patient);
-                onToggle();
-              }}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[#033d59] hover:bg-[#effaff] hover:text-[#00aae1] transition-colors cursor-pointer text-left"
-            >
+          {/* 3. + Nueva Acta */}
+          <button
+            type="button"
+            onClick={() => {
+              onOpenNuevaActa(patient);
+              onToggle();
+            }}
+            className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-[#033d59] hover:bg-[#effaff] hover:text-[#00aae1] transition-colors cursor-pointer text-left"
+          >
+            <span className="flex items-center gap-2.5">
               <Plus className="w-4 h-4 text-[#00aae1]" />
-              <span>Nueva Acta</span>
-            </button>
-          ) : (
-            <button
-              type="button"
-              disabled
-              title="Acceso restringido: Solo el Comité Médico / Cuadro Médico puede registrar nueva acta"
-              className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-gray-400 bg-gray-50 cursor-not-allowed text-left opacity-75"
-            >
-              <span className="flex items-center gap-2.5">
-                <Plus className="w-4 h-4 text-gray-400" />
-                <span>Nueva Acta</span>
-              </span>
-              <Lock className="w-3.5 h-3.5 text-amber-500" />
-            </button>
-          )}
+              <span>+ Nueva Acta</span>
+            </span>
+            {!isComite && (
+              <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-medium">Consulta</span>
+            )}
+          </button>
 
           {/* 4. Costos */}
           <button

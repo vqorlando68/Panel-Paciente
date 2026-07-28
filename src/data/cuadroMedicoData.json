@@ -1,0 +1,82 @@
+[
+  {
+    "specialty": "Medicina General",
+    "professionals": [
+      { "name": "Dra. María Fernanda Gómez", "phone": "(601) 333-5678" },
+      { "name": "Dr. Juan Camilo Ramírez", "phone": "(601) 333-5679" },
+      { "name": "Dr. Andrés Felipe Castro", "phone": "(601) 333-5680" }
+    ]
+  },
+  {
+    "specialty": "Nutrición",
+    "professionals": [
+      { "name": "Dra. Laura Camila Morales", "phone": "(605) 999-2211" },
+      { "name": "Lic. Sofía Valentina Ríos", "phone": "(605) 999-2212" },
+      { "name": "Dr. Mateo Fernández", "phone": "(605) 999-2213" }
+    ]
+  },
+  {
+    "specialty": "Psicologia",
+    "professionals": [
+      { "name": "Dra. Diana Marcela Orozco", "phone": "(604) 777-4321" },
+      { "name": "Dr. Jorge Alejandro Torres", "phone": "(604) 777-4322" },
+      { "name": "Lic. Natalia Andrea Gómez", "phone": "(604) 777-4323" }
+    ]
+  },
+  {
+    "specialty": "Cardiología",
+    "professionals": [
+      { "name": "Dr. Roberto Silva", "phone": "(604) 444-1234" },
+      { "name": "Dr. Carlos Eduardo Restrepo", "phone": "(604) 444-1235" },
+      { "name": "Dra. Beatriz Helena Viana", "phone": "(604) 444-1236" }
+    ]
+  },
+  {
+    "specialty": "Nefrología",
+    "professionals": [
+      { "name": "Dra. Luisa Fernanda Ospina", "phone": "(601) 888-3456" },
+      { "name": "Dr. Gabriel Alonso Niño", "phone": "(601) 888-3457" },
+      { "name": "Dr. Santiago Bedoya", "phone": "(601) 888-3458" }
+    ]
+  },
+  {
+    "specialty": "Hematología",
+    "professionals": [
+      { "name": "Dr. Fernando Hoyos", "phone": "(602) 555-9011" },
+      { "name": "Dra. Claudia Marcela Parra", "phone": "(602) 555-9012" },
+      { "name": "Dr. Esteban Gutiérrez", "phone": "(602) 555-9013" }
+    ]
+  },
+  {
+    "specialty": "Medicina Interna",
+    "professionals": [
+      { "name": "Dr. Alejandro Valencia", "phone": "(601) 222-6655" },
+      { "name": "Dra. Patricia Elena Jaramillo", "phone": "(601) 222-6656" },
+      { "name": "Dr. Hernán Darío Botero", "phone": "(601) 222-6657" }
+    ]
+  },
+  {
+    "specialty": "Pediatria",
+    "professionals": [
+      { "name": "Dra. Marcela Cristina Duque", "phone": "(604) 333-8811" },
+      { "name": "Dr. Felipe Andrés Moreno", "phone": "(604) 333-8812" },
+      { "name": "Dra. Juliana María Ortiz", "phone": "(604) 333-8813" }
+    ]
+  },
+  {
+    "specialty": "Dermatologia",
+    "professionals": [
+      { "name": "Dr. Mauricio Alejandro Franco", "phone": "(602) 777-1144" },
+      { "name": "Dra. Carolina Zuluaga", "phone": "(602) 777-1145" },
+      { "name": "Dr. Daniel Esteban Marín", "phone": "(602) 777-1146" }
+    ]
+  },
+  {
+    "specialty": "Ginecología",
+    "professionals": [
+      { "name": "Dra. Ana María Restrepo", "phone": "(605) 444-6677" },
+      { "name": "Dr. Ricardo José Henao", "phone": "(605) 444-6678" },
+      { "name": "Dra. Verónica Lucía Cárdenas", "phone": "(605) 444-6679" }
+    ]
+  }
+]
