@@ -162,14 +162,15 @@ export const FilterBar: React.FC<FilterBarProps> = ({
 
           {hasActiveFilters && (
             <button
+              type="button"
               onClick={() => {
                 onResetFilters();
-                handleChange('fastFilter', 'Todos');
               }}
-              className="text-xs text-[#e11d48] hover:text-[#be123c] font-semibold flex items-center gap-1 hover:underline cursor-pointer transition-colors px-1"
+              className="text-xs text-[#00aae1] hover:text-[#0196d4] font-bold flex items-center gap-1.5 bg-[#effaff] hover:bg-[#dbeafe] px-2.5 py-1 rounded-lg border border-[#00aae1]/30 transition-colors cursor-pointer shadow-2xs"
+              title="Limpiar todos los filtros"
             >
               <FilterX className="w-3.5 h-3.5" />
-              <span>✕ Limpiar</span>
+              <span>Limpiar filtros</span>
             </button>
           )}
 

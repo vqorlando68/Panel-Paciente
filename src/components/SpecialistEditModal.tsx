@@ -97,21 +97,41 @@ export const SpecialistEditModal: React.FC<SpecialistEditModalProps> = ({
                   <span className="text-[10px] text-[#035476]/70 mt-0.5 block">Formato: DD/MM/YYYY HH:MM AM/PM</span>
                 </div>
 
-                {/* FRECUENCIA / PERIODICIDAD */}
-                <div>
-                  <label className="block text-[11px] font-semibold text-[#035476] mb-1 uppercase tracking-wide">
-                    Frecuencia / Periodicidad
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      placeholder="Ej: Quincenal, Cada 30 días..."
-                      value={formData.frequency}
-                      onChange={(e) => setFormData({ ...formData, frequency: e.target.value })}
-                      className="w-full bg-[#f9fafb] border border-[#e2e8eb] rounded-md pl-8 pr-3 py-2 text-[#033d59] font-medium focus:outline-none focus:border-[#00aae1] focus:bg-white text-xs"
-                      required
-                    />
-                    <Clock className="w-3.5 h-3.5 text-[#00aae1] absolute left-2.5 top-1/2 -translate-y-1/2" />
+                {/* FRECUENCIA Y ATENCIONES */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-[#035476] mb-1 uppercase tracking-wide">
+                      Frecuencia / Periodicidad
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="Ej: Quincenal..."
+                        value={formData.frequency}
+                        onChange={(e) => setFormData({ ...formData, frequency: e.target.value })}
+                        className="w-full bg-[#f9fafb] border border-[#e2e8eb] rounded-md pl-8 pr-3 py-2 text-[#033d59] font-medium focus:outline-none focus:border-[#00aae1] focus:bg-white text-xs"
+                        required
+                      />
+                      <Clock className="w-3.5 h-3.5 text-[#00aae1] absolute left-2.5 top-1/2 -translate-y-1/2" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-[#035476] mb-1 uppercase tracking-wide">
+                      Atenciones
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="Ej: 4"
+                        value={formData.attentionsCount ?? 3}
+                        onChange={(e) => setFormData({ ...formData, attentionsCount: parseInt(e.target.value) || 0 })}
+                        className="w-full bg-[#f9fafb] border border-[#e2e8eb] rounded-md pl-8 pr-3 py-2 text-[#033d59] font-medium focus:outline-none focus:border-[#00aae1] focus:bg-white text-xs"
+                        required
+                      />
+                      <ClipboardList className="w-3.5 h-3.5 text-[#00aae1] absolute left-2.5 top-1/2 -translate-y-1/2" />
+                    </div>
                   </div>
                 </div>
 

@@ -143,11 +143,25 @@ export const CuadroMedicoDrawer: React.FC<CuadroMedicoDrawerProps> = ({
                           </label>
                           <input
                             type="text"
+                            list="cm-specialties"
                             value={item.specialty}
                             onChange={(e) => handleItemChange(item.id, 'specialty', e.target.value)}
                             placeholder="Ej: Cardiología"
                             className="w-full text-xs p-1.5 bg-white border border-[#e2e8eb] rounded text-[#033d59] focus:outline-none focus:border-[#00aae1] font-medium"
                           />
+                          <datalist id="cm-specialties">
+                            <option value="Cardiología" />
+                            <option value="Medicina General" />
+                            <option value="Neurología" />
+                            <option value="Endocrinología" />
+                            <option value="Psiquiatría" />
+                            <option value="Nefrología" />
+                            <option value="Ortopedia" />
+                            <option value="Medicina Interna" />
+                            <option value="Nutrición" />
+                            <option value="Neumología" />
+                            <option value="Oncología" />
+                          </datalist>
                         </div>
                         <div>
                           <label className="block text-[10px] font-bold text-[#035476] mb-0.5">
@@ -155,11 +169,25 @@ export const CuadroMedicoDrawer: React.FC<CuadroMedicoDrawerProps> = ({
                           </label>
                           <input
                             type="text"
+                            list="cm-professionals"
                             value={item.professional}
                             onChange={(e) => handleItemChange(item.id, 'professional', e.target.value)}
                             placeholder="Ej: Dr. Roberto Silva"
                             className="w-full text-xs p-1.5 bg-white border border-[#e2e8eb] rounded text-[#033d59] focus:outline-none focus:border-[#00aae1] font-bold"
                           />
+                          <datalist id="cm-professionals">
+                            <option value="Dr. Roberto Silva" />
+                            <option value="Dra. María Fernanda Gómez" />
+                            <option value="Dr. Carlos Mendoza" />
+                            <option value="Dra. Ana Patricia Ruiz" />
+                            <option value="Dr. Jorge Alejandro Torres" />
+                            <option value="Dra. Luisa Fernanda Ospina" />
+                            <option value="Dr. Ricardo Henao" />
+                            <option value="IPS CardioSalud" />
+                            <option value="Centro Médico Vitalis" />
+                            <option value="Clínica Especializada del Norte" />
+                            <option value="IPS Vida Sana" />
+                          </datalist>
                         </div>
                       </div>
 

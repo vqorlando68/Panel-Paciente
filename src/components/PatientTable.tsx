@@ -11,6 +11,7 @@ import {
   COORDINADORES_LIST,
 } from '../types';
 import { PatientHoverPopover } from './PatientHoverPopover';
+import { AdherencePopover } from './AdherencePopover';
 import { PatientCard } from './PatientCard';
 import { SpecialistCard } from './SpecialistCard';
 import { ThreeDotsMenu } from './ThreeDotsMenu';
@@ -605,8 +606,8 @@ export const PatientTable: React.FC<PatientTableProps> = ({
               const isInconforme = patient.etiqueta === 'Inconforme' || patient.retroalimentacion === 'Inconforme';
 
               return (
-                <React.Fragment key={patient.id}>
                   <tr
+                    key={patient.id}
                     className="hover:bg-[#f9fafb] transition-colors group h-[72px]"
                   >
                   {/* Col 1: ACCIONES (Sticky Left) */}
@@ -802,113 +803,6 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                     </button>
                   </td>
                 </tr>
-
-                {/* Sub-fila de Gráfico de Adherencia (Desplegable al hacer clic) */}
-                {adherenciaPatientId === patient.id && (
-                  <tr key={`sub-adherence-${patient.id}`} className="bg-[#effaff]/30 border-b-2 border-[#00aae1]/30 animate-in fade-in duration-200">
-                    <td colSpan={19} className="p-3 pl-6 pr-6">
-                      <div className="flex flex-wrap md:flex-nowrap items-center justify-between gap-4 bg-white p-3 rounded-xl border border-[#00aae1]/30 shadow-md">
-                        {/* Information Title */}
-                        <div className="shrink-0 flex items-center gap-2.5 pr-4 border-r border-[#e2e8eb]">
-                          <div className="w-8 h-8 rounded-lg bg-[#effaff] border border-[#00aae1]/30 flex items-center justify-center text-[#00aae1]">
-                            <Clock className="w-4 h-4" />
-                          </div>
-                          <div>
-                            <span className="font-bold text-[#033d59] text-xs block">Gráfico de Adherencia del Paciente</span>
-                            <span className="text-[11px] text-[#035476] font-medium">{patient.nombre}</span>
-                          </div>
-                        </div>
-
-                        {/* Stacked Thermometer Bar & Metric Labels */}
-                        <div className="flex-1 space-y-2 min-w-[280px]">
-                          {(() => {
-                            const cancPct = patient.tasas?.cancelacionesPct ?? 15;
-                            const inasPct = patient.tasas?.inasistenciasPct ?? 5;
-                            const reprogPct = patient.tasas?.reprogramacionesPct ?? 10;
-                            const totalSpecs = Object.keys(patient.specialists || {}).length || 7;
-                            const overdueCount = Object.values(patient.specialists || {}).filter(
-                              (s: SpecialistInfo) => s?.isOverdue
-                            ).length;
-                            const vencPct = Math.round((overdueCount / totalSpecs) * 100) || 20;
-
-                            return (
-                              <>
-                                <div className="h-6 w-full bg-[#f1f5f9] rounded-lg p-0.5 flex gap-1 border border-[#e2e8eb]/80 items-center overflow-hidden">
-                                  {cancPct > 0 && (
-                                    <div
-                                      style={{ width: `${cancPct}%` }}
-                                      className="bg-[#e11d48] h-full rounded flex items-center justify-center text-[10px] font-extrabold text-white transition-all shrink-0 shadow-2xs"
-                                      title={`% Cancelaciones: ${cancPct}%`}
-                                    >
-                                      {cancPct}%
-                                    </div>
-                                  )}
-                                  {inasPct > 0 && (
-                                    <div
-                                      style={{ width: `${inasPct}%` }}
-                                      className="bg-[#f59e0b] h-full rounded flex items-center justify-center text-[10px] font-extrabold text-white transition-all shrink-0 shadow-2xs"
-                                      title={`% Inasistencias: ${inasPct}%`}
-                                    >
-                                      {inasPct}%
-                                    </div>
-                                  )}
-                                  {reprogPct > 0 && (
-                                    <div
-                                      style={{ width: `${reprogPct}%` }}
-                                      className="bg-[#00aae1] h-full rounded flex items-center justify-center text-[10px] font-extrabold text-white transition-all shrink-0 shadow-2xs"
-                                      title={`% Reprogramaciones: ${reprogPct}%`}
-                                    >
-                                      {reprogPct}%
-                                    </div>
-                                  )}
-                                  {vencPct > 0 && (
-                                    <div
-                                      style={{ width: `${vencPct}%` }}
-                                      className="bg-[#a855f7] h-full rounded flex items-center justify-center text-[10px] font-extrabold text-white transition-all shrink-0 shadow-2xs"
-                                      title={`% Vencimientos: ${vencPct}%`}
-                                    >
-                                      {vencPct}%
-                                    </div>
-                                  )}
-                                </div>
-
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center font-bold text-[10px]">
-                                  <div className="bg-[#fff1f2] border border-[#fecdd3] text-[#e11d48] rounded-md py-1 px-2 flex items-center justify-between">
-                                    <span>CANC.</span>
-                                    <span>{cancPct}%</span>
-                                  </div>
-                                  <div className="bg-[#fffbeb] border border-[#fde68a] text-[#d97706] rounded-md py-1 px-2 flex items-center justify-between">
-                                    <span>INASIS.</span>
-                                    <span>{inasPct}%</span>
-                                  </div>
-                                  <div className="bg-[#f0f9ff] border border-[#bae6fd] text-[#00aae1] rounded-md py-1 px-2 flex items-center justify-between">
-                                    <span>REPROG.</span>
-                                    <span>{reprogPct}%</span>
-                                  </div>
-                                  <div className="bg-[#faf5ff] border border-[#e9d5ff] text-[#a855f7] rounded-md py-1 px-2 flex items-center justify-between">
-                                    <span>VENC.</span>
-                                    <span>{vencPct}%</span>
-                                  </div>
-                                </div>
-                              </>
-                            );
-                          })()}
-                        </div>
-
-                        {/* Close sub-row button */}
-                        <button
-                          type="button"
-                          onClick={() => setAdherenciaPatientId(null)}
-                          className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer shrink-0"
-                          title="Cerrar sub-fila"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-                </React.Fragment>
               );
             })
           )}
@@ -925,6 +819,14 @@ export const PatientTable: React.FC<PatientTableProps> = ({
             onEditPatient(hoveredPatient.patient);
             setHoveredPatient(null);
           }}
+        />
+      )}
+
+      {/* Render Adherence Popover */}
+      {adherenciaPatientId && (
+        <AdherencePopover
+          patient={sortedPatients.find(p => p.id === adherenciaPatientId) || patients[0]}
+          onClose={() => setAdherenciaPatientId(null)}
         />
       )}
     </div>

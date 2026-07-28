@@ -20,6 +20,7 @@ export interface SpecialistInfo {
   professionalName: string;
   lastAttentionDate: string; // YYYY-MM-DD or DD/MM/YYYY HH:MM AM/PM
   frequency: string; // e.g. "Semanal", "Quincenal", "Mensual", "Bimensual", "Trimestral", "Semestral", "Anual"
+  attentionsCount?: number; // Cantidad de atenciones
   targetDate: string; // YYYY-MM-DD or DD/MM/YYYY HH:MM AM/PM
   isOverdue?: boolean;
   hasRehuso?: boolean;
