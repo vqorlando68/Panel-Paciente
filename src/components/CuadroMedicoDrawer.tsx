@@ -9,6 +9,20 @@ interface CuadroMedicoDrawerProps {
   onClose: () => void;
 }
 
+const PROFESSIONAL_DIRECTORY: Record<string, { specialty: string; phone: string }> = {
+  "Dr. Roberto Silva": { specialty: "Cardiología", phone: "(604) 444-1234" },
+  "Dra. María Fernanda Gómez": { specialty: "Medicina General", phone: "(601) 333-5678" },
+  "Dr. Carlos Mendoza": { specialty: "Neurología", phone: "(602) 222-9012" },
+  "Dra. Ana Patricia Ruiz": { specialty: "Endocrinología", phone: "(605) 555-7890" },
+  "Dr. Jorge Alejandro Torres": { specialty: "Psiquiatría", phone: "(604) 777-4321" },
+  "Dra. Luisa Fernanda Ospina": { specialty: "Nefrología", phone: "(601) 888-3456" },
+  "Dr. Ricardo Henao": { specialty: "Ortopedia", phone: "(602) 333-1122" },
+  "IPS CardioSalud": { specialty: "Cardiología", phone: "(604) 444-9988" },
+  "Centro Médico Vitalis": { specialty: "Medicina Interna", phone: "(601) 222-6655" },
+  "Clínica Especializada del Norte": { specialty: "Neumología", phone: "(602) 666-4433" },
+  "IPS Vida Sana": { specialty: "Nutrición", phone: "(605) 999-2211" },
+};
+
 export const CuadroMedicoDrawer: React.FC<CuadroMedicoDrawerProps> = ({
   patient,
   activeRole,
@@ -21,7 +35,15 @@ export const CuadroMedicoDrawer: React.FC<CuadroMedicoDrawerProps> = ({
 
   const handleItemChange = (id: string, field: keyof CuadroMedicoItem, value: any) => {
     setItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, [field]: value } : item))
+      prev.map((item) => {
+        if (item.id !== id) return item;
+        const updated = { ...item, [field]: value };
+        if (field === 'professional' && PROFESSIONAL_DIRECTORY[value]) {
+          updated.specialty = PROFESSIONAL_DIRECTORY[value].specialty;
+          updated.phone = PROFESSIONAL_DIRECTORY[value].phone;
+        }
+        return updated;
+      })
     );
     setHasSaved(false);
   };

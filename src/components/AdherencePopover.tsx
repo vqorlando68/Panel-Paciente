@@ -92,15 +92,19 @@ export const AdherencePopover: React.FC<AdherencePopoverProps> = ({ patient, onC
         <div className="grid grid-cols-4 gap-1 text-center font-bold text-[9px]">
           <div className="bg-[#fff1f2] border border-[#fecdd3] text-[#e11d48] rounded py-1 px-1 flex flex-col items-center justify-center">
             <span>Canc.</span>
+            <span className="text-[10px] font-extrabold">{cancPct}%</span>
           </div>
           <div className="bg-[#fffbeb] border border-[#fde68a] text-[#d97706] rounded py-1 px-1 flex flex-col items-center justify-center">
             <span>Inasis.</span>
+            <span className="text-[10px] font-extrabold">{inasPct}%</span>
           </div>
           <div className="bg-[#f0f9ff] border border-[#bae6fd] text-[#00aae1] rounded py-1 px-1 flex flex-col items-center justify-center">
             <span>Reprog.</span>
+            <span className="text-[10px] font-extrabold">{reprogPct}%</span>
           </div>
           <div className="bg-[#faf5ff] border border-[#e9d5ff] text-[#a855f7] rounded py-1 px-1 flex flex-col items-center justify-center">
             <span>Vencid.</span>
+            <span className="text-[10px] font-extrabold">{vencPct}%</span>
           </div>
         </div>
       </div>
