@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Patient, NoteEntry, UserRole } from '../types';
-import { X, Pencil, Stethoscope, Send, User, Clock, MessageSquare, Plus } from 'lucide-react';
+import { X, Pencil, Stethoscope, Send, User, Clock, MessageSquare, Plus, UserCheck } from 'lucide-react';
 
 interface NotesDrawerProps {
   patient: Patient;
@@ -14,6 +14,24 @@ interface NotesDrawerProps {
   ) => void;
   onClose: () => void;
 }
+
+const BASE_PROFESIONALES = [
+  { name: 'Dr. Carlos Mendoza', specialty: 'Medicina General' },
+  { name: 'Lic. Mariana Gómez', specialty: 'Nutrición' },
+  { name: 'Dra. Claudia Ruiz', specialty: 'Psicología' },
+  { name: 'Dr. Roberto Silva', specialty: 'Cardiología' },
+  { name: 'Dr. Andrés Parra', specialty: 'Nefrología' },
+  { name: 'Dra. Sofía López', specialty: 'Endocrinología' },
+  { name: 'Dr. Fernando Hoyos', specialty: 'Medicina Interna' },
+  { name: 'Dra. Camila Morales', specialty: 'Medicina General' },
+  { name: 'Dr. Juan Carlos Restrepo', specialty: 'Cardiología' },
+  { name: 'Enf. Beatriz Viana', specialty: 'Enfermería' },
+  { name: 'Dr. Alejandro Restrepo', specialty: 'Neumología' },
+  { name: 'Dra. Patricia Gómez', specialty: 'Medicina Familiar' },
+  { name: 'Dr. Gabriel Torres', specialty: 'Neurología' },
+  { name: 'Dra. Elena Ramírez', specialty: 'Psiquiatría' },
+  { name: 'Lic. Mónica Moreno', specialty: 'Trabajo Social' },
+];
 
 export const NotesDrawer: React.FC<NotesDrawerProps> = ({
   patient,
@@ -29,6 +47,72 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({
 
   const notesList = type === 'op' ? patient.operationalNotes : patient.clinicalNotes;
   const isOperational = type === 'op';
+
+  // Consolidated Base of Professionals & Specialties
+  const professionalBase = useMemo(() => {
+    const map = new Map<string, string>();
+
+    // 1. Add static base professionals
+    BASE_PROFESIONALES.forEach((p) => map.set(p.name, p.specialty));
+
+    // 2. Add patient's cuadroMedico
+    if (patient.cuadroMedico) {
+      patient.cuadroMedico.forEach((cm) => {
+        if (cm.professional && cm.specialty) {
+          map.set(cm.professional, cm.specialty);
+        }
+      });
+    }
+
+    // 3. Add patient's specialists
+    if (patient.specialists) {
+      Object.values(patient.specialists).forEach((s) => {
+        if (s.professionalName && s.specialistTitle) {
+          map.set(s.professionalName, s.specialistTitle);
+        }
+      });
+    }
+
+    return Array.from(map.entries()).map(([name, specialty]) => ({ name, specialty }));
+  }, [patient]);
+
+  const specialtyList = useMemo(() => {
+    const set = new Set<string>();
+    professionalBase.forEach((p) => {
+      if (p.specialty) set.add(p.specialty);
+    });
+    return Array.from(set).sort();
+  }, [professionalBase]);
+
+  const handleProfessionalChange = (val: string) => {
+    setRehusoProfessional(val);
+    const match = professionalBase.find(
+      (p) => p.name.toLowerCase() === val.trim().toLowerCase()
+    );
+    if (match) {
+      setRehusoSpecialty(match.specialty);
+    }
+  };
+
+  const handleSpecialtyChange = (val: string) => {
+    setRehusoSpecialty(val);
+    const match = professionalBase.find(
+      (p) => p.specialty.toLowerCase() === val.trim().toLowerCase()
+    );
+    if (match && !rehusoProfessional.trim()) {
+      setRehusoProfessional(match.name);
+    }
+  };
+
+  const handleSelectFromBase = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedName = e.target.value;
+    if (!selectedName) return;
+    const item = professionalBase.find((p) => p.name === selectedName);
+    if (item) {
+      setRehusoProfessional(item.name);
+      setRehusoSpecialty(item.specialty);
+    }
+  };
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
@@ -169,32 +253,68 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({
               </label>
 
               {isRehuso && (
-                <div className="grid grid-cols-2 gap-2 pt-1 border-t border-rose-200">
+                <div className="space-y-2 pt-1.5 border-t border-rose-200">
+                  {/* Quick select from base */}
                   <div>
-                    <label className="block text-[10px] font-bold text-rose-800 mb-0.5">
-                      Nombre del Profesional *
+                    <label className="block text-[10px] font-bold text-rose-900 mb-0.5 flex items-center gap-1">
+                      <UserCheck className="w-3 h-3 text-[#e11d48]" />
+                      <span>Seleccionar de Base de Profesional / Especialidad:</span>
                     </label>
-                    <input
-                      type="text"
-                      required={isRehuso}
-                      value={rehusoProfessional}
-                      onChange={(e) => setRehusoProfessional(e.target.value)}
-                      placeholder="Ej: Dr. Roberto Silva"
-                      className="w-full text-xs p-1.5 bg-white border border-rose-300 rounded text-[#033d59] focus:outline-none focus:border-[#e11d48]"
-                    />
+                    <select
+                      onChange={handleSelectFromBase}
+                      className="w-full text-xs p-1.5 bg-white border border-rose-300 rounded text-[#033d59] focus:outline-none focus:border-[#e11d48] cursor-pointer"
+                    >
+                      <option value="">-- Buscar en Base de Profesionales --</option>
+                      {professionalBase.map((p, idx) => (
+                        <option key={idx} value={p.name}>
+                          {p.name} ({p.specialty})
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                  <div>
-                    <label className="block text-[10px] font-bold text-rose-800 mb-0.5">
-                      Especialidad *
-                    </label>
-                    <input
-                      type="text"
-                      required={isRehuso}
-                      value={rehusoSpecialty}
-                      onChange={(e) => setRehusoSpecialty(e.target.value)}
-                      placeholder="Ej: Cardiología"
-                      className="w-full text-xs p-1.5 bg-white border border-rose-300 rounded text-[#033d59] focus:outline-none focus:border-[#e11d48]"
-                    />
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[10px] font-bold text-rose-800 mb-0.5">
+                        Nombre del Profesional *
+                      </label>
+                      <input
+                        type="text"
+                        list="profesionales-base-list"
+                        required={isRehuso}
+                        value={rehusoProfessional}
+                        onChange={(e) => handleProfessionalChange(e.target.value)}
+                        placeholder="Ej: Dr. Roberto Silva"
+                        className="w-full text-xs p-1.5 bg-white border border-rose-300 rounded text-[#033d59] focus:outline-none focus:border-[#e11d48]"
+                      />
+                      <datalist id="profesionales-base-list">
+                        {professionalBase.map((p, idx) => (
+                          <option key={idx} value={p.name}>
+                            {p.specialty}
+                          </option>
+                        ))}
+                      </datalist>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-rose-800 mb-0.5">
+                        Especialidad *
+                      </label>
+                      <input
+                        type="text"
+                        list="especialidades-base-list"
+                        required={isRehuso}
+                        value={rehusoSpecialty}
+                        onChange={(e) => handleSpecialtyChange(e.target.value)}
+                        placeholder="Ej: Cardiología"
+                        className="w-full text-xs p-1.5 bg-white border border-rose-300 rounded text-[#033d59] focus:outline-none focus:border-[#e11d48]"
+                      />
+                      <datalist id="especialidades-base-list">
+                        {specialtyList.map((s, idx) => (
+                          <option key={idx} value={s} />
+                        ))}
+                      </datalist>
+                    </div>
                   </div>
                 </div>
               )}

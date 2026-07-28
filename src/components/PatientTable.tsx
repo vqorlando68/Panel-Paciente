@@ -225,30 +225,26 @@ export const PatientTable: React.FC<PatientTableProps> = ({
     switch (risk) {
       case 'Critical':
         return (
-          <div className="flex items-center gap-1.5 text-[#e11d48] font-bold text-[11px]" title="Riesgo Crítico">
-            <AlertTriangle className="w-3.5 h-3.5 fill-[#e11d48]/20 stroke-[2.5]" />
-            <span>Critical</span>
+          <div className="flex items-center justify-center text-[#e11d48]" title="Riesgo Crítico">
+            <AlertTriangle className="w-4 h-4 fill-[#e11d48]/20 stroke-[2.5]" />
           </div>
         );
       case 'High':
         return (
-          <div className="flex items-center gap-1.5 text-[#e11d48] font-bold text-[11px]" title="Riesgo Alto">
-            <Circle className="w-3 h-3 fill-[#e11d48] stroke-none" />
-            <span>High</span>
+          <div className="flex items-center justify-center text-[#e11d48]" title="Riesgo Alto">
+            <Circle className="w-3.5 h-3.5 fill-[#e11d48] stroke-none" />
           </div>
         );
       case 'Medium':
         return (
-          <div className="flex items-center gap-1.5 text-[#d97706] font-bold text-[11px]" title="Riesgo Medio">
-            <Circle className="w-3 h-3 fill-[#fbbf24] stroke-none" />
-            <span>Medium</span>
+          <div className="flex items-center justify-center text-[#d97706]" title="Riesgo Medio">
+            <Circle className="w-3.5 h-3.5 fill-[#fbbf24] stroke-none" />
           </div>
         );
       case 'Low':
         return (
-          <div className="flex items-center gap-1.5 text-[#01ae6c] font-bold text-[11px]" title="Riesgo Bajo">
-            <Circle className="w-3 h-3 fill-[#01ae6c] stroke-none" />
-            <span>Low</span>
+          <div className="flex items-center justify-center text-[#01ae6c]" title="Riesgo Bajo">
+            <Circle className="w-3.5 h-3.5 fill-[#01ae6c] stroke-none" />
           </div>
         );
     }

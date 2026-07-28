@@ -193,6 +193,9 @@ export default function App() {
   const totalPatients = patients.length;
   const overdueCount = patients.filter(patientHasOverdueSpecialist).length;
   const activeCount = patients.filter((p) => p.estado === 'Activo').length;
+  const inconformeCount = patients.filter(
+    (p) => p.etiqueta === 'Inconforme' || p.retroalimentacion === 'Inconforme'
+  ).length;
   const alarmCount = patients.filter((p) => p.hasAlarm).length;
 
   // Handlers for state updates
@@ -208,6 +211,7 @@ export default function App() {
       numeroCarga: '',
       soloVencidas: false,
       soloAlarmas: false,
+      fastFilter: 'Todos',
     });
   };
 
@@ -254,15 +258,28 @@ export default function App() {
 
   const handleSaveActa = (patientId: string, newActa: ActaInfo) => {
     setPatients((prev) =>
-      prev.map((p) =>
-        p.id === patientId
-          ? {
-              ...p,
-              acta: newActa,
-              actasHistory: [newActa, ...(p.actasHistory || [])],
-            }
-          : p
-      )
+      prev.map((p) => {
+        if (p.id !== patientId) return p;
+        const currentActa = p.acta;
+        const existingHistory = p.actasHistory || [];
+
+        // Build history: previous active acta goes to top of history if valid
+        const previousActas = currentActa && currentActa.numero > 0
+          ? [currentActa, ...existingHistory.filter((a) => a.numero !== currentActa.numero && a.numero !== newActa.numero)]
+          : existingHistory.filter((a) => a.numero !== newActa.numero);
+
+        const updatedP = {
+          ...p,
+          acta: newActa,
+          actasHistory: previousActas,
+        };
+
+        if (actaModalPatient && actaModalPatient.id === patientId) {
+          setActaModalPatient(updatedP);
+        }
+
+        return updatedP;
+      })
     );
   };
 
@@ -380,6 +397,7 @@ export default function App() {
           totalPatients={totalPatients}
           overdueCount={overdueCount}
           activeCount={activeCount}
+          inconformeCount={inconformeCount}
           onSelectMetricCard={handleSelectMetricCard}
           activeMetricCard={activeMetricCard}
           fastFilter={filters.fastFilter || 'Todos'}
@@ -433,9 +451,9 @@ export default function App() {
 
           <div className="flex items-center gap-3.5 text-[11px] font-medium text-[#035476]">
             <span className="font-semibold text-[#033d59]">Nivel de Riesgo:</span>
-            <span className="flex items-center gap-1" title="Critical (Triángulo Rojo)">
+            <span className="flex items-center gap-1" title="Crítico (Triángulo Rojo)">
               <AlertTriangle className="w-3.5 h-3.5 text-[#e11d48] fill-[#e11d48]/20 stroke-[2.5]" />
-              Critical
+              Crítico
             </span>
             <span className="flex items-center gap-1" title="Alto (Círculo Rojo)">
               <span className="w-2.5 h-2.5 rounded-full bg-[#e11d48]" />

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Patient, UserRole, ActaInfo } from '../types';
-import { X, FileText, Calendar, Users, CheckCircle, Plus, Save } from 'lucide-react';
+import { X, FileText, Calendar, Users, CheckCircle, Plus, Save, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface ActaModalProps {
   patient: Patient;
@@ -18,6 +18,7 @@ export const ActaModal: React.FC<ActaModalProps> = ({
   onClose,
 }) => {
   const [activeTab, setActiveTab] = useState<'view' | 'create'>(initialMode);
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(0);
   
   // New Acta Form State
   const nextNum = (patient.acta?.numero || 100) + 1;
@@ -32,6 +33,13 @@ export const ActaModal: React.FC<ActaModalProps> = ({
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
 
   const isComite = activeRole === 'comite_medico';
+
+  const allActas: ActaInfo[] =
+    patient.actasHistory && patient.actasHistory.length > 0
+      ? patient.actasHistory
+      : patient.acta && patient.acta.numero > 0
+      ? [patient.acta]
+      : [];
 
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,6 +59,7 @@ export const ActaModal: React.FC<ActaModalProps> = ({
     setTimeout(() => {
       setSavedSuccess(false);
       setActiveTab('view');
+      setExpandedIndex(0);
     }, 1200);
   };
 
@@ -91,7 +100,7 @@ export const ActaModal: React.FC<ActaModalProps> = ({
             }`}
           >
             <FileText className="w-3.5 h-3.5" />
-            <span>Ver Actas Registradas</span>
+            <span>Actas Registradas</span>
           </button>
 
           <button
@@ -110,48 +119,164 @@ export const ActaModal: React.FC<ActaModalProps> = ({
 
         {/* Tab 1: View Actas */}
         {activeTab === 'view' && (
-          <div className="p-5 space-y-4 text-xs text-[#033d59] max-h-[70vh] overflow-y-auto">
-            <div className="flex items-center justify-between bg-[#effaff] p-3 rounded-lg border border-[#00aae1]/20">
-              <div className="flex items-center gap-1.5 text-[#035476]">
-                <Calendar className="w-4 h-4 text-[#00aae1]" />
-                <span>Fecha de Sesión:</span>
-                <strong className="text-[#033d59] font-mono">{patient.acta?.fecha || '24/07/2026'}</strong>
-              </div>
+          <div className="p-5 space-y-4 text-xs text-[#033d59] max-h-[75vh] overflow-y-auto">
+            {/* Main Active/Latest Acta Banner */}
+            {patient.acta && (
+              <div className="space-y-3 p-3.5 bg-[#f0f9ff] rounded-xl border border-[#00aae1]/30">
+                <div className="flex items-center justify-between pb-2 border-b border-[#00aae1]/20">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded bg-[#00aae1] text-white font-mono font-bold text-xs">
+                      #{patient.acta.numero}
+                    </span>
+                    <span className="font-bold text-[#033d59]">Última Acta Registrada</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="flex items-center gap-1 text-[#035476] font-mono text-[11px]">
+                      <Calendar className="w-3.5 h-3.5 text-[#00aae1]" />
+                      {patient.acta.fecha}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full bg-[#ebfef4] text-[#01ae6c] text-[10px] font-bold border border-[#01ae6c]/20 flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" />
+                      Aprobada
+                    </span>
+                  </div>
+                </div>
 
-              <span className="px-2 py-0.5 rounded-full bg-[#ebfef4] text-[#01ae6c] text-[11px] font-semibold border border-[#01ae6c]/20 flex items-center gap-1">
-                <CheckCircle className="w-3 h-3" />
-                Aprobada
-              </span>
-            </div>
+                <div>
+                  <h4 className="font-bold text-[#035476] mb-1 uppercase tracking-wider text-[10px]">
+                    Resumen de Decisiones
+                  </h4>
+                  <p className="text-xs text-[#033d59] leading-relaxed">
+                    {patient.acta.resumen}
+                  </p>
+                </div>
 
-            <div>
-              <h4 className="font-semibold text-[#033d59] mb-1 uppercase tracking-wider text-[11px]">
-                Resumen de Decisiones del Comité Médico
-              </h4>
-              <div className="p-3 bg-[#f9fafb] rounded-lg border border-[#e2e8eb] text-xs leading-relaxed text-[#033d59]">
-                {patient.acta?.resumen || 'No hay decisiones registradas aún.'}
-              </div>
-            </div>
-
-            {patient.acta?.integrantes && patient.acta.integrantes.length > 0 && (
-              <div>
-                <h4 className="font-semibold text-[#035476] mb-1.5 uppercase tracking-wider text-[11px] flex items-center gap-1">
-                  <Users className="w-3.5 h-3.5 text-[#00aae1]" />
-                  Integrantes del Comité Firmantes
-                </h4>
-                <ul className="space-y-1 pl-1">
-                  {patient.acta.integrantes.map((member, i) => (
-                    <li key={i} className="flex items-center gap-2 text-xs text-[#033d59]">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#00aae1]" />
-                      <span>{member}</span>
-                    </li>
-                  ))}
-                </ul>
+                {patient.acta.integrantes && patient.acta.integrantes.length > 0 && (
+                  <div>
+                    <h4 className="font-bold text-[#035476] mb-1 uppercase tracking-wider text-[10px] flex items-center gap-1">
+                      <Users className="w-3 h-3 text-[#00aae1]" />
+                      Integrantes Firmantes
+                    </h4>
+                    <ul className="flex flex-wrap gap-1.5 pt-0.5">
+                      {patient.acta.integrantes.map((member, i) => (
+                        <li key={i} className="px-2 py-0.5 rounded bg-white text-[10.5px] text-[#033d59] border border-[#e2e8eb] font-medium">
+                          {member}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             )}
 
+            {/* Historial de Actas Accordion */}
+            <div className="pt-2 border-t border-[#e2e8eb]">
+              <h4 className="font-bold text-[#033d59] mb-2.5 uppercase tracking-wider text-[11px] flex items-center justify-between">
+                <span>Historial de Actas</span>
+                <span className="text-[10px] font-mono text-gray-400 font-normal">
+                  ({allActas.length} {allActas.length === 1 ? 'acta' : 'actas'})
+                </span>
+              </h4>
+
+              {allActas.length === 0 ? (
+                <div className="p-4 text-center text-gray-400 text-xs bg-gray-50 rounded-lg border border-dashed border-[#e2e8eb]">
+                  No hay historial de actas registrado.
+                </div>
+              ) : (
+                <div className={`space-y-2 ${allActas.length > 3 ? 'max-h-56 overflow-y-auto pr-1' : ''}`}>
+                  {allActas.map((actaItem, idx) => {
+                    const isExpanded = expandedIndex === idx;
+                    const shortDesc =
+                      actaItem.resumen.length > 40
+                        ? `${actaItem.resumen.slice(0, 40)}...`
+                        : actaItem.resumen;
+
+                    return (
+                      <div
+                        key={`${actaItem.numero}-${idx}`}
+                        className="rounded-lg border border-[#e2e8eb] overflow-hidden bg-white shadow-2xs transition-all"
+                      >
+                        {/* Accordion Row Header (# Acta, Fecha, Descripción Breve) */}
+                        <button
+                          type="button"
+                          onClick={() => setExpandedIndex(isExpanded ? null : idx)}
+                          className="w-full p-2.5 flex items-center justify-between gap-2 hover:bg-[#effaff]/60 transition-colors cursor-pointer text-left"
+                        >
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            {/* # Acta */}
+                            <span className="px-2 py-0.5 rounded bg-[#033d59] text-white font-mono font-bold text-[10px] shrink-0">
+                              #{actaItem.numero}
+                            </span>
+
+                            {/* Fecha */}
+                            <span className="text-[#035476] font-mono font-semibold text-[11px] shrink-0">
+                              {actaItem.fecha}
+                            </span>
+
+                            {/* Divider */}
+                            <span className="text-gray-300 shrink-0">•</span>
+
+                            {/* Descripción Breve */}
+                            <span className="text-[#033d59] font-medium text-[11px] truncate flex-1 min-w-0">
+                              {shortDesc}
+                            </span>
+                          </div>
+
+                          <div className="p-0.5 rounded text-gray-400 hover:text-[#00aae1] shrink-0">
+                            {isExpanded ? (
+                              <ChevronUp className="w-4 h-4 text-[#00aae1]" />
+                            ) : (
+                              <ChevronDown className="w-4 h-4" />
+                            )}
+                          </div>
+                        </button>
+
+                        {/* Collapsible Unfolded Detail */}
+                        {isExpanded && (
+                          <div className="p-3 bg-[#f9fafb] border-t border-[#e2e8eb] space-y-2 text-xs text-[#033d59] animate-in fade-in duration-150">
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-[#033d59] text-[11px]">
+                                Acta #{actaItem.numero} - Detalle Completo
+                              </span>
+                              <span className="px-2 py-0.5 rounded-full bg-[#ebfef4] text-[#01ae6c] text-[10px] font-bold border border-[#01ae6c]/20 flex items-center gap-1">
+                                <CheckCircle className="w-3 h-3" />
+                                Aprobada
+                              </span>
+                            </div>
+
+                            <p className="p-2.5 bg-white rounded-md border border-[#e2e8eb] leading-relaxed text-[#033d59]">
+                              {actaItem.resumen}
+                            </p>
+
+                            {actaItem.integrantes && actaItem.integrantes.length > 0 && (
+                              <div className="pt-1">
+                                <span className="font-semibold text-[#035476] text-[10px] uppercase block mb-1">
+                                  Integrantes Firmantes:
+                                </span>
+                                <div className="flex flex-wrap gap-1">
+                                  {actaItem.integrantes.map((m, i) => (
+                                    <span
+                                      key={i}
+                                      className="px-2 py-0.5 rounded bg-white text-[10px] text-[#035476] border border-[#e2e8eb]"
+                                    >
+                                      {m}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
             <div className="pt-3 border-t border-[#e2e8eb] flex justify-end">
               <button
+                type="button"
                 onClick={onClose}
                 className="px-4 py-2 text-xs font-semibold text-white bg-[#00aae1] hover:bg-[#0196d4] rounded-lg shadow-xs transition-colors cursor-pointer"
               >

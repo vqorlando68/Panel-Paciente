@@ -31,26 +31,25 @@ export const AdherenceTooltip: React.FC<AdherenceTooltipProps> = ({ patient, onC
         onClick={(e) => e.stopPropagation()}
       >
         {/* Tooltip Header */}
-        <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#e2e8eb]">
-          <div className="font-bold text-[#033d59] text-xs truncate pr-2">
-            Adherencia - {patient.nombre}
-          </div>
+        <div className="flex items-center justify-between pb-2 mb-2.5 border-b border-[#e2e8eb]">
+          <h3 className="font-bold text-[#033d59] text-sm">Adherencia</h3>
           <button
             onClick={onClose}
             className="p-1 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer shrink-0"
             title="Cerrar"
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Thermometer Stacked Bar */}
+        {/* Thermometer Stacked Bar + 4 Labels */}
         <div className="space-y-2.5">
-          <div className="h-7 w-full bg-gray-100 rounded-lg overflow-hidden flex border border-[#e2e8eb] p-0.5 gap-0.5 shadow-inner">
+          {/* Temperature bar container */}
+          <div className="h-8 w-full bg-[#f1f5f9] rounded-xl p-0.5 flex gap-1 border border-[#e2e8eb]/60 items-center">
             {cancPct > 0 && (
               <div
                 style={{ width: `${cancPct}%` }}
-                className="bg-[#e11d48] h-full rounded flex items-center justify-center text-[10px] font-black text-white transition-all overflow-hidden shrink-0"
+                className="bg-[#e11d48] h-full rounded-lg flex items-center justify-center text-[11px] font-black text-white transition-all overflow-hidden shrink-0 shadow-2xs"
                 title={`% Canc.: ${cancPct}%`}
               >
                 {cancPct}%
@@ -60,7 +59,7 @@ export const AdherenceTooltip: React.FC<AdherenceTooltipProps> = ({ patient, onC
             {inasPct > 0 && (
               <div
                 style={{ width: `${inasPct}%` }}
-                className="bg-[#f59e0b] h-full rounded flex items-center justify-center text-[10px] font-black text-white transition-all overflow-hidden shrink-0"
+                className="bg-[#f59e0b] h-full rounded-lg flex items-center justify-center text-[11px] font-black text-white transition-all overflow-hidden shrink-0 shadow-2xs"
                 title={`% Inasis.: ${inasPct}%`}
               >
                 {inasPct}%
@@ -70,7 +69,7 @@ export const AdherenceTooltip: React.FC<AdherenceTooltipProps> = ({ patient, onC
             {reprogPct > 0 && (
               <div
                 style={{ width: `${reprogPct}%` }}
-                className="bg-[#0284c7] h-full rounded flex items-center justify-center text-[10px] font-black text-white transition-all overflow-hidden shrink-0"
+                className="bg-[#00aae1] h-full rounded-lg flex items-center justify-center text-[11px] font-black text-white transition-all overflow-hidden shrink-0 shadow-2xs"
                 title={`% Reprog.: ${reprogPct}%`}
               >
                 {reprogPct}%
@@ -80,7 +79,7 @@ export const AdherenceTooltip: React.FC<AdherenceTooltipProps> = ({ patient, onC
             {vencPct > 0 && (
               <div
                 style={{ width: `${vencPct}%` }}
-                className="bg-[#a855f7] h-full rounded flex items-center justify-center text-[10px] font-black text-white transition-all overflow-hidden shrink-0"
+                className="bg-[#a855f7] h-full rounded-lg flex items-center justify-center text-[11px] font-black text-white transition-all overflow-hidden shrink-0 shadow-2xs"
                 title={`% Venc.: ${vencPct}%`}
               >
                 {vencPct}%
@@ -88,23 +87,19 @@ export const AdherenceTooltip: React.FC<AdherenceTooltipProps> = ({ patient, onC
             )}
           </div>
 
-          {/* 4 Indicators Values Grid */}
-          <div className="grid grid-cols-4 gap-1 text-[10.5px] font-semibold text-center pt-1 border-t border-[#e2e8eb]">
-            <div className="bg-[#fff1f2] border border-[#fecdd3] text-[#e11d48] rounded py-1 px-0.5">
-              <div className="text-[9px] font-bold uppercase">Canc.</div>
-              <div className="font-extrabold font-mono">{cancPct}%</div>
+          {/* 4 Bottom Pill Labels */}
+          <div className="grid grid-cols-4 gap-1.5 text-center font-bold text-[10px]">
+            <div className="bg-[#fff1f2] border border-[#fecdd3] text-[#e11d48] rounded-lg py-1 px-1 tracking-wider uppercase">
+              CANC.
             </div>
-            <div className="bg-[#fffbeb] border border-[#fde68a] text-[#d97706] rounded py-1 px-0.5">
-              <div className="text-[9px] font-bold uppercase">Inasis.</div>
-              <div className="font-extrabold font-mono">{inasPct}%</div>
+            <div className="bg-[#fffbeb] border border-[#fde68a] text-[#d97706] rounded-lg py-1 px-1 tracking-wider uppercase">
+              INASIS.
             </div>
-            <div className="bg-[#f0f9ff] border border-[#bae6fd] text-[#0284c7] rounded py-1 px-0.5">
-              <div className="text-[9px] font-bold uppercase">Reprog.</div>
-              <div className="font-extrabold font-mono">{reprogPct}%</div>
+            <div className="bg-[#f0f9ff] border border-[#bae6fd] text-[#00aae1] rounded-lg py-1 px-1 tracking-wider uppercase">
+              REPROG.
             </div>
-            <div className="bg-[#faf5ff] border border-[#e9d5ff] text-[#a855f7] rounded py-1 px-0.5">
-              <div className="text-[9px] font-bold uppercase">Venc.</div>
-              <div className="font-extrabold font-mono">{vencPct}%</div>
+            <div className="bg-[#faf5ff] border border-[#e9d5ff] text-[#a855f7] rounded-lg py-1 px-1 tracking-wider uppercase">
+              VENC.
             </div>
           </div>
         </div>

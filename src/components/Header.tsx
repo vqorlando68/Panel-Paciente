@@ -8,6 +8,7 @@ interface HeaderProps {
   totalPatients: number;
   overdueCount: number;
   activeCount: number;
+  inconformeCount?: number;
   criticalCount?: number;
   onSelectMetricCard?: (metric: 'total' | 'activos' | 'vencidos') => void;
   activeMetricCard?: 'total' | 'activos' | 'vencidos';
@@ -16,9 +17,6 @@ interface HeaderProps {
 }
 
 const FAST_FILTER_CHIPS = [
-  { id: 'Activos', label: 'Activos' },
-  { id: 'Vencidos', label: 'Vencidos' },
-  { id: 'Inconforme', label: 'Inconforme', dot: '#e11d48' },
   { id: 'Críticos', label: 'Críticos' },
   { id: '>90 días', label: '>90 días', dot: '#a855f7' },
   { id: 'Rehúso', label: 'Rehuso', dot: '#e11d48' },
@@ -32,6 +30,7 @@ export const Header: React.FC<HeaderProps> = ({
   totalPatients,
   overdueCount,
   activeCount,
+  inconformeCount = 0,
   onSelectMetricCard,
   activeMetricCard = 'total',
   fastFilter = 'Todos',
@@ -84,13 +83,10 @@ export const Header: React.FC<HeaderProps> = ({
         </button>
       </div>
 
-      {/* Right Side: Metrics Bar & Quick Filters arranged strictly in 2 lines */}
+      {/* Right Side: 2 Organized Horizontal Lines */}
       <div className="flex flex-col items-end gap-2 text-xs shrink-0">
-        {/* Line 1: Counters (Total, Activos, Vencidos) */}
+        {/* Line 1: Counters (Total, Activos, Vencidos, Inconforme) */}
         <div className="flex items-center gap-2 shrink-0">
-          <span className="text-[10px] font-bold text-[#035476] uppercase tracking-wider mr-0.5">
-            Resumen:
-          </span>
           <button
             type="button"
             onClick={() => {
@@ -141,13 +137,32 @@ export const Header: React.FC<HeaderProps> = ({
             <span>Vencidos:</span>
             <span className="font-bold">{overdueCount}</span>
           </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              if (fastFilter === 'Inconforme') {
+                onFastFilterChange?.('Todos');
+                onSelectMetricCard?.('total');
+              } else {
+                onFastFilterChange?.('Inconforme');
+              }
+            }}
+            title="Filtrar pacientes Inconformes"
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-md border text-[#e11d48] cursor-pointer transition-all ${
+              fastFilter === 'Inconforme'
+                ? 'bg-[#ffe4e6] border-[#e11d48] ring-2 ring-[#e11d48]/30 font-bold shadow-xs'
+                : 'bg-[#fff1f2] border-[#fecdd3] hover:bg-[#ffe4e6]/60'
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-[#e11d48] shrink-0" />
+            <span>Inconforme:</span>
+            <span className="font-bold">{inconformeCount}</span>
+          </button>
         </div>
 
-        {/* Line 2: Quick Filter Chips (Activos, Vencidos, Inconforme, Críticos, >90 días, Rehuso, Aceptados, Sin Acta) */}
+        {/* Line 2: Chips (Críticos, >90 días, Rehuso, Aceptados, Sin Acta) */}
         <div className="flex items-center gap-1.5 flex-wrap justify-end">
-          <span className="text-[10px] font-bold text-[#035476] uppercase tracking-wider mr-0.5">
-            Filtros Rápidos:
-          </span>
           {FAST_FILTER_CHIPS.map((chip) => {
             const isActive =
               fastFilter === chip.id ||
@@ -163,8 +178,6 @@ export const Header: React.FC<HeaderProps> = ({
                     onSelectMetricCard?.('total');
                   } else {
                     onFastFilterChange?.(chip.id);
-                    if (chip.id === 'Activos') onSelectMetricCard?.('activos');
-                    else if (chip.id === 'Vencidos') onSelectMetricCard?.('vencidos');
                   }
                 }}
                 className={`h-[26px] px-3 py-0.5 rounded-full text-[12px] font-medium transition-all duration-200 cursor-pointer flex items-center justify-center shrink-0 ${
