@@ -34,12 +34,12 @@ export const ActaModal: React.FC<ActaModalProps> = ({
 
   const isComite = activeRole === 'comite_medico';
 
-  const allActas: ActaInfo[] =
-    patient.actasHistory && patient.actasHistory.length > 0
-      ? patient.actasHistory
-      : patient.acta && patient.acta.numero > 0
-      ? [patient.acta]
-      : [];
+  const currentActa = patient.acta && patient.acta.numero > 0 ? [patient.acta] : [];
+  const historyActas = patient.actasHistory || [];
+  const allActas: ActaInfo[] = [
+    ...currentActa,
+    ...historyActas.filter(a => !currentActa.some(c => c.numero === a.numero))
+  ];
 
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -183,7 +183,7 @@ export const ActaModal: React.FC<ActaModalProps> = ({
                   No hay historial de actas registrado.
                 </div>
               ) : (
-                <div className={`space-y-2 ${allActas.length > 3 ? 'max-h-56 overflow-y-auto pr-1' : ''}`}>
+                <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
                   {allActas.map((actaItem, idx) => {
                     const isExpanded = expandedIndex === idx;
                     const shortDesc =

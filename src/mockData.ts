@@ -42,6 +42,18 @@ export const INITIAL_PATIENTS: Patient[] = [
         fecha: '15 mar 2026',
         resumen: 'Evaluación de ingreso al programa de riesgo vascular.',
         integrantes: ['Dr. Fernando Hoyos']
+      },
+      {
+        numero: 72,
+        fecha: '10 feb 2026',
+        resumen: 'Validación de exámenes de laboratorio iniciales y perfil lipídico.',
+        integrantes: ['Dra. Ana Patricia Ruiz', 'Dr. Carlos Mendoza']
+      },
+      {
+        numero: 50,
+        fecha: '05 ene 2026',
+        resumen: 'Recepción inicial y asignación de gestor de caso para cohorte vascular.',
+        integrantes: ['Anyeli Ledezma', 'Dr. Fernando Hoyos']
       }
     ],
     coordinador: 'Anyeli Ledezma',
@@ -212,6 +224,18 @@ export const INITIAL_PATIENTS: Patient[] = [
         fecha: '12 abr 2026',
         resumen: 'Revisión por Inconformidad manifestada en atención domiciliaria.',
         integrantes: ['Dra. Sofía López']
+      },
+      {
+        numero: 70,
+        fecha: '15 mar 2026',
+        resumen: 'Evaluación inicial de control glucémico y revisión de medicamentos.',
+        integrantes: ['Dr. Carlos Mendoza']
+      },
+      {
+        numero: 45,
+        fecha: '20 feb 2026',
+        resumen: 'Registro inicial de ingreso a programa ambulatorio de diabetes.',
+        integrantes: ['Katherine Mora']
       }
     ],
     coordinador: 'Katherine Mora',
