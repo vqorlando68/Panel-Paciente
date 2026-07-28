@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Patient, UserRole } from '../types';
 import {
   MoreVertical,
@@ -9,9 +9,7 @@ import {
   BarChart3,
   Users,
   Calendar,
-  Clock,
 } from 'lucide-react';
-import { AdherenceTooltip } from './AdherenceTooltip';
 
 interface ThreeDotsMenuProps {
   patient: Patient;
@@ -24,8 +22,6 @@ interface ThreeDotsMenuProps {
   onOpenCostos: (patient: Patient) => void;
   onOpenCuadroMedico: (patient: Patient) => void;
   onOpenAgenda: (patient: Patient) => void;
-  isAdherenciaOpen: boolean;
-  onToggleAdherencia: () => void;
 }
 
 export const ThreeDotsMenu: React.FC<ThreeDotsMenuProps> = ({
@@ -39,13 +35,27 @@ export const ThreeDotsMenu: React.FC<ThreeDotsMenuProps> = ({
   onOpenCostos,
   onOpenCuadroMedico,
   onOpenAgenda,
-  isAdherenciaOpen,
-  onToggleAdherencia,
 }) => {
   const isComite = activeRole === 'comite_medico';
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        onToggle();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen, onToggle]);
 
   return (
-    <div className="relative inline-block text-left">
+    <div ref={menuRef} className="relative inline-block text-left">
       <button
         onClick={onToggle}
         className="p-1.5 rounded-lg hover:bg-gray-100 text-[#035476] hover:text-[#00aae1] transition-colors cursor-pointer"
@@ -54,9 +64,9 @@ export const ThreeDotsMenu: React.FC<ThreeDotsMenuProps> = ({
         <MoreVertical className="w-4 h-4" />
       </button>
 
-      {/* Dropdown Options (7 literal items in exact order) */}
+      {/* Dropdown Options (Shifted to the right left-7 so the 3 dots remain visible, elevated -top-7) */}
       {isOpen && (
-        <div className="absolute top-full left-0 mt-1 z-40 bg-white rounded-xl shadow-2xl border border-[#e2e8eb] p-1.5 w-56 text-xs font-semibold space-y-0.5 animate-in fade-in zoom-in-95 duration-150">
+        <div className="absolute -top-7 left-7 z-50 bg-white rounded-xl shadow-2xl border border-[#e2e8eb] p-1 w-52 text-xs font-semibold space-y-0.5 animate-in fade-in zoom-in-95 duration-150">
           
           {/* 1. Ver Actas */}
           <button
@@ -65,9 +75,9 @@ export const ThreeDotsMenu: React.FC<ThreeDotsMenuProps> = ({
               onOpenActas(patient);
               onToggle();
             }}
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[#033d59] hover:bg-[#effaff] hover:text-[#00aae1] transition-colors cursor-pointer text-left"
+            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[#033d59] hover:bg-[#effaff] hover:text-[#00aae1] transition-colors cursor-pointer text-left"
           >
-            <FileText className="w-4 h-4 text-[#00aae1]" />
+            <FileText className="w-3.5 h-3.5 text-[#00aae1]" />
             <span>Ver Actas</span>
           </button>
 
@@ -78,27 +88,35 @@ export const ThreeDotsMenu: React.FC<ThreeDotsMenuProps> = ({
               onOpenEvolucion(patient);
               onToggle();
             }}
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[#033d59] hover:bg-[#effaff] hover:text-[#00aae1] transition-colors cursor-pointer text-left"
+            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[#033d59] hover:bg-[#effaff] hover:text-[#00aae1] transition-colors cursor-pointer text-left"
           >
-            <Activity className="w-4 h-4 text-[#00aae1]" />
+            <Activity className="w-3.5 h-3.5 text-[#00aae1]" />
             <span>Evolución</span>
           </button>
 
           {/* 3. + Nueva Acta */}
           <button
             type="button"
+            disabled={!isComite}
             onClick={() => {
-              onOpenNuevaActa(patient);
-              onToggle();
+              if (isComite) {
+                onOpenNuevaActa(patient);
+                onToggle();
+              }
             }}
-            className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-[#033d59] hover:bg-[#effaff] hover:text-[#00aae1] transition-colors cursor-pointer text-left"
+            title={!isComite ? 'Acceso inhabilitado para Coordinadora SIAU' : 'Registrar Nueva Acta'}
+            className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left transition-colors ${
+              isComite
+                ? 'text-[#033d59] hover:bg-[#effaff] hover:text-[#00aae1] cursor-pointer'
+                : 'text-gray-400 bg-gray-50 border border-gray-200 cursor-not-allowed opacity-60'
+            }`}
           >
-            <span className="flex items-center gap-2.5">
-              <Plus className="w-4 h-4 text-[#00aae1]" />
+            <span className="flex items-center gap-2">
+              <Plus className="w-3.5 h-3.5 text-[#00aae1]" />
               <span>+ Nueva Acta</span>
             </span>
             {!isComite && (
-              <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-medium">Consulta</span>
+              <Lock className="w-3 h-3 text-gray-400" />
             )}
           </button>
 
@@ -109,9 +127,9 @@ export const ThreeDotsMenu: React.FC<ThreeDotsMenuProps> = ({
               onOpenCostos(patient);
               onToggle();
             }}
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[#033d59] hover:bg-[#effaff] hover:text-[#00aae1] transition-colors cursor-pointer text-left"
+            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[#033d59] hover:bg-[#effaff] hover:text-[#00aae1] transition-colors cursor-pointer text-left"
           >
-            <BarChart3 className="w-4 h-4 text-[#00aae1]" />
+            <BarChart3 className="w-3.5 h-3.5 text-[#00aae1]" />
             <span>Costos</span>
           </button>
 
@@ -122,9 +140,9 @@ export const ThreeDotsMenu: React.FC<ThreeDotsMenuProps> = ({
               onOpenCuadroMedico(patient);
               onToggle();
             }}
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[#033d59] hover:bg-[#effaff] hover:text-[#00aae1] transition-colors cursor-pointer text-left"
+            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[#033d59] hover:bg-[#effaff] hover:text-[#00aae1] transition-colors cursor-pointer text-left"
           >
-            <Users className="w-4 h-4 text-[#00aae1]" />
+            <Users className="w-3.5 h-3.5 text-[#00aae1]" />
             <span>Cuadro Médico Asignado</span>
           </button>
 
@@ -135,23 +153,10 @@ export const ThreeDotsMenu: React.FC<ThreeDotsMenuProps> = ({
               onOpenAgenda(patient);
               onToggle();
             }}
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[#033d59] hover:bg-[#effaff] hover:text-[#00aae1] transition-colors cursor-pointer text-left"
+            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[#033d59] hover:bg-[#effaff] hover:text-[#00aae1] transition-colors cursor-pointer text-left"
           >
-            <Calendar className="w-4 h-4 text-[#00aae1]" />
+            <Calendar className="w-3.5 h-3.5 text-[#00aae1]" />
             <span>Agenda</span>
-          </button>
-
-          {/* 7. Adherencia */}
-          <button
-            type="button"
-            onClick={() => {
-              onToggleAdherencia();
-              onToggle();
-            }}
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[#033d59] hover:bg-[#effaff] hover:text-[#00aae1] transition-colors cursor-pointer text-left"
-          >
-            <Clock className="w-4 h-4 text-[#00aae1]" />
-            <span>Adherencia</span>
           </button>
         </div>
       )}

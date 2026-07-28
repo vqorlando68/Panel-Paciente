@@ -12,7 +12,12 @@ export const AdherencePopover: React.FC<AdherencePopoverProps> = ({ patient, onC
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
+      const target = event.target as HTMLElement | null;
+      if (
+        popoverRef.current &&
+        !popoverRef.current.contains(target) &&
+        !target?.closest('[data-adherence-toggle]')
+      ) {
         onClose();
       }
     };
@@ -34,7 +39,7 @@ export const AdherencePopover: React.FC<AdherencePopoverProps> = ({ patient, onC
   return (
     <div
       ref={popoverRef}
-      className="absolute left-4 top-2 z-30 bg-white rounded-xl shadow-2xl border border-[#00aae1]/40 w-72 p-3 space-y-2.5 animate-in fade-in zoom-in-95 duration-150"
+      className="absolute left-full top-0 ml-1.5 z-50 bg-white rounded-xl shadow-2xl border border-[#00aae1]/40 w-72 p-3 space-y-2.5 animate-in fade-in zoom-in-95 duration-150"
     >
       {/* Header */}
       <div className="flex items-center justify-between pb-1.5 border-b border-[#e2e8eb]">

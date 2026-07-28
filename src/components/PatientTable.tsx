@@ -37,6 +37,7 @@ import {
   Bell,
   Clock,
   X,
+  BarChart2,
 } from 'lucide-react';
 
 export type SortField =
@@ -593,6 +594,7 @@ export const PatientTable: React.FC<PatientTableProps> = ({
             sortedPatients.map((patient) => {
               const isMenuOpen = activeMenuPatientId === patient.id;
               const isAlarmOpen = activeAlarmTooltipPatientId === patient.id;
+              const isAdherenciaOpen = adherenciaPatientId === patient.id;
               const isInconforme = patient.etiqueta === 'Inconforme' || patient.retroalimentacion === 'Inconforme';
 
               return (
@@ -601,65 +603,81 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                     className="hover:bg-[#f9fafb] transition-colors group h-[72px]"
                   >
                   {/* Col 1: ACCIONES (Sticky on sm+) */}
-                  <td className={`bg-white sm:sticky sm:left-0 group-hover:bg-[#f9fafb] px-2 py-2 border-r border-[#e2e8eb] min-w-[80px] sm:min-w-[100px] max-w-[80px] sm:max-w-[100px] ${
-                    isMenuOpen || isAlarmOpen ? 'z-40' : 'z-30'
+                  <td className={`bg-white sm:sticky sm:left-0 group-hover:bg-[#f9fafb] px-2 py-1 border-r border-[#e2e8eb] min-w-[80px] sm:min-w-[100px] max-w-[80px] sm:max-w-[100px] relative ${
+                    isMenuOpen || isAlarmOpen || isAdherenciaOpen ? 'z-40' : 'z-30'
                   }`}>
-                    <div className="flex items-center justify-center gap-1">
-                      
-                      {/* Bell Icon if alarm active */}
-                      {patient.hasAlarm ? (
-                        <div className="relative">
-                          <button
-                            type="button"
-                            onClick={() => setActiveAlarmTooltipPatientId(isAlarmOpen ? null : patient.id)}
-                            className="p-1 rounded-md bg-[#fffbeb] text-[#b45309] hover:bg-[#fef3c7] border border-[#fbbf24] transition-colors cursor-pointer"
-                            title="Ver Alerta de Gestión"
-                          >
-                            <Bell className="w-3.5 h-3.5 fill-[#fbbf24] text-[#b45309]" />
-                          </button>
+                    <div className="flex flex-col items-center justify-center gap-1">
+                      {/* Mini-Chart Adherencia Toggle Button */}
+                      <button
+                        type="button"
+                        data-adherence-toggle="true"
+                        onClick={() => setAdherenciaPatientId((prev) => (prev === patient.id ? null : patient.id))}
+                        className={`p-1 rounded-md transition-all cursor-pointer border ${
+                          isAdherenciaOpen
+                            ? 'bg-[#00aae1] text-white border-[#00aae1] shadow-xs'
+                            : 'bg-[#effaff] text-[#00aae1] hover:bg-[#00aae1] hover:text-white border-[#00aae1]/40'
+                        }`}
+                        title={isAdherenciaOpen ? 'Ocultar Adherencia' : 'Ver Adherencia (Gráfico de Barras)'}
+                      >
+                        <BarChart2 className="w-3.5 h-3.5" />
+                      </button>
 
-                          {/* Alarm Tooltip */}
-                          {isAlarmOpen && (
-                            <div className="absolute top-full left-0 mt-1 z-50 bg-[#fffbeb] border border-[#fbbf24] text-[#b45309] p-2.5 rounded-lg shadow-xl w-56 text-[10px] space-y-1 animate-in fade-in zoom-in-95 duration-150">
-                              <span className="font-bold block text-[#b45309] uppercase">Motivo de Alerta:</span>
-                              <ul className="list-disc pl-3 space-y-0.5">
-                                {patient.alarmReasons.map((r, i) => (
-                                  <li key={i}>{r}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="w-5" /> // spacer
-                      )}
+                      <div className="flex items-center justify-center gap-1">
+                        {/* Bell Icon if alarm active */}
+                        {patient.hasAlarm ? (
+                          <div className="relative">
+                            <button
+                              type="button"
+                              onClick={() => setActiveAlarmTooltipPatientId(isAlarmOpen ? null : patient.id)}
+                              className="p-1 rounded-md bg-[#fffbeb] text-[#b45309] hover:bg-[#fef3c7] border border-[#fbbf24] transition-colors cursor-pointer"
+                              title="Ver Alerta de Gestión"
+                            >
+                              <Bell className="w-3.5 h-3.5 fill-[#fbbf24] text-[#b45309]" />
+                            </button>
 
-                      {/* 3 Vertical Dots Menu Component */}
-                      <ThreeDotsMenu
-                        patient={patient}
-                        activeRole={activeRole}
-                        isOpen={isMenuOpen}
-                        onToggle={() => setActiveMenuPatientId(isMenuOpen ? null : patient.id)}
-                        onOpenActas={(p) => onOpenActa(p)}
-                        onOpenEvolucion={(p) => onOpenNotesDrawer(p, 'cli')}
-                        onOpenNuevaActa={(p) => onOpenActa(p)}
-                        onOpenCostos={(p) => onOpenCostAnalysis(p)}
-                        onOpenCuadroMedico={(p) => onOpenCuadroMedico(p)}
-                        onOpenAgenda={(p) => onOpenAgenda(p)}
-                        isAdherenciaOpen={adherenciaPatientId === patient.id}
-                        onToggleAdherencia={() => setAdherenciaPatientId(prev => prev === patient.id ? null : patient.id)}
-                      />
+                            {/* Alarm Tooltip */}
+                            {isAlarmOpen && (
+                              <div className="absolute top-full left-0 mt-1 z-50 bg-[#fffbeb] border border-[#fbbf24] text-[#b45309] p-2.5 rounded-lg shadow-xl w-56 text-[10px] space-y-1 animate-in fade-in zoom-in-95 duration-150">
+                                <span className="font-bold block text-[#b45309] uppercase">Motivo de Alerta:</span>
+                                <ul className="list-disc pl-3 space-y-0.5">
+                                  {patient.alarmReasons.map((r, i) => (
+                                    <li key={i}>{r}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="w-5" /> // spacer
+                        )}
+
+                        {/* 3 Vertical Dots Menu Component */}
+                        <ThreeDotsMenu
+                          patient={patient}
+                          activeRole={activeRole}
+                          isOpen={isMenuOpen}
+                          onToggle={() => setActiveMenuPatientId(isMenuOpen ? null : patient.id)}
+                          onOpenActas={(p) => onOpenActa(p)}
+                          onOpenEvolucion={(p) => onOpenNotesDrawer(p, 'cli')}
+                          onOpenNuevaActa={(p) => onOpenActa(p)}
+                          onOpenCostos={(p) => onOpenCostAnalysis(p)}
+                          onOpenCuadroMedico={(p) => onOpenCuadroMedico(p)}
+                          onOpenAgenda={(p) => onOpenAgenda(p)}
+                        />
+                      </div>
                     </div>
-                  </td>
 
-                  {/* Col 2: PACIENTE (Sticky on sm+) */}
-                  <td className="bg-white sm:sticky sm:left-[100px] z-30 group-hover:bg-[#f9fafb] px-2 py-1.5 border-r border-[#e2e8eb] min-w-[240px] max-w-[240px] relative">
-                    {adherenciaPatientId === patient.id && (
+                    {/* Adherence Popover anchored directly to ACCIONES cell */}
+                    {isAdherenciaOpen && (
                       <AdherencePopover
                         patient={patient}
                         onClose={() => setAdherenciaPatientId(null)}
                       />
                     )}
+                  </td>
+
+                  {/* Col 2: PACIENTE (Sticky on sm+) */}
+                  <td className="bg-white sm:sticky sm:left-[100px] z-30 group-hover:bg-[#f9fafb] px-2 py-1.5 border-r border-[#e2e8eb] min-w-[240px] max-w-[240px] relative">
                     <PatientCard
                       patient={patient}
                       onClick={() => onEditPatient(patient)}
