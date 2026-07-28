@@ -165,14 +165,6 @@ export const ThreeDotsMenu: React.FC<ThreeDotsMenuProps> = ({
           </button>
         </div>
       )}
-
-      {/* Adherencia Tooltip Popover */}
-      {isAdherenciaOpen && (
-        <AdherenceTooltip
-          patient={patient}
-          onClose={onToggleAdherencia}
-        />
-      )}
     </div>
   );
 };

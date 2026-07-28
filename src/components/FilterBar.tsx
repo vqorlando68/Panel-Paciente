@@ -103,6 +103,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   const activeFastFilter = filters.fastFilter || 'Todos';
 
   const hasActiveFilters =
+    filters.estado !== 'Todos' ||
     filters.cohorte !== 'Todos' ||
     filters.seguimiento !== 'Todos' ||
     filters.coordinador !== 'Todos' ||
@@ -110,6 +111,8 @@ export const FilterBar: React.FC<FilterBarProps> = ({
     filters.identificacion !== '' ||
     filters.nombresApellidos !== '' ||
     filters.numeroCarga !== '' ||
+    Boolean(filters.soloVencidas) ||
+    Boolean(filters.soloAlarmas) ||
     activeFastFilter !== 'Todos';
 
   const convenioButtonLabel = useMemo(() => {

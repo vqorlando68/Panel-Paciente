@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Patient, NoteEntry, UserRole } from '../types';
+import { Patient, NoteEntry, UserRole, SpecialistInfo } from '../types';
 import { X, Pencil, Stethoscope, Send, User, Clock, MessageSquare, Plus, UserCheck } from 'lucide-react';
 
 interface NotesDrawerProps {
@@ -67,8 +67,9 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({
     // 3. Add patient's specialists
     if (patient.specialists) {
       Object.values(patient.specialists).forEach((s) => {
-        if (s.professionalName && s.specialistTitle) {
-          map.set(s.professionalName, s.specialistTitle);
+        const spec = s as SpecialistInfo;
+        if (spec?.professionalName && spec?.specialistTitle) {
+          map.set(spec.professionalName, spec.specialistTitle);
         }
       });
     }
@@ -240,85 +241,91 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({
               </span>
             </div>
 
-            {/* Checkbox: Marcar Rehúso */}
-            <div className="bg-[#fff1f2] border border-[#fecdd3] rounded-lg p-2.5 space-y-2">
-              <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-[#e11d48]">
-                <input
-                  type="checkbox"
-                  checked={isRehuso}
-                  onChange={(e) => setIsRehuso(e.target.checked)}
-                  className="rounded border-rose-300 text-[#e11d48] focus:ring-[#e11d48] cursor-pointer"
-                />
-                <span>Marcar Rehúso</span>
-              </label>
+            {/* Checkbox: Marcar Rehúso (Exclusivo Cuadro Médico / Comité Médico) */}
+            {activeRole === 'comite_medico' ? (
+              <div className="bg-[#fff1f2] border border-[#fecdd3] rounded-lg p-2.5 space-y-2">
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-[#e11d48]">
+                  <input
+                    type="checkbox"
+                    checked={isRehuso}
+                    onChange={(e) => setIsRehuso(e.target.checked)}
+                    className="rounded border-rose-300 text-[#e11d48] focus:ring-[#e11d48] cursor-pointer"
+                  />
+                  <span>Marcar Rehúso</span>
+                </label>
 
-              {isRehuso && (
-                <div className="space-y-2 pt-1.5 border-t border-rose-200">
-                  {/* Quick select from base */}
-                  <div>
-                    <label className="block text-[10px] font-bold text-rose-900 mb-0.5 flex items-center gap-1">
-                      <UserCheck className="w-3 h-3 text-[#e11d48]" />
-                      <span>Seleccionar de Base de Profesional / Especialidad:</span>
-                    </label>
-                    <select
-                      onChange={handleSelectFromBase}
-                      className="w-full text-xs p-1.5 bg-white border border-rose-300 rounded text-[#033d59] focus:outline-none focus:border-[#e11d48] cursor-pointer"
-                    >
-                      <option value="">-- Buscar en Base de Profesionales --</option>
-                      {professionalBase.map((p, idx) => (
-                        <option key={idx} value={p.name}>
-                          {p.name} ({p.specialty})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
+                {isRehuso && (
+                  <div className="space-y-2 pt-1.5 border-t border-rose-200">
+                    {/* Quick select from base */}
                     <div>
-                      <label className="block text-[10px] font-bold text-rose-800 mb-0.5">
-                        Nombre del Profesional *
+                      <label className="block text-[10px] font-bold text-rose-900 mb-0.5 flex items-center gap-1">
+                        <UserCheck className="w-3 h-3 text-[#e11d48]" />
+                        <span>Seleccionar de Base de Profesional / Especialidad:</span>
                       </label>
-                      <input
-                        type="text"
-                        list="profesionales-base-list"
-                        required={isRehuso}
-                        value={rehusoProfessional}
-                        onChange={(e) => handleProfessionalChange(e.target.value)}
-                        placeholder="Ej: Dr. Roberto Silva"
-                        className="w-full text-xs p-1.5 bg-white border border-rose-300 rounded text-[#033d59] focus:outline-none focus:border-[#e11d48]"
-                      />
-                      <datalist id="profesionales-base-list">
+                      <select
+                        onChange={handleSelectFromBase}
+                        className="w-full text-xs p-1.5 bg-white border border-rose-300 rounded text-[#033d59] focus:outline-none focus:border-[#e11d48] cursor-pointer"
+                      >
+                        <option value="">-- Buscar en Base de Profesionales --</option>
                         {professionalBase.map((p, idx) => (
                           <option key={idx} value={p.name}>
-                            {p.specialty}
+                            {p.name} ({p.specialty})
                           </option>
                         ))}
-                      </datalist>
+                      </select>
                     </div>
 
-                    <div>
-                      <label className="block text-[10px] font-bold text-rose-800 mb-0.5">
-                        Especialidad *
-                      </label>
-                      <input
-                        type="text"
-                        list="especialidades-base-list"
-                        required={isRehuso}
-                        value={rehusoSpecialty}
-                        onChange={(e) => handleSpecialtyChange(e.target.value)}
-                        placeholder="Ej: Cardiología"
-                        className="w-full text-xs p-1.5 bg-white border border-rose-300 rounded text-[#033d59] focus:outline-none focus:border-[#e11d48]"
-                      />
-                      <datalist id="especialidades-base-list">
-                        {specialtyList.map((s, idx) => (
-                          <option key={idx} value={s} />
-                        ))}
-                      </datalist>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[10px] font-bold text-rose-800 mb-0.5">
+                          Nombre del Profesional *
+                        </label>
+                        <input
+                          type="text"
+                          list="profesionales-base-list"
+                          required={isRehuso}
+                          value={rehusoProfessional}
+                          onChange={(e) => handleProfessionalChange(e.target.value)}
+                          placeholder="Ej: Dr. Roberto Silva"
+                          className="w-full text-xs p-1.5 bg-white border border-rose-300 rounded text-[#033d59] focus:outline-none focus:border-[#e11d48]"
+                        />
+                        <datalist id="profesionales-base-list">
+                          {professionalBase.map((p, idx) => (
+                            <option key={idx} value={p.name}>
+                              {p.specialty}
+                            </option>
+                          ))}
+                        </datalist>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-rose-800 mb-0.5">
+                          Especialidad *
+                        </label>
+                        <input
+                          type="text"
+                          list="especialidades-base-list"
+                          required={isRehuso}
+                          value={rehusoSpecialty}
+                          onChange={(e) => handleSpecialtyChange(e.target.value)}
+                          placeholder="Ej: Cardiología"
+                          className="w-full text-xs p-1.5 bg-white border border-rose-300 rounded text-[#033d59] focus:outline-none focus:border-[#e11d48]"
+                        />
+                        <datalist id="especialidades-base-list">
+                          {specialtyList.map((s, idx) => (
+                            <option key={idx} value={s} />
+                          ))}
+                        </datalist>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            ) : (
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-2 text-[11px] text-gray-500 italic">
+                El registro de Rehúso y sus datos de profesional y especialidad es exclusivo del Cuadro Médico. El coordinador SIAU solo lo visualiza.
+              </div>
+            )}
 
             <textarea
               rows={3}
