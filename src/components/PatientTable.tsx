@@ -608,8 +608,15 @@ export const PatientTable: React.FC<PatientTableProps> = ({
               return (
                   <tr
                     key={patient.id}
-                    className="hover:bg-[#f9fafb] transition-colors group h-[72px]"
+                    className="hover:bg-[#f9fafb] transition-colors group h-[72px] relative"
                   >
+                  {/* Adherence Popover */}
+                  {adherenciaPatientId === patient.id && (
+                    <AdherencePopover
+                      patient={patient}
+                      onClose={() => setAdherenciaPatientId(null)}
+                    />
+                  )}
                   {/* Col 1: ACCIONES (Sticky Left) */}
                   <td className={`sticky left-0 bg-white group-hover:bg-[#f9fafb] px-2 py-2 border-r border-[#e2e8eb] min-w-[100px] max-w-[100px] ${
                     isMenuOpen || isAlarmOpen ? 'z-40' : 'z-20'
@@ -819,14 +826,6 @@ export const PatientTable: React.FC<PatientTableProps> = ({
             onEditPatient(hoveredPatient.patient);
             setHoveredPatient(null);
           }}
-        />
-      )}
-
-      {/* Render Adherence Popover */}
-      {adherenciaPatientId && (
-        <AdherencePopover
-          patient={sortedPatients.find(p => p.id === adherenciaPatientId) || patients[0]}
-          onClose={() => setAdherenciaPatientId(null)}
         />
       )}
     </div>
