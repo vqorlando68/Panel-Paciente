@@ -58,15 +58,15 @@ export const ThreeDotsMenu: React.FC<ThreeDotsMenuProps> = ({
     <div ref={menuRef} className="relative inline-block text-left">
       <button
         onClick={onToggle}
-        className="p-1.5 rounded-lg hover:bg-gray-100 text-[#035476] hover:text-[#00aae1] transition-colors cursor-pointer"
+        className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-[#334155] text-[#035476] dark:text-[#94a3b8] hover:text-[#00aae1] dark:hover:text-[#38bdf8] transition-colors cursor-pointer"
         title="Menú de Acciones"
       >
         <MoreVertical className="w-4 h-4" />
       </button>
 
-      {/* Dropdown Options (Shifted to the right left-7 so the 3 dots remain visible, elevated -top-7) */}
+      {/* Dropdown Options */}
       {isOpen && (
-        <div className="absolute -top-7 left-7 z-50 bg-white rounded-xl shadow-2xl border border-[#e2e8eb] p-1 w-52 text-xs font-semibold space-y-0.5 animate-in fade-in zoom-in-95 duration-150">
+        <div className="absolute -top-7 left-7 z-50 bg-white dark:bg-[#1e293b] rounded-xl shadow-2xl border border-[#e2e8eb] dark:border-[#334155] p-1 w-52 text-xs font-semibold space-y-0.5 animate-in fade-in zoom-in-95 duration-150">
           
           {/* 1. Ver Actas */}
           <button
@@ -75,7 +75,7 @@ export const ThreeDotsMenu: React.FC<ThreeDotsMenuProps> = ({
               onOpenActas(patient);
               onToggle();
             }}
-            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[#033d59] hover:bg-[#effaff] hover:text-[#00aae1] transition-colors cursor-pointer text-left"
+            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[#033d59] dark:text-[#f8fafc] hover:bg-[#effaff] dark:hover:bg-[#0f172a] hover:text-[#00aae1] dark:hover:text-[#38bdf8] transition-colors cursor-pointer text-left"
           >
             <FileText className="w-3.5 h-3.5 text-[#00aae1]" />
             <span>Ver Actas</span>
@@ -88,7 +88,7 @@ export const ThreeDotsMenu: React.FC<ThreeDotsMenuProps> = ({
               onOpenEvolucion(patient);
               onToggle();
             }}
-            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[#033d59] hover:bg-[#effaff] hover:text-[#00aae1] transition-colors cursor-pointer text-left"
+            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[#033d59] dark:text-[#f8fafc] hover:bg-[#effaff] dark:hover:bg-[#0f172a] hover:text-[#00aae1] dark:hover:text-[#38bdf8] transition-colors cursor-pointer text-left"
           >
             <Activity className="w-3.5 h-3.5 text-[#00aae1]" />
             <span>Evolución</span>
@@ -107,8 +107,8 @@ export const ThreeDotsMenu: React.FC<ThreeDotsMenuProps> = ({
             title={!isComite ? 'Acceso inhabilitado para Coordinadora SIAU' : 'Registrar Nueva Acta'}
             className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left transition-colors ${
               isComite
-                ? 'text-[#033d59] hover:bg-[#effaff] hover:text-[#00aae1] cursor-pointer'
-                : 'text-gray-400 bg-gray-50 border border-gray-200 cursor-not-allowed opacity-60'
+                ? 'text-[#033d59] dark:text-[#f8fafc] hover:bg-[#effaff] dark:hover:bg-[#0f172a] hover:text-[#00aae1] dark:hover:text-[#38bdf8] cursor-pointer'
+                : 'text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 cursor-not-allowed opacity-60'
             }`}
           >
             <span className="flex items-center gap-2">
@@ -127,7 +127,7 @@ export const ThreeDotsMenu: React.FC<ThreeDotsMenuProps> = ({
               onOpenCostos(patient);
               onToggle();
             }}
-            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[#033d59] hover:bg-[#effaff] hover:text-[#00aae1] transition-colors cursor-pointer text-left"
+            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[#033d59] dark:text-[#f8fafc] hover:bg-[#effaff] dark:hover:bg-[#0f172a] hover:text-[#00aae1] dark:hover:text-[#38bdf8] transition-colors cursor-pointer text-left"
           >
             <BarChart3 className="w-3.5 h-3.5 text-[#00aae1]" />
             <span>Costos</span>
@@ -140,7 +140,7 @@ export const ThreeDotsMenu: React.FC<ThreeDotsMenuProps> = ({
               onOpenCuadroMedico(patient);
               onToggle();
             }}
-            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[#033d59] hover:bg-[#effaff] hover:text-[#00aae1] transition-colors cursor-pointer text-left"
+            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[#033d59] dark:text-[#f8fafc] hover:bg-[#effaff] dark:hover:bg-[#0f172a] hover:text-[#00aae1] dark:hover:text-[#38bdf8] transition-colors cursor-pointer text-left"
           >
             <Users className="w-3.5 h-3.5 text-[#00aae1]" />
             <span>Cuadro Médico Asignado</span>
@@ -153,7 +153,7 @@ export const ThreeDotsMenu: React.FC<ThreeDotsMenuProps> = ({
               onOpenAgenda(patient);
               onToggle();
             }}
-            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[#033d59] hover:bg-[#effaff] hover:text-[#00aae1] transition-colors cursor-pointer text-left"
+            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[#033d59] dark:text-[#f8fafc] hover:bg-[#effaff] dark:hover:bg-[#0f172a] hover:text-[#00aae1] dark:hover:text-[#38bdf8] transition-colors cursor-pointer text-left"
           >
             <Calendar className="w-3.5 h-3.5 text-[#00aae1]" />
             <span>Agenda</span>

@@ -115,17 +115,17 @@ export const CuadroMedicoDrawer: React.FC<CuadroMedicoDrawerProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex justify-end font-sans">
-      <div className="bg-white w-full max-w-lg h-full shadow-2xl border-l border-[#e2e8eb] flex flex-col animate-in slide-in-from-right duration-200">
+    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex justify-end font-sans">
+      <div className="bg-white dark:bg-[#1e293b] text-[#033d59] dark:text-[#f8fafc] w-full max-w-lg h-full shadow-2xl flex flex-col border-l border-[#e2e8eb] dark:border-[#334155] animate-in slide-in-from-right duration-200">
         
         {/* Header */}
-        <div className="bg-[#033d59] text-white p-4 flex items-center justify-between">
+        <div className="bg-[#00aae1] text-white p-4 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-[#00aae1] rounded-lg text-white">
-              <Users className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-lg bg-white/20 flex items-center justify-center">
+              <Users className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h3 className="font-bold text-sm">Cuadro Médico del Paciente</h3>
+              <h3 className="font-bold text-base leading-tight">Cuadro Médico Asignado</h3>
               <p className="text-xs text-white/80">{patient.nombre}</p>
             </div>
           </div>
@@ -140,8 +140,8 @@ export const CuadroMedicoDrawer: React.FC<CuadroMedicoDrawerProps> = ({
         {/* Mode Notification Banner */}
         <div className={`px-4 py-2 text-xs font-bold flex items-center justify-between border-b ${
           isEditable
-            ? 'bg-[#effaff] text-[#00aae1] border-[#00aae1]/20'
-            : 'bg-gray-100 text-gray-600 border-gray-200'
+            ? 'bg-[#effaff] dark:bg-[#00aae1]/10 text-[#00aae1] dark:text-[#38bdf8] border-[#00aae1]/20'
+            : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700'
         }`}>
           <div className="flex items-center gap-1.5">
             {isEditable ? (
@@ -162,25 +162,25 @@ export const CuadroMedicoDrawer: React.FC<CuadroMedicoDrawerProps> = ({
         </div>
 
         {/* Content */}
-        <div className="p-5 flex-1 overflow-y-auto space-y-4 text-xs text-[#033d59]">
-          <div className="bg-[#effaff] p-3 rounded-xl border border-[#00aae1]/20 flex items-center justify-between">
+        <div className="p-5 flex-1 overflow-y-auto space-y-4 text-xs text-[#033d59] dark:text-[#f8fafc]">
+          <div className="bg-[#effaff] dark:bg-[#00aae1]/10 p-3 rounded-xl border border-[#00aae1]/20 flex items-center justify-between">
             <div>
-              <span className="text-[10px] text-[#035476] font-semibold uppercase block">Convenio Asignado</span>
-              <span className="font-bold text-[#033d59] text-xs">{patient.convenioNombre}</span>
+              <span className="text-[10px] text-[#035476] dark:text-[#38bdf8] font-semibold uppercase block">Convenio Asignado</span>
+              <span className="font-bold text-[#033d59] dark:text-[#f8fafc] text-xs">{patient.convenioNombre}</span>
             </div>
             <ShieldCheck className="w-5 h-5 text-[#00aae1]" />
           </div>
 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h4 className="font-bold text-xs text-[#033d59] uppercase tracking-wide">
+              <h4 className="font-bold text-xs text-[#033d59] dark:text-[#f8fafc] uppercase tracking-wide">
                 Profesionales e IPS Asignadas ({items.length})
               </h4>
               {isEditable && (
                 <button
                   type="button"
                   onClick={handleAddItem}
-                  className="flex items-center gap-1 text-[11px] font-bold text-[#00aae1] hover:text-[#0196d4] bg-[#effaff] hover:bg-[#dbeafe] px-2.5 py-1 rounded-lg border border-[#00aae1]/30 transition-colors cursor-pointer"
+                  className="flex items-center gap-1 text-[11px] font-bold text-[#00aae1] dark:text-[#38bdf8] hover:text-[#0196d4] bg-[#effaff] dark:bg-[#00aae1]/10 hover:bg-[#dbeafe] dark:hover:bg-[#00aae1]/20 px-2.5 py-1 rounded-lg border border-[#00aae1]/30 transition-colors cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Agregar Profesional</span>
@@ -189,27 +189,27 @@ export const CuadroMedicoDrawer: React.FC<CuadroMedicoDrawerProps> = ({
             </div>
 
             {items.length === 0 ? (
-              <p className="text-gray-500 py-6 text-center italic">No hay profesionales registrados en el cuadro médico.</p>
+              <p className="text-gray-500 dark:text-gray-400 py-6 text-center italic">No hay profesionales registrados en el cuadro médico.</p>
             ) : (
               items.map((item) => {
                 const availableProfessionals = getProfessionalsForSpecialty(item.specialty);
                 return (
                   <div
                     key={item.id}
-                    className="p-3.5 bg-white border border-[#e2e8eb] rounded-xl hover:border-[#00aae1]/40 shadow-2xs transition-all space-y-2.5"
+                    className="p-3.5 bg-white dark:bg-[#0f172a] border border-[#e2e8eb] dark:border-[#334155] rounded-xl hover:border-[#00aae1]/40 shadow-2xs transition-all space-y-2.5"
                   >
                     {isEditable ? (
                       /* Editable Item Controls with Dropdowns */
                       <div className="space-y-2">
                         <div className="grid grid-cols-2 gap-2">
                           <div>
-                            <label className="block text-[10px] font-bold text-[#035476] mb-0.5">
+                            <label className="block text-[10px] font-bold text-[#035476] dark:text-[#94a3b8] mb-0.5">
                               Especialidad / Rol *
                             </label>
                             <select
                               value={item.specialty}
                               onChange={(e) => handleSpecialtyChange(item.id, e.target.value)}
-                              className="w-full text-xs p-1.5 bg-white border border-[#e2e8eb] rounded text-[#033d59] focus:outline-none focus:border-[#00aae1] font-medium"
+                              className="w-full text-xs p-1.5 bg-white dark:bg-[#1e293b] border border-[#e2e8eb] dark:border-[#334155] rounded text-[#033d59] dark:text-[#f8fafc] focus:outline-none focus:border-[#00aae1] font-medium"
                             >
                               <option value="">Seleccionar Especialidad...</option>
                               {SPECIALTY_OPTIONS.map((spec) => (

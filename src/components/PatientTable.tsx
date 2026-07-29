@@ -278,8 +278,8 @@ export const PatientTable: React.FC<PatientTableProps> = ({
         )}
 
         {priorityMenuPatientId === patient.id && isComite && (
-          <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 z-30 bg-white rounded-lg shadow-xl border border-[#e2e8eb] p-1.5 w-28 text-xs font-medium space-y-0.5 max-h-48 overflow-y-auto">
-            <div className="text-[10px] font-bold text-[#035476] px-2 py-1 uppercase tracking-wider border-b border-[#e2e8eb] mb-1">
+          <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 z-30 bg-white dark:bg-[#1e293b] rounded-lg shadow-xl border border-[#e2e8eb] dark:border-[#334155] p-1.5 w-28 text-xs font-medium space-y-0.5 max-h-48 overflow-y-auto">
+            <div className="text-[10px] font-bold text-[#035476] dark:text-[#94a3b8] px-2 py-1 uppercase tracking-wider border-b border-[#e2e8eb] dark:border-[#334155] mb-1">
               Prioridad
             </div>
             {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((pNum) => (
@@ -293,8 +293,8 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                   }
                   setPriorityMenuPatientId(null);
                 }}
-                className={`w-full text-center px-2 py-1 rounded-md text-xs font-bold hover:bg-[#effaff] cursor-pointer transition-colors ${
-                  val === pNum ? 'bg-[#effaff] text-[#00aae1]' : 'text-[#033d59]'
+                className={`w-full text-center px-2 py-1 rounded-md text-xs font-bold hover:bg-[#effaff] dark:hover:bg-[#0f172a] cursor-pointer transition-colors ${
+                  val === pNum ? 'bg-[#effaff] dark:bg-[#00aae1]/20 text-[#00aae1] dark:text-[#38bdf8]' : 'text-[#033d59] dark:text-[#f8fafc]'
                 }`}
               >
                 P-{pNum}
@@ -311,16 +311,16 @@ export const PatientTable: React.FC<PatientTableProps> = ({
       <div className="relative font-sans inline-block">
         <button
           onClick={() => setCoordinadorMenuPatientId(coordinadorMenuPatientId === patient.id ? null : patient.id)}
-          className="px-2 py-0.5 rounded-full text-[11px] font-semibold border transition-all flex items-center gap-1 cursor-pointer bg-[#effaff] text-[#033d59] border-[#00aae1]/30 hover:bg-[#dff4ff]"
+          className="px-2 py-0.5 rounded-full text-[11px] font-semibold border transition-all flex items-center gap-1 cursor-pointer bg-[#effaff] dark:bg-[#00aae1]/20 text-[#033d59] dark:text-[#f8fafc] border-[#00aae1]/30 hover:bg-[#dff4ff]"
           title={`Coordinador: ${patient.coordinador}. Clic para cambiar.`}
         >
           <span className="truncate max-w-[125px]">{patient.coordinador || 'Sin asignar'}</span>
-          <ChevronDown className="w-3 h-3 text-[#00aae1] shrink-0" />
+          <ChevronDown className="w-3 h-3 text-[#00aae1] dark:text-[#38bdf8] shrink-0" />
         </button>
 
         {coordinadorMenuPatientId === patient.id && (
-          <div className="absolute top-full left-0 mt-1 z-30 bg-white rounded-lg shadow-xl border border-[#e2e8eb] p-1.5 w-48 max-h-56 overflow-y-auto text-xs font-medium space-y-0.5">
-            <div className="text-[10px] font-bold text-[#035476] px-2 py-1 uppercase tracking-wider border-b border-[#e2e8eb] mb-1">
+          <div className="absolute top-full left-0 mt-1 z-30 bg-white dark:bg-[#1e293b] rounded-lg shadow-xl border border-[#e2e8eb] dark:border-[#334155] p-1.5 w-48 max-h-56 overflow-y-auto text-xs font-medium space-y-0.5">
+            <div className="text-[10px] font-bold text-[#035476] dark:text-[#94a3b8] px-2 py-1 uppercase tracking-wider border-b border-[#e2e8eb] dark:border-[#334155] mb-1">
               Coordinador
             </div>
             {COORDINADORES_LIST.map((coord) => (
@@ -334,8 +334,8 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                   }
                   setCoordinadorMenuPatientId(null);
                 }}
-                className={`w-full text-left px-2 py-1.5 rounded-md text-[11px] hover:bg-[#effaff] cursor-pointer transition-colors ${
-                  patient.coordinador === coord ? 'bg-[#effaff] text-[#00aae1] font-bold' : 'text-[#033d59]'
+                className={`w-full text-left px-2 py-1.5 rounded-md text-[11px] hover:bg-[#effaff] dark:hover:bg-[#0f172a] cursor-pointer transition-colors ${
+                  patient.coordinador === coord ? 'bg-[#effaff] dark:bg-[#00aae1]/20 text-[#00aae1] dark:text-[#38bdf8] font-bold' : 'text-[#033d59] dark:text-[#f8fafc]'
                 }`}
               >
                 {coord}
@@ -348,13 +348,13 @@ export const PatientTable: React.FC<PatientTableProps> = ({
   };
 
   const renderCohorteBadge = (patient: Patient) => {
-    let style = 'bg-[#effaff] text-[#00aae1] border-[#00aae1]/30 hover:bg-[#dff4ff]';
+    let style = 'bg-[#effaff] dark:bg-[#00aae1]/20 text-[#00aae1] dark:text-[#38bdf8] border-[#00aae1]/30 hover:bg-[#dff4ff]';
     if (['ACTIVO', 'ACEPTADO', 'ESTRATIFICADO'].includes(patient.cohorte)) {
-      style = 'bg-[#ebfef4] text-[#01ae6c] border-[#01ae6c]/30 hover:bg-[#d0fbe2]';
+      style = 'bg-[#ebfef4] dark:bg-emerald-950/40 text-[#01ae6c] dark:text-emerald-300 border-[#01ae6c]/30 hover:bg-[#d0fbe2]';
     } else if (['RECHAZADO', 'ERRORES', 'DESERTADO', 'FALLECIDO I', 'FALLECIDO II', 'FALLECIDOS III', 'RECHAZA EL SERVICIO'].includes(patient.cohorte)) {
-      style = 'bg-[#fff1f2] text-[#e11d48] border-[#e11d48]/30 hover:bg-[#ffe4e6]';
+      style = 'bg-[#fff1f2] dark:bg-rose-950/40 text-[#e11d48] dark:text-rose-300 border-[#e11d48]/30 hover:bg-[#ffe4e6]';
     } else if (['PROSPECTO', 'INTERESADO', 'PENDIENTE DE CONTACTO', 'NO RESPUESTA'].includes(patient.cohorte)) {
-      style = 'bg-[#fffbeb] text-[#b45309] border-[#fbbf24]/40 hover:bg-[#fef3c7]';
+      style = 'bg-[#fffbeb] dark:bg-amber-950/40 text-[#b45309] dark:text-amber-300 border-[#fbbf24]/40 hover:bg-[#fef3c7]';
     }
 
     const currentOption = COHORTE_OPTIONS.find((c) => c.code === patient.cohorte || c.label === patient.cohorte);
@@ -372,8 +372,8 @@ export const PatientTable: React.FC<PatientTableProps> = ({
         </button>
 
         {cohorteMenuPatientId === patient.id && (
-          <div className="absolute top-full left-0 mt-1 z-30 bg-white rounded-lg shadow-xl border border-[#e2e8eb] p-1.5 w-72 max-h-60 overflow-y-auto text-xs font-medium space-y-0.5">
-            <div className="text-[10px] font-bold text-[#035476] px-2 py-1 uppercase tracking-wider border-b border-[#e2e8eb] mb-1">
+          <div className="absolute top-full left-0 mt-1 z-30 bg-white dark:bg-[#1e293b] rounded-lg shadow-xl border border-[#e2e8eb] dark:border-[#334155] p-1.5 w-72 max-h-60 overflow-y-auto text-xs font-medium space-y-0.5">
+            <div className="text-[10px] font-bold text-[#035476] dark:text-[#94a3b8] px-2 py-1 uppercase tracking-wider border-b border-[#e2e8eb] dark:border-[#334155] mb-1">
               Estado Cohorte
             </div>
             {COHORTE_OPTIONS.map((coh) => (
@@ -387,13 +387,13 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                   }
                   setCohorteMenuPatientId(null);
                 }}
-                className={`w-full text-left px-2 py-1.5 rounded-md text-[11px] hover:bg-[#effaff] cursor-pointer transition-colors flex flex-col ${
-                  patient.cohorte === coh.code ? 'bg-[#effaff] text-[#00aae1] font-bold' : 'text-[#033d59]'
+                className={`w-full text-left px-2 py-1.5 rounded-md text-[11px] hover:bg-[#effaff] dark:hover:bg-[#0f172a] cursor-pointer transition-colors flex flex-col ${
+                  patient.cohorte === coh.code ? 'bg-[#effaff] dark:bg-[#00aae1]/20 text-[#00aae1] dark:text-[#38bdf8] font-bold' : 'text-[#033d59] dark:text-[#f8fafc]'
                 }`}
                 title={coh.label}
               >
                 <span className="font-bold">{coh.code}</span>
-                <span className="text-[10px] text-[#035476]/70 font-normal leading-tight">
+                <span className="text-[10px] text-[#035476]/70 dark:text-gray-400 font-normal leading-tight">
                   {coh.label.includes(' - ') ? coh.label.split(' - ')[1] : coh.label}
                 </span>
               </button>
@@ -405,12 +405,12 @@ export const PatientTable: React.FC<PatientTableProps> = ({
   };
 
   const renderFaseCell = (patient: Patient) => {
-    let color = 'bg-[#f9fafb] text-[#033d59] border-[#e2e8eb]';
+    let color = 'bg-[#f9fafb] dark:bg-[#0f172a] text-[#033d59] dark:text-[#f8fafc] border-[#e2e8eb] dark:border-[#334155]';
     let label: string = patient.fase;
-    if (patient.fase === 'E') { color = 'bg-purple-50 text-purple-700 border-purple-200'; }
-    if (patient.fase === 'D') { color = 'bg-blue-50 text-blue-700 border-blue-200'; }
-    if (patient.fase === 'I') { color = 'bg-amber-50 text-amber-800 border-amber-200'; }
-    if (patient.fase === 'M/E') { color = 'bg-teal-50 text-teal-700 border-teal-200'; }
+    if (patient.fase === 'E') { color = 'bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800'; }
+    if (patient.fase === 'D') { color = 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800'; }
+    if (patient.fase === 'I') { color = 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800'; }
+    if (patient.fase === 'M/E') { color = 'bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300 border-teal-200 dark:border-teal-800'; }
 
     return (
       <div className="relative font-sans text-center inline-block">
@@ -432,7 +432,7 @@ export const PatientTable: React.FC<PatientTableProps> = ({
         )}
 
         {faseMenuPatientId === patient.id && isComite && (
-          <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 z-30 bg-white rounded-lg shadow-xl border border-[#e2e8eb] p-1.5 w-28 space-y-1">
+          <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 z-30 bg-white dark:bg-[#1e293b] rounded-lg shadow-xl border border-[#e2e8eb] dark:border-[#334155] p-1.5 w-28 space-y-1">
             {(['E', 'D', 'I', 'M/E'] as FasePaciente[]).map((f) => (
               <button
                 key={f}
@@ -440,8 +440,8 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                   onEditPatient({ ...patient, fase: f });
                   setFaseMenuPatientId(null);
                 }}
-                className={`w-full text-center px-2 py-1 rounded-md text-xs font-bold hover:bg-[#effaff] cursor-pointer ${
-                  patient.fase === f ? 'bg-[#effaff] text-[#00aae1]' : 'text-[#033d59]'
+                className={`w-full text-center px-2 py-1 rounded-md text-xs font-bold hover:bg-[#effaff] dark:hover:bg-[#0f172a] cursor-pointer ${
+                  patient.fase === f ? 'bg-[#effaff] dark:bg-[#00aae1]/20 text-[#00aae1] dark:text-[#38bdf8]' : 'text-[#033d59] dark:text-[#f8fafc]'
                 }`}
               >
                 {f}
@@ -475,12 +475,12 @@ export const PatientTable: React.FC<PatientTableProps> = ({
     return (
       <th
         onClick={() => handleSort(field)}
-        className={`px-3 h-10 cursor-pointer transition-colors hover:bg-[#effaff] select-none ${className}`}
+        className={`px-3 h-10 cursor-pointer transition-colors hover:bg-[#effaff] dark:hover:bg-[#334155] select-none ${className}`}
         title={`Clic para ordenar por ${label}`}
       >
         <div className="flex items-center gap-1.5 justify-between">
           <span>{label}</span>
-          <span className="text-[#00aae1]">
+          <span className="text-[#00aae1] dark:text-[#38bdf8]">
             {isActive ? (
               sortDirection === 'asc' ? (
                 <ArrowUp className="w-3.5 h-3.5" />
@@ -488,7 +488,7 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                 <ArrowDown className="w-3.5 h-3.5" />
               )
             ) : (
-              <ArrowUpDown className="w-3 h-3 text-[#035476]/40 hover:text-[#00aae1]" />
+              <ArrowUpDown className="w-3 h-3 text-[#035476]/40 dark:text-gray-500 hover:text-[#00aae1]" />
             )}
           </span>
         </div>
@@ -497,10 +497,10 @@ export const PatientTable: React.FC<PatientTableProps> = ({
   };
 
   return (
-    <div className="flex-1 overflow-x-auto overflow-y-auto touch-pan-x relative w-full bg-white font-sans max-w-[1550px] mx-auto rounded-xl shadow-2xs border border-[#e2e8eb] my-2" style={{ WebkitOverflowScrolling: 'touch' }}>
+    <div className="flex-1 overflow-x-auto overflow-y-auto touch-pan-x relative w-full bg-white dark:bg-[#1e293b] font-sans max-w-[1550px] mx-auto rounded-xl shadow-2xs border border-[#e2e8eb] dark:border-[#334155] my-2 transition-colors duration-200" style={{ WebkitOverflowScrolling: 'touch' }}>
       {/* Toast Notification when SIAU tries to change Risk */}
       {showRoleAlert && (
-        <div className="fixed bottom-4 right-4 z-50 bg-[#fffbeb] border border-[#fbbf24] text-[#b45309] px-4 py-2.5 rounded-lg shadow-lg text-xs font-semibold flex items-center gap-2">
+        <div className="fixed bottom-4 right-4 z-50 bg-[#fffbeb] dark:bg-amber-950 border border-[#fbbf24] dark:border-amber-600 text-[#b45309] dark:text-amber-200 px-4 py-2.5 rounded-lg shadow-lg text-xs font-semibold flex items-center gap-2">
           <ShieldAlert className="w-4 h-4 text-[#fbbf24]" />
           <span>Acceso restringido: Solo el Comité Médico puede modificar el Nivel de Riesgo.</span>
         </div>
@@ -510,9 +510,9 @@ export const PatientTable: React.FC<PatientTableProps> = ({
       <table className="w-full text-left border-collapse min-w-[2100px]">
         {/* Table Header */}
         <thead>
-          <tr className="bg-[#f9fafb] border-b border-[#e2e8eb] text-[10px] font-bold text-[#035476] uppercase tracking-wider select-none h-10">
+          <tr className="bg-[#f9fafb] dark:bg-[#0f172a] border-b border-[#e2e8eb] dark:border-[#334155] text-[10px] font-bold text-[#035476] dark:text-[#94a3b8] uppercase tracking-wider select-none h-10">
             {/* Col 1: ACCIONES (Sticky on sm+) */}
-            <th className="sm:sticky sm:left-0 z-30 bg-[#f9fafb] px-2 text-center border-r border-[#e2e8eb] min-w-[80px] sm:min-w-[100px] max-w-[80px] sm:max-w-[100px]">
+            <th className="sm:sticky sm:left-0 z-30 bg-[#f9fafb] dark:bg-[#0f172a] px-2 text-center border-r border-[#e2e8eb] dark:border-[#334155] min-w-[80px] sm:min-w-[100px] max-w-[80px] sm:max-w-[100px]">
               <span className="hidden sm:inline">ACCIONES</span>
               <span className="inline sm:hidden">ACC.</span>
             </th>
@@ -520,22 +520,19 @@ export const PatientTable: React.FC<PatientTableProps> = ({
             {/* Col 2: PACIENTE (Sticky on sm+) */}
             <th
               onClick={() => handleSort('nombre')}
-              className="sm:sticky sm:left-[100px] z-30 bg-[#f9fafb] px-3 border-r border-[#e2e8eb] min-w-[240px] max-w-[240px] cursor-pointer hover:bg-[#effaff] transition-colors"
+              className="sm:sticky sm:left-[100px] z-30 bg-[#f9fafb] dark:bg-[#0f172a] px-3 border-r border-[#e2e8eb] dark:border-[#334155] min-w-[240px] max-w-[240px] cursor-pointer hover:bg-[#effaff] dark:hover:bg-[#334155] transition-colors"
             >
               <div className="flex items-center gap-1.5 justify-between">
                 <span>PACIENTE</span>
-                <span className="text-[#00aae1]">
+                <span className="text-[#00aae1] dark:text-[#38bdf8]">
                   {sortField === 'nombre' ? (
                     sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />
                   ) : (
-                    <ArrowUpDown className="w-3 h-3 text-[#035476]/40" />
+                    <ArrowUpDown className="w-3 h-3 text-[#035476]/40 dark:text-gray-500" />
                   )}
                 </span>
               </div>
             </th>
-
-            {/* Col 3: PRIORIDAD INICIAL */}
-            {renderHeader('PRIORIDAD INICIAL', 'prioridadInicial', 'min-w-[110px] text-center')}
 
             {/* Col 4: CONVENIO */}
             {renderHeader('CONV.', 'convenioNombre', 'min-w-[120px] sm:min-w-[170px]')}
@@ -562,31 +559,31 @@ export const PatientTable: React.FC<PatientTableProps> = ({
             {renderHeader('FECHA PROX. REVISIÓN', 'fechaProximaRevision', 'min-w-[130px] text-center')}
 
             {/* Col 12: ESPECIALISTAS (7 Subcolumns) */}
-            {renderHeader('MEDICO GEN.', 'med_gen', 'min-w-[155px] bg-[#f9fafb] border-l border-[#e2e8eb] text-[#033d59]')}
-            {renderHeader('NUTRICIONISTA', 'nutri', 'min-w-[155px] bg-[#f9fafb] text-[#033d59]')}
-            {renderHeader('PSICOLOGIA', 'psicol', 'min-w-[155px] bg-[#f9fafb] text-[#033d59]')}
-            {renderHeader('ESP. 1', 'esp_1', 'min-w-[155px] bg-[#f9fafb] text-[#033d59]')}
-            {renderHeader('ESP. 2', 'esp_2', 'min-w-[155px] bg-[#f9fafb] text-[#033d59]')}
-            {renderHeader('ESP. 3', 'esp_3', 'min-w-[155px] bg-[#f9fafb] text-[#033d59]')}
-            {renderHeader('ESP. 4', 'esp_4', 'min-w-[155px] bg-[#f9fafb] border-r border-[#e2e8eb] text-[#033d59]')}
+            {renderHeader('MEDICO GEN.', 'med_gen', 'min-w-[155px] bg-[#f9fafb] dark:bg-[#0f172a] border-l border-[#e2e8eb] dark:border-[#334155] text-[#033d59] dark:text-[#f8fafc]')}
+            {renderHeader('NUTRICIONISTA', 'nutri', 'min-w-[155px] bg-[#f9fafb] dark:bg-[#0f172a] text-[#033d59] dark:text-[#f8fafc]')}
+            {renderHeader('PSICOLOGIA', 'psicol', 'min-w-[155px] bg-[#f9fafb] dark:bg-[#0f172a] text-[#033d59] dark:text-[#f8fafc]')}
+            {renderHeader('ESP. 1', 'esp_1', 'min-w-[155px] bg-[#f9fafb] dark:bg-[#0f172a] text-[#033d59] dark:text-[#f8fafc]')}
+            {renderHeader('ESP. 2', 'esp_2', 'min-w-[155px] bg-[#f9fafb] dark:bg-[#0f172a] text-[#033d59] dark:text-[#f8fafc]')}
+            {renderHeader('ESP. 3', 'esp_3', 'min-w-[155px] bg-[#f9fafb] dark:bg-[#0f172a] text-[#033d59] dark:text-[#f8fafc]')}
+            {renderHeader('ESP. 4', 'esp_4', 'min-w-[155px] bg-[#f9fafb] dark:bg-[#0f172a] border-r border-[#e2e8eb] dark:border-[#334155] text-[#033d59] dark:text-[#f8fafc]')}
 
             {/* Col 13: NOTA OP (Sticky on sm+) */}
-            <th className="sm:sticky sm:right-[56px] z-20 bg-[#f9fafb] px-2 text-center border-l border-[#e2e8eb] min-w-[56px] max-w-[56px]">
+            <th className="sm:sticky sm:right-[56px] z-20 bg-[#f9fafb] dark:bg-[#0f172a] px-2 text-center border-l border-[#e2e8eb] dark:border-[#334155] min-w-[56px] max-w-[56px]">
               NOTA OP
             </th>
 
             {/* Col 14: NOTA CLI (Sticky on sm+) */}
-            <th className="sm:sticky sm:right-0 z-20 bg-[#f9fafb] px-2 text-center border-l border-[#e2e8eb] min-w-[56px] max-w-[56px]">
+            <th className="sm:sticky sm:right-0 z-20 bg-[#f9fafb] dark:bg-[#0f172a] px-2 text-center border-l border-[#e2e8eb] dark:border-[#334155] min-w-[56px] max-w-[56px]">
               NOTA CLI
             </th>
           </tr>
         </thead>
 
         {/* Table Body */}
-        <tbody className="divide-y divide-[#e2e8eb] text-xs bg-white">
+        <tbody className="divide-y divide-[#e2e8eb] dark:divide-[#334155] text-xs bg-white dark:bg-[#1e293b]">
           {sortedPatients.length === 0 ? (
             <tr>
-              <td colSpan={19} className="py-12 text-center text-[#035476] font-medium">
+              <td colSpan={19} className="py-12 text-center text-[#035476] dark:text-[#94a3b8] font-medium">
                 No se encontraron pacientes que coincidan con los criterios de búsqueda.
               </td>
             </tr>
@@ -600,10 +597,10 @@ export const PatientTable: React.FC<PatientTableProps> = ({
               return (
                   <tr
                     key={patient.id}
-                    className="hover:bg-[#f9fafb] transition-colors group h-[72px]"
+                    className="hover:bg-[#f9fafb] dark:hover:bg-[#0f172a]/60 transition-colors group h-[72px]"
                   >
                   {/* Col 1: ACCIONES (Sticky on sm+) */}
-                  <td className={`bg-white sm:sticky sm:left-0 group-hover:bg-[#f9fafb] px-2 py-1 border-r border-[#e2e8eb] min-w-[80px] sm:min-w-[100px] max-w-[80px] sm:max-w-[100px] relative ${
+                  <td className={`bg-white dark:bg-[#1e293b] sm:sticky sm:left-0 group-hover:bg-[#f9fafb] dark:group-hover:bg-[#0f172a] px-2 py-1 border-r border-[#e2e8eb] dark:border-[#334155] min-w-[80px] sm:min-w-[100px] max-w-[80px] sm:max-w-[100px] relative ${
                     isMenuOpen || isAlarmOpen || isAdherenciaOpen ? 'z-40' : 'z-30'
                   }`}>
                     <div className="flex flex-col items-center justify-center gap-1">
@@ -677,20 +674,15 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                   </td>
 
                   {/* Col 2: PACIENTE (Sticky on sm+) */}
-                  <td className="bg-white sm:sticky sm:left-[100px] z-30 group-hover:bg-[#f9fafb] px-2 py-1.5 border-r border-[#e2e8eb] min-w-[240px] max-w-[240px] relative">
+                  <td className="bg-white dark:bg-[#1e293b] sm:sticky sm:left-[100px] z-30 group-hover:bg-[#f9fafb] dark:group-hover:bg-[#0f172a] px-2 py-1.5 border-r border-[#e2e8eb] dark:border-[#334155] min-w-[240px] max-w-[240px] relative">
                     <PatientCard
                       patient={patient}
                       onClick={() => onEditPatient(patient)}
                     />
                   </td>
 
-                  {/* Col 3: PRIORIDAD INICIAL */}
-                  <td className="px-3 py-2 text-center">
-                    {renderPrioridadBadge(patient)}
-                  </td>
-
                   {/* Col 4: CONVENIO */}
-                  <td className="px-3 py-2 text-[#033d59] font-medium text-[11px] truncate min-w-[120px] max-w-[120px] sm:min-w-[170px] sm:max-w-[170px]">
+                  <td className="px-3 py-2 text-[#033d59] dark:text-[#f8fafc] font-medium text-[11px] truncate min-w-[120px] max-w-[120px] sm:min-w-[170px] sm:max-w-[170px]">
                     {patient.convenioNombre}
                   </td>
 
@@ -703,7 +695,7 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                   <td className="px-3 py-2 text-center relative">
                     <button
                       onClick={() => handleRiskClick(patient)}
-                      className="p-1 rounded-md hover:bg-[#effaff] transition-colors inline-flex items-center justify-center cursor-pointer"
+                      className="p-1 rounded-md hover:bg-[#effaff] dark:hover:bg-[#334155] transition-colors inline-flex items-center justify-center cursor-pointer"
                       title="Clic para cambiar nivel de riesgo (Comité Médico)"
                     >
                       {renderRiskIcon(patient.riesgo)}
@@ -711,7 +703,7 @@ export const PatientTable: React.FC<PatientTableProps> = ({
 
                     {/* Risk Selector Dropdown */}
                     {riskMenuPatientId === patient.id && isComite && (
-                      <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 z-30 bg-white rounded-lg shadow-xl border border-[#e2e8eb] p-1.5 w-32 space-y-1">
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 z-30 bg-white dark:bg-[#1e293b] rounded-lg shadow-xl border border-[#e2e8eb] dark:border-[#334155] p-1.5 w-32 space-y-1">
                         {(['Critical', 'High', 'Medium', 'Low'] as NivelRiesgo[]).map((r) => (
                           <button
                             key={r}
@@ -719,8 +711,8 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                               onUpdateRisk(patient.id, r);
                               setRiskMenuPatientId(null);
                             }}
-                            className={`w-full flex items-center gap-2 px-2 py-1 rounded-md text-xs font-medium hover:bg-[#effaff] cursor-pointer ${
-                              patient.riesgo === r ? 'bg-[#effaff] text-[#00aae1] font-bold' : 'text-[#033d59]'
+                            className={`w-full flex items-center gap-2 px-2 py-1 rounded-md text-xs font-medium hover:bg-[#effaff] dark:hover:bg-[#0f172a] cursor-pointer ${
+                              patient.riesgo === r ? 'bg-[#effaff] dark:bg-[#00aae1]/20 text-[#00aae1] dark:text-[#38bdf8] font-bold' : 'text-[#033d59] dark:text-[#f8fafc]'
                             }`}
                           >
                             {renderRiskIcon(r)}
@@ -734,11 +726,11 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                   {/* Col 7: ETIQUETA (Badge Inconforme) */}
                   <td className="px-3 py-2 text-center">
                     {isInconforme ? (
-                      <span className="px-2 py-0.5 rounded bg-[#fff1f2] text-[#e11d48] font-bold text-[10px] border border-[#fecdd3] inline-block shadow-2xs">
+                      <span className="px-2 py-0.5 rounded bg-[#fff1f2] dark:bg-[#be123c]/20 text-[#e11d48] dark:text-[#fb7185] font-bold text-[10px] border border-[#fecdd3] dark:border-[#be123c]/40 inline-block shadow-2xs">
                         Inconforme
                       </span>
                     ) : (
-                      <span className="text-gray-300 text-[10px]">—</span>
+                      <span className="text-gray-300 dark:text-gray-600 text-[10px]">—</span>
                     )}
                   </td>
 
@@ -753,12 +745,12 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                   </td>
 
                   {/* Col 10: N° CARGA */}
-                  <td className="px-3 py-2 text-center font-mono text-[11px] text-[#033d59] font-medium">
+                  <td className="px-3 py-2 text-center font-mono text-[11px] text-[#033d59] dark:text-[#f8fafc] font-medium">
                     {patient.numeroCarga || '—'}
                   </td>
 
                   {/* Col 11: FECHA PROX. REVISIÓN */}
-                  <td className="px-3 py-2 text-center font-mono text-[11px] text-[#033d59]">
+                  <td className="px-3 py-2 text-center font-mono text-[11px] text-[#033d59] dark:text-[#f8fafc]">
                     {patient.fechaProximaRevision || '—'}
                   </td>
 
@@ -786,15 +778,15 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                   </td>
 
                   {/* Col 13: NOTA OP (Sticky on sm+) */}
-                  <td className="bg-white sm:sticky sm:right-[56px] z-20 group-hover:bg-[#f9fafb] px-2 py-2 text-center border-l border-[#e2e8eb] min-w-[56px] max-w-[56px]">
+                  <td className="bg-white dark:bg-[#1e293b] sm:sticky sm:right-[56px] z-20 group-hover:bg-[#f9fafb] dark:group-hover:bg-[#0f172a] px-2 py-2 text-center border-l border-[#e2e8eb] dark:border-[#334155] min-w-[56px] max-w-[56px]">
                     <button
                       onClick={() => onOpenNotesDrawer(patient, 'op')}
-                      className="relative p-1.5 rounded-lg bg-[#f9fafb] hover:bg-[#033d59] text-[#033d59] hover:text-white transition-all border border-[#e2e8eb] cursor-pointer"
+                      className="relative p-1.5 rounded-lg bg-[#f9fafb] dark:bg-[#0f172a] hover:bg-[#033d59] dark:hover:bg-[#00aae1] text-[#033d59] dark:text-[#f8fafc] hover:text-white transition-all border border-[#e2e8eb] dark:border-[#334155] cursor-pointer"
                       title="Ver/Agregar Nota Operativa"
                     >
                       <Pencil className="w-3.5 h-3.5" />
                       {patient.operationalNotes.length > 0 && (
-                        <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-[#033d59] text-white text-[8px] font-bold flex items-center justify-center border border-white">
+                        <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-[#033d59] dark:bg-[#00aae1] text-white text-[8px] font-bold flex items-center justify-center border border-white">
                           {patient.operationalNotes.length}
                         </span>
                       )}
@@ -802,10 +794,10 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                   </td>
 
                   {/* Col 14: NOTA CLI (Sticky on sm+) */}
-                  <td className="bg-white sm:sticky sm:right-0 z-20 group-hover:bg-[#f9fafb] px-2 py-2 text-center border-l border-[#e2e8eb] min-w-[56px] max-w-[56px]">
+                  <td className="bg-white dark:bg-[#1e293b] sm:sticky sm:right-0 z-20 group-hover:bg-[#f9fafb] dark:group-hover:bg-[#0f172a] px-2 py-2 text-center border-l border-[#e2e8eb] dark:border-[#334155] min-w-[56px] max-w-[56px]">
                     <button
                       onClick={() => onOpenNotesDrawer(patient, 'cli')}
-                      className="relative p-1.5 rounded-lg bg-[#effaff] hover:bg-[#00aae1] text-[#00aae1] hover:text-white transition-all border border-[#00aae1]/30 cursor-pointer"
+                      className="relative p-1.5 rounded-lg bg-[#effaff] dark:bg-[#00aae1]/10 hover:bg-[#00aae1] text-[#00aae1] dark:text-[#38bdf8] hover:text-white transition-all border border-[#00aae1]/30 cursor-pointer"
                       title="Ver/Agregar Nota Clínica"
                     >
                       <Stethoscope className="w-3.5 h-3.5" />

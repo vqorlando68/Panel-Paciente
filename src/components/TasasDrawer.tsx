@@ -20,17 +20,17 @@ export const TasasDrawer: React.FC<TasasDrawerProps> = ({ patient, onClose }) =>
   const reprogPct = tasas.reprogramacionesPct;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex justify-end font-sans">
-      <div className="bg-white w-[380px] max-w-full h-full shadow-2xl border-l border-[#e2e8eb] flex flex-col animate-in slide-in-from-right duration-200">
+    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex justify-end font-sans">
+      <div className="bg-white dark:bg-[#1e293b] text-[#033d59] dark:text-[#f8fafc] w-[380px] max-w-full h-full shadow-2xl border-l border-[#e2e8eb] dark:border-[#334155] flex flex-col animate-in slide-in-from-right duration-200">
         
         {/* Header */}
-        <div className="bg-[#033d59] text-white p-4 flex items-center justify-between">
+        <div className="bg-[#00aae1] text-white p-4 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-[#00aae1]/20 flex items-center justify-center text-[#00aae1]">
+            <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center text-white">
               <TrendingUp className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-sm leading-tight">Adherencia del Paciente</h3>
+              <h3 className="font-bold text-sm leading-tight">Adherencia e Indicadores</h3>
               <p className="text-xs text-white/80 truncate max-w-[220px]">{patient.nombre}</p>
             </div>
           </div>
@@ -46,151 +46,71 @@ export const TasasDrawer: React.FC<TasasDrawerProps> = ({ patient, onClose }) =>
         <div className="p-4 flex-1 overflow-y-auto space-y-4 text-xs">
           
           {/* Stacked Temperature Bar Section */}
-          <div className="p-3.5 bg-[#f9fafb] border border-[#e2e8eb] rounded-xl space-y-3 shadow-2xs">
+          <div className="p-3.5 bg-[#f9fafb] dark:bg-[#0f172a] border border-[#e2e8eb] dark:border-[#334155] rounded-xl space-y-3 shadow-2xs">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-[#033d59] uppercase tracking-wide flex items-center gap-1.5">
+              <span className="text-[11px] font-bold text-[#033d59] dark:text-[#f8fafc] uppercase tracking-wide flex items-center gap-1.5">
                 <Clock className="w-3.5 h-3.5 text-[#00aae1]" />
                 Barra de Temperatura Apilada
               </span>
-              <span className="text-[10px] text-[#035476] font-semibold bg-white px-2 py-0.5 rounded border border-[#e2e8eb]">
+              <span className="text-[10px] text-[#035476] dark:text-[#94a3b8] bg-white dark:bg-[#1e293b] px-2 py-0.5 rounded border border-[#e2e8eb] dark:border-[#334155]">
                 4 Indicadores
               </span>
             </div>
 
             {/* The Stacked Bar */}
-            <div className="h-6 w-full bg-gray-100 rounded-lg overflow-hidden flex border border-[#e2e8eb] shadow-inner p-0.5 gap-0.5">
-              {cancPct > 0 && (
-                <div
-                  style={{ width: `${cancPct}%` }}
-                  className="bg-[#e11d48] h-full rounded-xs transition-all flex items-center justify-center text-[9px] font-bold text-white overflow-hidden"
-                  title={`% Canc.: ${cancPct}%`}
-                >
-                  {cancPct > 8 && `${cancPct}%`}
-                </div>
-              )}
-              {inasPct > 0 && (
-                <div
-                  style={{ width: `${inasPct}%` }}
-                  className="bg-[#f59e0b] h-full rounded-xs transition-all flex items-center justify-center text-[9px] font-bold text-white overflow-hidden"
-                  title={`% Inasis.: ${inasPct}%`}
-                >
-                  {inasPct > 8 && `${inasPct}%`}
-                </div>
-              )}
-              {reprogPct > 0 && (
-                <div
-                  style={{ width: `${reprogPct}%` }}
-                  className="bg-[#0284c7] h-full rounded-xs transition-all flex items-center justify-center text-[9px] font-bold text-white overflow-hidden"
-                  title={`% Reprog.: ${reprogPct}%`}
-                >
-                  {reprogPct > 8 && `${reprogPct}%`}
-                </div>
-              )}
-              {vencPct > 0 && (
-                <div
-                  style={{ width: `${vencPct}%` }}
-                  className="bg-[#a855f7] h-full rounded-xs transition-all flex items-center justify-center text-[9px] font-bold text-white overflow-hidden"
-                  title={`% Venc.: ${vencPct}%`}
-                >
-                  {vencPct > 8 && `${vencPct}%`}
-                </div>
-              )}
-            </div>
-
-            {/* Indicator Details Grid */}
-            <div className="grid grid-cols-2 gap-2 text-[11px] font-bold pt-1">
-              <div className="flex items-center justify-between p-2 rounded-lg bg-rose-50/80 border border-rose-200 text-[#be123c]">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#e11d48]" />
-                  <span>% Canc.</span>
-                </div>
-                <span className="text-xs font-black">{cancPct}%</span>
+            <div className="space-y-1.5">
+              <div className="w-full h-4 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden flex">
+                <div style={{ width: `${vencPct}%` }} className="bg-[#b45309] h-full transition-all" title={`Vencidos: ${vencPct}%`} />
+                <div style={{ width: `${cancPct}%` }} className="bg-[#e11d48] h-full transition-all" title={`Cancelaciones: ${cancPct}%`} />
+                <div style={{ width: `${inasPct}%` }} className="bg-[#a855f7] h-full transition-all" title={`Inasistencias: ${inasPct}%`} />
+                <div style={{ width: `${reprogPct}%` }} className="bg-[#0284c7] h-full transition-all" title={`Reprogramaciones: ${reprogPct}%`} />
               </div>
 
-              <div className="flex items-center justify-between p-2 rounded-lg bg-amber-50/80 border border-amber-200 text-[#b45309]">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#f59e0b]" />
-                  <span>% Inasis.</span>
+              {/* Legend Grid */}
+              <div className="grid grid-cols-2 gap-2 text-[10.5px] font-medium pt-1">
+                <div className="flex items-center gap-1.5 text-[#b45309] dark:text-amber-400">
+                  <span className="w-2.5 h-2.5 rounded-sm bg-[#b45309] shrink-0" />
+                  <span>Vencidos ({overdueCount} esp / {vencPct}%)</span>
                 </div>
-                <span className="text-xs font-black">{inasPct}%</span>
-              </div>
-
-              <div className="flex items-center justify-between p-2 rounded-lg bg-sky-50/80 border border-sky-200 text-[#0369a1]">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#0284c7]" />
-                  <span>% Reprog.</span>
+                <div className="flex items-center gap-1.5 text-[#e11d48] dark:text-rose-400">
+                  <span className="w-2.5 h-2.5 rounded-sm bg-[#e11d48] shrink-0" />
+                  <span>Cancelados ({tasas.cancelacionesNum} / {cancPct}%)</span>
                 </div>
-                <span className="text-xs font-black">{reprogPct}%</span>
-              </div>
-
-              <div className="flex items-center justify-between p-2 rounded-lg bg-purple-50/80 border border-purple-200 text-[#7e22ce]">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#a855f7]" />
-                  <span>% Venc.</span>
+                <div className="flex items-center gap-1.5 text-[#a855f7] dark:text-purple-400">
+                  <span className="w-2.5 h-2.5 rounded-sm bg-[#a855f7] shrink-0" />
+                  <span>Inasistencias ({tasas.inasistenciasNum} / {inasPct}%)</span>
                 </div>
-                <span className="text-xs font-black">{vencPct}%</span>
+                <div className="flex items-center gap-1.5 text-[#0284c7] dark:text-sky-400">
+                  <span className="w-2.5 h-2.5 rounded-sm bg-[#0284c7] shrink-0" />
+                  <span>Reprog. ({tasas.reprogramacionesNum} / {reprogPct}%)</span>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Detailed Metric Cards */}
-          <div className="space-y-2">
-            <h4 className="font-bold text-[11px] text-[#035476] uppercase tracking-wide">
-              Desglose de Indicadores
-            </h4>
-
-            {/* Cancelaciones */}
-            <div className="p-2.5 bg-white border border-rose-200 rounded-lg space-y-0.5">
-              <div className="flex items-center justify-between text-rose-700">
-                <span className="font-bold text-xs">% Canc. (Cancelaciones)</span>
-                <span className="font-black text-sm">{cancPct}%</span>
-              </div>
-              <p className="text-[10px] text-gray-500">
-                {tasas.cancelacionesNum} atenciones canceladas
-              </p>
+          {/* Cards for Details */}
+          <div className="grid grid-cols-2 gap-2.5">
+            <div className="p-3 bg-white dark:bg-[#0f172a] border border-[#e2e8eb] dark:border-[#334155] rounded-xl space-y-1">
+              <span className="text-[10px] font-bold text-[#035476] dark:text-[#94a3b8] uppercase block">Cancelaciones</span>
+              <p className="text-base font-extrabold text-[#e11d48]">{tasas.cancelacionesPct}%</p>
+              <span className="text-[10px] text-gray-500 dark:text-gray-400 block">{tasas.cancelacionesNum} citas en total</span>
             </div>
 
-            {/* Inasistencias */}
-            <div className="p-2.5 bg-white border border-amber-200 rounded-lg space-y-0.5">
-              <div className="flex items-center justify-between text-amber-800">
-                <span className="font-bold text-xs">% Inasis. (Inasistencias)</span>
-                <span className="font-black text-sm">{inasPct}%</span>
-              </div>
-              <p className="text-[10px] text-gray-500">
-                {tasas.inasistenciasNum} atenciones con inasistencia
-              </p>
-            </div>
-
-            {/* Reprogramaciones */}
-            <div className="p-2.5 bg-white border border-sky-200 rounded-lg space-y-0.5">
-              <div className="flex items-center justify-between text-[#0284c7]">
-                <span className="font-bold text-xs">% Reprog. (Reprogramaciones)</span>
-                <span className="font-black text-sm">{reprogPct}%</span>
-              </div>
-              <p className="text-[10px] text-gray-500">
-                {tasas.reprogramacionesNum} atenciones reprogramadas
-              </p>
-            </div>
-
-            {/* Vencidas */}
-            <div className="p-2.5 bg-white border border-purple-200 rounded-lg space-y-0.5">
-              <div className="flex items-center justify-between text-purple-800">
-                <span className="font-bold text-xs">% Venc. (Atenciones Vencidas)</span>
-                <span className="font-black text-sm">{vencPct}%</span>
-              </div>
-              <p className="text-[10px] text-gray-500">
-                {overdueCount} de {totalSpecs} atenciones de especialidades vencidas
-              </p>
+            <div className="p-3 bg-white dark:bg-[#0f172a] border border-[#e2e8eb] dark:border-[#334155] rounded-xl space-y-1">
+              <span className="text-[10px] font-bold text-[#035476] dark:text-[#94a3b8] uppercase block">Inasistencias</span>
+              <p className="text-base font-extrabold text-[#a855f7]">{tasas.inasistenciasPct}%</p>
+              <span className="text-[10px] text-gray-500 dark:text-gray-400 block">{tasas.inasistenciasNum} no asistidas</span>
             </div>
           </div>
 
         </div>
 
         {/* Footer */}
-        <div className="p-3 bg-[#f9fafb] border-t border-[#e2e8eb] flex justify-end">
+        <div className="p-4 bg-gray-50 dark:bg-[#0f172a] border-t border-[#e2e8eb] dark:border-[#334155] flex justify-end">
           <button
+            type="button"
             onClick={onClose}
-            className="px-4 py-1.5 text-xs font-semibold text-[#033d59] bg-white border border-[#e2e8eb] hover:bg-gray-50 rounded-lg shadow-2xs transition-colors cursor-pointer"
+            className="px-4 py-2 text-xs font-semibold text-white bg-[#00aae1] hover:bg-[#0196d4] rounded-lg shadow-xs transition-colors cursor-pointer"
           >
             Cerrar
           </button>

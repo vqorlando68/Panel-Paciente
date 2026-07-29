@@ -130,8 +130,8 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({ onAdd, onClose
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 font-sans">
-      <div className="bg-white rounded-xl shadow-2xl border border-[#e2e8eb] w-full max-w-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 font-sans">
+      <div className="bg-white dark:bg-[#1e293b] text-[#033d59] dark:text-[#f8fafc] rounded-xl shadow-2xl border border-[#e2e8eb] dark:border-[#334155] w-full max-w-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         <div className="bg-[#00aae1] text-white p-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <UserPlus className="w-5 h-5" />
@@ -148,7 +148,7 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({ onAdd, onClose
         <form onSubmit={handleSubmit} className="p-5 space-y-4 text-xs">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11px] font-semibold text-[#035476] mb-1 uppercase">
+              <label className="block text-[11px] font-semibold text-[#035476] dark:text-[#94a3b8] mb-1 uppercase">
                 Nombre Completo *
               </label>
               <input
@@ -156,12 +156,12 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({ onAdd, onClose
                 placeholder="Ej: María Camila Pérez"
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
-                className="w-full bg-[#f9fafb] border border-[#e2e8eb] rounded-md px-2.5 py-1.5 text-[#033d59] focus:outline-none focus:border-[#00aae1]"
+                className="w-full bg-[#f9fafb] dark:bg-[#0f172a] border border-[#e2e8eb] dark:border-[#334155] rounded-md px-2.5 py-1.5 text-[#033d59] dark:text-[#f8fafc] focus:outline-none focus:border-[#00aae1]"
                 required
               />
             </div>
             <div>
-              <label className="block text-[11px] font-semibold text-[#035476] mb-1 uppercase">
+              <label className="block text-[11px] font-semibold text-[#035476] dark:text-[#94a3b8] mb-1 uppercase">
                 Identificación *
               </label>
               <input
@@ -169,7 +169,7 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({ onAdd, onClose
                 placeholder="Ej: CC 1.032.849.102"
                 value={identificacion}
                 onChange={(e) => setIdentificacion(e.target.value)}
-                className="w-full bg-[#f9fafb] border border-[#e2e8eb] rounded-md px-2.5 py-1.5 text-[#033d59] focus:outline-none focus:border-[#00aae1]"
+                className="w-full bg-[#f9fafb] dark:bg-[#0f172a] border border-[#e2e8eb] dark:border-[#334155] rounded-md px-2.5 py-1.5 text-[#033d59] dark:text-[#f8fafc] focus:outline-none focus:border-[#00aae1]"
                 required
               />
             </div>
@@ -177,7 +177,7 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({ onAdd, onClose
 
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="block text-[11px] font-semibold text-[#035476] mb-1 uppercase">
+              <label className="block text-[11px] font-semibold text-[#035476] dark:text-[#94a3b8] mb-1 uppercase">
                 Teléfono
               </label>
               <input
@@ -185,28 +185,28 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({ onAdd, onClose
                 placeholder="+57 300 123 4567"
                 value={telefono}
                 onChange={(e) => setTelefono(e.target.value)}
-                className="w-full bg-[#f9fafb] border border-[#e2e8eb] rounded-md px-2.5 py-1.5 text-[#033d59] focus:outline-none focus:border-[#00aae1]"
+                className="w-full bg-[#f9fafb] dark:bg-[#0f172a] border border-[#e2e8eb] dark:border-[#334155] rounded-md px-2.5 py-1.5 text-[#033d59] dark:text-[#f8fafc] focus:outline-none focus:border-[#00aae1]"
               />
             </div>
             <div>
-              <label className="block text-[11px] font-semibold text-[#035476] mb-1 uppercase">
+              <label className="block text-[11px] font-semibold text-[#035476] dark:text-[#94a3b8] mb-1 uppercase">
                 ID Convenio
               </label>
               <input
                 type="text"
                 value={idConvenio}
                 onChange={(e) => setIdConvenio(e.target.value)}
-                className="w-full bg-[#f9fafb] border border-[#e2e8eb] rounded-md px-2.5 py-1.5 text-[#033d59] focus:outline-none focus:border-[#00aae1]"
+                className="w-full bg-[#f9fafb] dark:bg-[#0f172a] border border-[#e2e8eb] dark:border-[#334155] rounded-md px-2.5 py-1.5 text-[#033d59] dark:text-[#f8fafc] focus:outline-none focus:border-[#00aae1]"
               />
             </div>
             <div>
-              <label className="block text-[11px] font-semibold text-[#035476] mb-1 uppercase">
+              <label className="block text-[11px] font-semibold text-[#035476] dark:text-[#94a3b8] mb-1 uppercase">
                 Estado Cohorte
               </label>
               <select
                 value={cohorte}
                 onChange={(e) => setCohorte(e.target.value)}
-                className="w-full bg-[#f9fafb] border border-[#e2e8eb] rounded-md px-2.5 py-1.5 text-[#033d59] focus:outline-none focus:border-[#00aae1]"
+                className="w-full bg-[#f9fafb] dark:bg-[#0f172a] border border-[#e2e8eb] dark:border-[#334155] rounded-md px-2.5 py-1.5 text-[#033d59] dark:text-[#f8fafc] focus:outline-none focus:border-[#00aae1]"
               >
                 {COHORTE_OPTIONS.map((c) => (
                   <option key={c.code} value={c.code}>
@@ -217,15 +217,15 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({ onAdd, onClose
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-3 bg-[#effaff] p-3 rounded-lg border border-[#00aae1]/20">
+          <div className="grid grid-cols-3 gap-3 bg-[#effaff] dark:bg-[#00aae1]/10 p-3 rounded-lg border border-[#00aae1]/20">
             <div>
-              <label className="block text-[11px] font-semibold text-[#035476] mb-1 uppercase">
+              <label className="block text-[11px] font-semibold text-[#035476] dark:text-[#94a3b8] mb-1 uppercase">
                 Riesgo
               </label>
               <select
                 value={riesgo}
                 onChange={(e) => setRiesgo(e.target.value as NivelRiesgo)}
-                className="w-full bg-white border border-[#e2e8eb] rounded-md px-2 py-1 text-[#033d59]"
+                className="w-full bg-white dark:bg-[#0f172a] border border-[#e2e8eb] dark:border-[#334155] rounded-md px-2 py-1 text-[#033d59] dark:text-[#f8fafc]"
               >
                 <option value="Critical">Critical</option>
                 <option value="High">High</option>
@@ -234,24 +234,24 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({ onAdd, onClose
               </select>
             </div>
             <div>
-              <label className="block text-[11px] font-semibold text-[#035476] mb-1 uppercase">
+              <label className="block text-[11px] font-semibold text-[#035476] dark:text-[#94a3b8] mb-1 uppercase">
                 Etiqueta
               </label>
               <input
                 type="text"
                 value={etiqueta}
                 onChange={(e) => setEtiqueta(e.target.value)}
-                className="w-full bg-white border border-[#e2e8eb] rounded-md px-2 py-1 text-[#033d59]"
+                className="w-full bg-white dark:bg-[#0f172a] border border-[#e2e8eb] dark:border-[#334155] rounded-md px-2 py-1 text-[#033d59] dark:text-[#f8fafc]"
               />
             </div>
             <div>
-              <label className="block text-[11px] font-semibold text-[#035476] mb-1 uppercase">
+              <label className="block text-[11px] font-semibold text-[#035476] dark:text-[#94a3b8] mb-1 uppercase">
                 Fase
               </label>
               <select
                 value={fase}
                 onChange={(e) => setFase(e.target.value as FasePaciente)}
-                className="w-full bg-white border border-[#e2e8eb] rounded-md px-2 py-1 text-[#033d59]"
+                className="w-full bg-white dark:bg-[#0f172a] border border-[#e2e8eb] dark:border-[#334155] rounded-md px-2 py-1 text-[#033d59] dark:text-[#f8fafc]"
               >
                 <option value="E">E - Evaluación</option>
                 <option value="D">D - Diagnóstico</option>
@@ -262,7 +262,7 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({ onAdd, onClose
           </div>
 
           {/* Retroalimentación Checkbox */}
-          <div className="bg-[#fff1f2] p-3 rounded-lg border border-rose-200 flex items-center justify-between">
+          <div className="bg-[#fff1f2] dark:bg-[#be123c]/20 p-3 rounded-lg border border-rose-200 dark:border-[#be123c]/40 flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <input
                 type="checkbox"
@@ -271,12 +271,12 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({ onAdd, onClose
                 onChange={(e) => setRetroalimentacion(e.target.checked ? 'Inconforme' : '')}
                 className="w-4 h-4 text-[#00aae1] rounded border-rose-300 focus:ring-[#00aae1] cursor-pointer"
               />
-              <label htmlFor="addRetroInconforme" className="text-xs font-semibold text-[#033d59] cursor-pointer select-none">
-                Marcar Retroalimentación como <span className="text-rose-700 font-bold uppercase">Inconforme</span>
+              <label htmlFor="addRetroInconforme" className="text-xs font-semibold text-[#033d59] dark:text-[#f8fafc] cursor-pointer select-none">
+                Marcar Retroalimentación como <span className="text-rose-700 dark:text-rose-400 font-bold uppercase">Inconforme</span>
               </label>
             </div>
             {retroalimentacion === 'Inconforme' && (
-              <span className="px-2 py-0.5 rounded bg-rose-100 text-rose-800 font-bold text-[10px] border border-rose-300">
+              <span className="px-2 py-0.5 rounded bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300 font-bold text-[10px] border border-rose-300">
                 Inconforme
               </span>
             )}
@@ -284,13 +284,13 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({ onAdd, onClose
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11px] font-semibold text-[#035476] mb-1 uppercase">
+              <label className="block text-[11px] font-semibold text-[#035476] dark:text-[#94a3b8] mb-1 uppercase">
                 Coordinador
               </label>
               <select
                 value={coordinador}
                 onChange={(e) => setCoordinador(e.target.value)}
-                className="w-full bg-[#f9fafb] border border-[#e2e8eb] rounded-md px-2.5 py-1.5 text-[#033d59] focus:outline-none focus:border-[#00aae1]"
+                className="w-full bg-[#f9fafb] dark:bg-[#0f172a] border border-[#e2e8eb] dark:border-[#334155] rounded-md px-2.5 py-1.5 text-[#033d59] dark:text-[#f8fafc] focus:outline-none focus:border-[#00aae1]"
               >
                 {COORDINADORES_LIST.map((coord) => (
                   <option key={coord} value={coord}>
@@ -300,23 +300,23 @@ export const AddPatientModal: React.FC<AddPatientModalProps> = ({ onAdd, onClose
               </select>
             </div>
             <div>
-              <label className="block text-[11px] font-semibold text-[#035476] mb-1 uppercase">
+              <label className="block text-[11px] font-semibold text-[#035476] dark:text-[#94a3b8] mb-1 uppercase">
                 Número de Carga
               </label>
               <input
                 type="text"
                 value={numeroCarga}
                 onChange={(e) => setNumeroCarga(e.target.value)}
-                className="w-full bg-[#f9fafb] border border-[#e2e8eb] rounded-md px-2.5 py-1.5 text-[#033d59] focus:outline-none focus:border-[#00aae1]"
+                className="w-full bg-[#f9fafb] dark:bg-[#0f172a] border border-[#e2e8eb] dark:border-[#334155] rounded-md px-2.5 py-1.5 text-[#033d59] dark:text-[#f8fafc] focus:outline-none focus:border-[#00aae1]"
               />
             </div>
           </div>
 
-          <div className="pt-3 border-t border-[#e2e8eb] flex justify-end gap-2">
+          <div className="pt-3 border-t border-[#e2e8eb] dark:border-[#334155] flex justify-end gap-2">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-medium text-[#035476] hover:bg-[#f9fafb] rounded-lg transition-colors cursor-pointer"
+              className="px-4 py-2 text-xs font-medium text-[#035476] dark:text-[#94a3b8] hover:bg-[#f9fafb] dark:hover:bg-[#334155] rounded-lg transition-colors cursor-pointer"
             >
               Cancelar
             </button>

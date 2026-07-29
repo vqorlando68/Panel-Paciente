@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import {
   Patient,
@@ -14,6 +14,7 @@ import {
   COHORTE_OPTIONS,
 } from './types';
 import { INITIAL_PATIENTS } from './mockData';
+import { PatientService } from './services/patientService';
 import { Header } from './components/Header';
 import { FilterBar } from './components/FilterBar';
 import { PatientTable } from './components/PatientTable';
@@ -27,10 +28,49 @@ import { CostAnalysisModal } from './components/CostAnalysisModal';
 import { CuadroMedicoDrawer } from './components/CuadroMedicoDrawer';
 import { AgendaDrawer } from './components/AgendaDrawer';
 import { TasasDrawer } from './components/TasasDrawer';
+import { OracleDocModal } from './components/OracleDocModal';
 
 export default function App() {
   const [patients, setPatients] = useState<Patient[]>(INITIAL_PATIENTS);
   const [activeRole, setActiveRole] = useState<UserRole>('comite_medico');
+
+  // Theme state: 'light' | 'dark'
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    return (localStorage.getItem('app-theme') as 'light' | 'dark') || 'light';
+  });
+
+  // Oracle Doc Modal State
+  const [isOracleDocOpen, setIsOracleDocOpen] = useState(false);
+
+  useEffect(() => {
+    PatientService.getPatients().then((data) => setPatients(data));
+  }, []);
+
+  // Sync theme with html document element class
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('app-theme', theme);
+  }, [theme]);
+
+  // Global Keyboard Listener for Ctrl + Alt + D
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.altKey && (e.key === 'd' || e.key === 'D')) {
+        e.preventDefault();
+        setIsOracleDocOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  };
 
   // Filter State
   const [filters, setFilters] = useState<FilterState>({
@@ -402,7 +442,7 @@ export default function App() {
   };
 
   return (
-    <div className="h-screen w-screen flex flex-col overflow-hidden bg-[#fafafa] font-sans text-[#033d59]">
+    <div className="h-screen w-screen flex flex-col overflow-hidden bg-[#f8fafc] dark:bg-[#0b1329] font-sans text-[#033d59] dark:text-[#f8fafc] transition-colors duration-200">
       <div className="flex-1 flex flex-col overflow-hidden px-4 md:px-8 py-2 max-w-[1600px] w-full mx-auto">
         
         {/* Header */}
@@ -417,6 +457,9 @@ export default function App() {
           activeMetricCard={activeMetricCard}
           fastFilter={filters.fastFilter || 'Todos'}
           onFastFilterChange={(filter) => setFilters((prev) => ({ ...prev, fastFilter: filter }))}
+          theme={theme}
+          onToggleTheme={toggleTheme}
+          onOpenOracleDoc={() => setIsOracleDocOpen(true)}
         />
 
         {/* Filter Bar */}
@@ -562,6 +605,12 @@ export default function App() {
           onClose={() => setTasasPatient(null)}
         />
       )}
+
+      {/* Oracle DB Documentation Modal */}
+      <OracleDocModal
+        isOpen={isOracleDocOpen}
+        onClose={() => setIsOracleDocOpen(false)}
+      />
     </div>
   );
 }

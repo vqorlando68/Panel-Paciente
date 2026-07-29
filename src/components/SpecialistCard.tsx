@@ -23,7 +23,7 @@ export const SpecialistCard: React.FC<SpecialistCardProps> = ({
     return (
       <div
         onClick={onClick}
-        className="p-2 bg-amber-50/40 rounded-lg border border-dashed border-[#fbbf24] hover:border-[#00aae1] transition-all cursor-pointer min-h-[92px] flex items-center justify-center text-[#d97706] text-[11px] font-bold shadow-2xs"
+        className="p-2 bg-amber-50/40 dark:bg-amber-950/20 rounded-lg border border-dashed border-[#fbbf24] dark:border-amber-600/60 hover:border-[#00aae1] dark:hover:border-[#38bdf8] transition-all cursor-pointer min-h-[92px] flex items-center justify-center text-[#d97706] dark:text-amber-400 text-[11px] font-bold shadow-2xs"
         title="Sin especialista asignado. Clic para asignar."
       >
         <span className="flex items-center gap-1">
@@ -34,12 +34,9 @@ export const SpecialistCard: React.FC<SpecialistCardProps> = ({
     );
   }
 
-  // Purple dot: >90 days overdue
   const showPurple = Boolean(data.isOverdue);
-  // Red dot: Rehúso
   const showRed = Boolean(data.hasRehuso || (patientHasRehuso && data.hasRehuso !== false));
 
-  // Format date helper to ensure DD/MM/YYYY HH:MM AM/PM
   const formatWithTime = (dateStr: string) => {
     if (!dateStr || dateStr === '—') return '—';
     if (dateStr.includes(':')) return dateStr;
@@ -55,35 +52,35 @@ export const SpecialistCard: React.FC<SpecialistCardProps> = ({
   return (
     <div
       onClick={onClick}
-      className={`p-2 rounded-lg border transition-all cursor-pointer text-xs space-y-1 bg-white hover:border-[#00aae1] ${
+      className={`p-2 rounded-lg border transition-all cursor-pointer text-xs space-y-1 bg-white dark:bg-[#0f172a] hover:border-[#00aae1] dark:hover:border-[#38bdf8] ${
         isOverdue
-          ? 'border-[#fbbf24] bg-[#fffbeb] shadow-[0_4px_12px_rgba(251,191,36,0.35)]'
-          : 'border-[#e2e8eb] shadow-2xs'
+          ? 'border-[#fbbf24] dark:border-amber-500 bg-[#fffbeb] dark:bg-amber-950/30 shadow-[0_4px_12px_rgba(251,191,36,0.35)]'
+          : 'border-[#e2e8eb] dark:border-[#334155] shadow-2xs'
       }`}
       title={`Especialista: ${data.professionalName}. Clic para editar.`}
     >
-      {/* Line 1: 👤 Nombre + guion + contador */}
-      <div className="font-bold text-[#033d59] truncate text-[11px] flex items-center gap-1 leading-tight">
+      {/* Line 1: Nombre + guion + contador */}
+      <div className="font-bold text-[#033d59] dark:text-[#f8fafc] truncate text-[11px] flex items-center gap-1 leading-tight">
         <span className="shrink-0">👤</span>
         <span className="truncate">
           {data.professionalName} - {appointmentCount}
         </span>
       </div>
 
-      {/* Line 2: 📅 Fecha y hora */}
-      <div className="text-[10px] text-gray-600 font-mono flex items-center gap-1 truncate">
+      {/* Line 2: Fecha y hora */}
+      <div className="text-[10px] text-gray-600 dark:text-gray-400 font-mono flex items-center gap-1 truncate">
         <span className="shrink-0">📅</span>
         <span className="truncate">{lastDateFormatted}</span>
       </div>
 
-      {/* Line 3: 🎯 Fecha y hora objetivo */}
-      <div className="text-[10px] text-gray-600 font-mono flex items-center gap-1 truncate">
+      {/* Line 3: Fecha y hora objetivo */}
+      <div className="text-[10px] text-gray-600 dark:text-gray-400 font-mono flex items-center gap-1 truncate">
         <span className="shrink-0">🎯</span>
         <span className="truncate">{targetDateFormatted}</span>
       </div>
 
-      {/* Line 4: ⏱️ Frecuencia + Puntos de alarma */}
-      <div className="text-[10px] font-semibold text-[#035476] flex items-center justify-between pt-0.5 border-t border-gray-100">
+      {/* Line 4: Frecuencia + Puntos de alarma */}
+      <div className="text-[10px] font-semibold text-[#035476] dark:text-[#94a3b8] flex items-center justify-between pt-0.5 border-t border-gray-100 dark:border-gray-800">
         <div className="flex items-center gap-1 truncate">
           <span className="shrink-0">⏱️</span>
           <span className="truncate">{data.frequency}</span>
