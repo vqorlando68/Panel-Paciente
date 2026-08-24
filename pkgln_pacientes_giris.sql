@@ -1,8 +1,14 @@
 /*******************************************************************************
   PAQUETE: pkgln_pacientes_giris
   DESCRIPCION: Paquete de Lógica de Negocio para el Panel de Pacientes Giris.
-               Todas las interacciones de entrada y salida utilizan objetos JSON 
-               a través de los parámetros p_json_entrada y p_json_salida.
+               Todas las interacciones con la base de datos se realizan a través
+               de los parámetros de entrada p_json_entrada y salida p_json_salida
+               (o p_json_salida para catálogos).
+
+  REGLA DE CONSTRUCCIÓN SQL:
+    - Todos los SELECTs están estructurados SIN la nomenclatura JOIN,
+      utilizando la sintaxis en la cláusula WHERE y la notación (+) para
+      outer joins de Oracle.
 *******************************************************************************/
 
 -- =============================================================================
@@ -11,14 +17,55 @@
 CREATE OR REPLACE PACKAGE pkgln_pacientes_giris IS
 
   /*****************************************************************************
+    PROCEDIMIENTO: prc_obtener_total_paginas
+    DESCRIPCION: Recibe los filtros y registros por página para retornar el total
+                 de registros y la cantidad total de páginas calculadas.
+  *****************************************************************************/
+  PROCEDURE prc_obtener_total_paginas (
+    p_json_entrada IN  CLOB,
+    p_json_salida  OUT CLOB
+  );
+
+  /*****************************************************************************
+    PROCEDIMIENTO: prc_obtener_pacientes_pagina
+    DESCRIPCION: Recibe la página solicitada, registros por página y filtros.
+                 Estructura y entrega el arreglo de pacientes GIRIS para la página activa.
+  *****************************************************************************/
+  PROCEDURE prc_obtener_pacientes_pagina (
+    p_json_entrada IN  CLOB,
+    p_json_salida  OUT CLOB
+  );
+
+  /*****************************************************************************
     PROCEDIMIENTO: prc_obtener_pacientes
-    DESCRIPCION: Retorna la lista paginada y filtrada de pacientes.
-    PARAMETROS:
-      - p_json_entrada (IN CLOB): JSON con filtros y parámetros de paginación.
-      - p_json_salida (OUT CLOB): JSON con código de respuesta, paginación y arreglo de pacientes.
+    DESCRIPCION: Procedimiento de compatibilidad directa. Invoca prc_obtener_pacientes_pagina.
   *****************************************************************************/
   PROCEDURE prc_obtener_pacientes (
     p_json_entrada IN  CLOB,
+    p_json_salida  OUT CLOB
+  );
+
+  /*****************************************************************************
+    PROCEDIMIENTO: prc_obtener_tipos_identificacion
+    DESCRIPCION: Retorna los tipos de identificación ordenados por abreviatura.
+  *****************************************************************************/
+  PROCEDURE prc_obtener_tipos_identificacion (
+    p_json_salida  OUT CLOB
+  );
+
+  /*****************************************************************************
+    PROCEDIMIENTO: prc_obtener_coordinadores
+    DESCRIPCION: Retorna los usuarios coordinadores (rol = 11) ordenados por nombres y apellidos.
+  *****************************************************************************/
+  PROCEDURE prc_obtener_coordinadores (
+    p_json_salida  OUT CLOB
+  );
+
+  /*****************************************************************************
+    PROCEDIMIENTO: prc_obtener_estados_cohorte
+    DESCRIPCION: Retorna los estados de cohorte ordenados por descripción.
+  *****************************************************************************/
+  PROCEDURE prc_obtener_estados_cohorte (
     p_json_salida  OUT CLOB
   );
 
@@ -59,82 +106,346 @@ SHOW ERRORS;
 CREATE OR REPLACE PACKAGE BODY pkgln_pacientes_giris IS
 
   ------------------------------------------------------------------------------
-  -- PROCEDIMIENTO: prc_obtener_pacientes
+  -- PROCEDIMIENTO: prc_obtener_total_paginas
   ------------------------------------------------------------------------------
-  PROCEDURE prc_obtener_pacientes (
+  PROCEDURE prc_obtener_total_paginas (
+    p_json_entrada IN  CLOB,
+    p_json_salida  OUT CLOB
+  ) IS
+    v_registros_pag  NUMBER := 10;
+    v_total_reg      NUMBER := 0;
+    v_total_pag      NUMBER := 1;
+  BEGIN
+    IF p_json_entrada IS NOT NULL AND LENGTH(p_json_entrada) > 0 THEN
+      BEGIN
+        v_registros_pag := NVL(TO_NUMBER(JSON_VALUE(p_json_entrada, '$.registros_por_pagina')), 10);
+      EXCEPTION
+        WHEN OTHERS THEN
+          v_registros_pag := 10;
+      END;
+    END IF;
+
+    SELECT COUNT(*)
+      INTO v_total_reg
+      FROM tkr_usuarios              u,
+           tkr_tipos_identificacion  ti,
+           tkr_usuarios_cohorte      uc,
+           tkr_usuarios              uco
+     WHERE u.id_tipo_identificacion = ti.id
+       AND uc.id_usuario = u.id
+       AND uc.id_coordinador = uco.id(+);
+
+    IF v_registros_pag > 0 THEN
+      v_total_pag := CEIL(v_total_reg / v_registros_pag);
+    ELSE
+      v_total_pag := 1;
+    END IF;
+
+    p_json_salida := '{"codigo_respuesta": 0, "mensaje_respuesta": "Cálculo de paginación realizado exitosamente", "paginacion": {"registros_por_pagina": ' 
+                     || v_registros_pag || ', "total_registros": ' || v_total_reg || ', "total_paginas": ' || v_total_pag || '}}';
+  EXCEPTION
+    WHEN OTHERS THEN
+      p_json_salida := '{"codigo_respuesta": -1, "mensaje_respuesta": "Error en prc_obtener_total_paginas: ' || REPLACE(SQLERRM, '"', '\"') || '"}';
+  END prc_obtener_total_paginas;
+
+  ------------------------------------------------------------------------------
+  -- PROCEDIMIENTO: prc_obtener_pacientes_pagina
+  ------------------------------------------------------------------------------
+  PROCEDURE prc_obtener_pacientes_pagina (
     p_json_entrada IN  CLOB,
     p_json_salida  OUT CLOB
   ) IS
     v_pagina         NUMBER := 1;
-    v_registros_pag  NUMBER := 50;
-    v_estado         VARCHAR2(100);
-    v_cohorte        VARCHAR2(100);
-    v_identificacion VARCHAR2(100);
-    v_nombres        VARCHAR2(200);
-    v_coordinador    VARCHAR2(200);
+    v_registros_pag  NUMBER := 10;
+    v_total_reg      NUMBER := 0;
+    v_total_pag      NUMBER := 1;
 
-    v_hdr            VARCHAR2(500);
+    v_hdr            VARCHAR2(2000);
     v_json_data      CLOB;
+    v_first          BOOLEAN := TRUE;
+    v_item           VARCHAR2(4000);
+    v_riesgo_desc    VARCHAR2(50);
+
+    CURSOR c_pacientes IS
+      SELECT u.id,
+             u.nombres,
+             u.apellidos,
+             u.id_tipo_identificacion,
+             ti.abreviatura                  tipo_identificacion_abrev,
+             ti.descripcion                  tipo_identificacion_desc,
+             u.identificacion,
+             u.telefono,
+             u.correo_electronico,
+             u.direccion,
+             uco.id                          id_coordinador,
+             uco.nombres || ' ' || uco.apellidos coordinador_nombre,
+             (  SELECT a.nivel_riesgo
+                  FROM tkr_actas_medicas a
+                 WHERE a.id_usuario = u.id
+              ORDER BY a.id DESC
+                 FETCH FIRST 1 ROWS ONLY)    id_nivel_riesgo
+        FROM tkr_usuarios              u,
+             tkr_tipos_identificacion  ti,
+             tkr_usuarios_cohorte      uc,
+             tkr_usuarios              uco
+       WHERE u.id_tipo_identificacion = ti.id 
+         AND uc.id_usuario = u.id 
+         AND uc.id_coordinador = uco.id(+)
+       ORDER BY u.nombres, u.apellidos;
   BEGIN
     IF p_json_entrada IS NOT NULL AND LENGTH(p_json_entrada) > 0 THEN
       BEGIN
         v_pagina        := NVL(TO_NUMBER(JSON_VALUE(p_json_entrada, '$.pagina')), 1);
-        v_registros_pag := NVL(TO_NUMBER(JSON_VALUE(p_json_entrada, '$.registros_por_pagina')), 50);
-        v_estado        := JSON_VALUE(p_json_entrada, '$.filtros.estado');
-        v_cohorte       := JSON_VALUE(p_json_entrada, '$.filtros.cohorte');
-        v_identificacion:= JSON_VALUE(p_json_entrada, '$.filtros.identificacion');
-        v_nombres       := JSON_VALUE(p_json_entrada, '$.filtros.nombresApellidos');
-        v_coordinador   := JSON_VALUE(p_json_entrada, '$.filtros.coordinador');
+        v_registros_pag := NVL(TO_NUMBER(JSON_VALUE(p_json_entrada, '$.registros_por_pagina')), 10);
       EXCEPTION
         WHEN OTHERS THEN
           v_pagina        := 1;
-          v_registros_pag := 50;
+          v_registros_pag := 10;
       END;
     END IF;
 
-    /* CREAR TEMPORARY CLOB Y CONSTRUIR POR FRAGMENTOS SEGUROS (< 1500 CARACTERES) PARA EVITAR PLS-00172 */
+    SELECT COUNT(*)
+      INTO v_total_reg
+      FROM tkr_usuarios              u,
+           tkr_tipos_identificacion  ti,
+           tkr_usuarios_cohorte      uc,
+           tkr_usuarios              uco
+     WHERE u.id_tipo_identificacion = ti.id 
+       AND uc.id_usuario = u.id 
+       AND uc.id_coordinador = uco.id(+);
+
+    IF v_registros_pag > 0 THEN
+      v_total_pag := CEIL(v_total_reg / v_registros_pag);
+    ELSE
+      v_total_pag := 1;
+    END IF;
+
     DBMS_LOB.CREATETEMPORARY(v_json_data, TRUE);
-    
-    v_hdr := '{"codigo_respuesta": 0, "mensaje_respuesta": "Consulta realizada exitosamente", "paginacion": {"pagina_actual": ' || v_pagina || ', "registros_por_pagina": ' || v_registros_pag || ', "total_registros": 14, "total_paginas": 1}, "pacientes": ';
+
+    v_hdr := '{"codigo_respuesta": 0, "mensaje_respuesta": "Página de pacientes obtenida exitosamente", "paginacion": {"pagina_actual": ' 
+             || v_pagina || ', "registros_por_pagina": ' || v_registros_pag || ', "total_registros": ' || v_total_reg 
+             || ', "total_paginas": ' || v_total_pag || '}, "especialidades_orden": ['
+             || '{"id_especialidad": 17, "nombre": "Medicina General", "key": "med_gen"},'
+             || '{"id_especialidad": 36, "nombre": "Psicología", "key": "psicol"},'
+             || '{"id_especialidad": 37, "nombre": "Nutrición", "key": "nutri"},'
+             || '{"id_especialidad": 101, "nombre": "Cardiología", "key": "esp_1"},'
+             || '{"id_especialidad": 102, "nombre": "Endocrinología", "key": "esp_2"},'
+             || '{"id_especialidad": 103, "nombre": "Nefrología", "key": "esp_3"},'
+             || '{"id_especialidad": 104, "nombre": "Neurología", "key": "esp_4"}'
+             || '], "pacientes": [';
+
     DBMS_LOB.WRITEAPPEND(v_json_data, LENGTH(v_hdr), v_hdr);
 
-    DBMS_LOB.WRITEAPPEND(v_json_data, 1500, '[{"id":"PAT-001","nombre":"Valeria Restrepo Montoya","identificacion":"CC 52.849.182","telefono":"+57 312 458 9012","email":"valeria.restrepo@gmail.com","direccion":"Calle 45 #28-14, Medellín","idConvenio":"SURA-8492","convenioNombre":"EPS Suramericana Cuidate360","prioridadInicial":1,"fechaProximaRevision":"18/08/2026","cohorte":"ACTIVO","estado":"Activo","riesgo":"Critical","etiqueta":"","retroalimentacion":"Satisfecho","fase":"I","acta":{"numero":142,"fecha":"16 jul 2026","resumen":"Aprobación de tratamiento anticoagulante orales de nueva generación y remisión prioritaria a Cardiología.","integrantes":["Dr. Fernando Hoyos","Dra. Sofía López","Dra. María Paz"]},"actasHistory":[{"numero":142,"fecha":"16 jul 2026","resumen":"Aprobación de tratamiento anticoagulante orales de nueva generación y remisión prioritaria a Cardiología.","integrantes":["Dr. Fernando Hoyos","Dra. Sofía López","Dra. María Paz"]},{"numero":110,"fecha":"10 may 2026","resumen":"Ajuste de dosis de antihipertensivos y control de función renal.","integrantes":["Dr. Carlos Mendoza","Dra. Sofía López"]},{"numero":85,"fecha":"15 mar 2026","resumen":"Evaluación de ingreso al programa de riesgo vascular.","integrantes":["Dr. Fernando Hoyos"]},{"numero":72,"fecha":"10 feb 2026","resumen":"Validación de exámenes de laboratorio iniciales y perfil lipídico.","integrantes":["Dra. Ana Patricia Ruiz","Dr. Carlos Mendoza"]},{"numero":50,"fecha":"05 ene 2026","resumen":"Recepción inicial y asignación de gestor de caso par');
-    DBMS_LOB.WRITEAPPEND(v_json_data, 1500, 'a cohorte vascular.","integrantes":["Anyeli Ledezma","Dr. Fernando Hoyos"]}],"coordinador":"Anyeli Ledezma","numeroCarga":"CARGA-104","hasAlarm":true,"alarmReasons":["Paciente lleva > 3 meses sin visita de Medicina General (Última: 10/01/2026)","Cita de Nutricionista asignada con profesional fuera de cuadro médico"],"tasas":{"cancelacionesPct":22,"cancelacionesNum":4,"inasistenciasPct":15,"inasistenciasNum":3,"reprogramacionesPct":18,"reprogramacionesNum":3,"history":[{"id":"t-1","date":"2026-07-12","specialty":"Med. Gen.","professional":"Dr. Carlos Mendoza","status":"Inasistida"},{"id":"t-2","date":"2026-06-20","specialty":"Nutrición","professional":"Lic. Mariana Gómez","status":"Cancelada"},{"id":"t-3","date":"2026-05-10","specialty":"Med. Gen.","professional":"Dr. Carlos Mendoza","status":"Atendida"},{"id":"t-4","date":"2026-04-15","specialty":"Cardiología","professional":"Dr. Roberto Silva","status":"Reprogramada"},{"id":"t-5","date":"2026-03-01","specialty":"Psicología","professional":"Dra. Claudia Ruiz","status":"Atendida"}]},"cuadroMedico":[{"id":"cm-1","specialty":"Medicina General","professional":"Dr. Carlos Mendoza","inNetwork":true,"phone":"+57 300 123 4567"},{"id":"cm-2","specialty":"Nutrición","professional":"Lic. Mariana Gómez","inNetwork":false,"phone":"+57 311 987 6543"},{"id":"cm-3","specialty":"Cardiología","professional":"Dr. Roberto Silva","inNetwork":true,"phone":"+57 315 444 5566"},{"id":"cm-4","specialty":"Nefrología","professional":"Dr. Andrés Parra","');
-    DBMS_LOB.WRITEAPPEND(v_json_data, 1500, 'inNetwork":true,"phone":"+57 318 222 1100"}],"agenda":[{"id":"ag-1","date":"2026-08-05","time":"09:00 AM","specialty":"Medicina General","professional":"Dr. Carlos Mendoza","status":"Programada","type":"Presencial"},{"id":"ag-2","date":"2026-08-15","time":"11:30 AM","specialty":"Nutrición","professional":"Lic. Mariana Gómez","status":"Programada","type":"Teleconsulta"},{"id":"ag-3","date":"2026-09-12","time":"02:00 PM","specialty":"Nefrología","professional":"Dr. Andrés Parra","status":"Programada","type":"Presencial"},{"id":"ag-4","date":"2026-07-10","time":"08:00 AM","specialty":"Cardiología","professional":"Dr. Roberto Silva","status":"Completada","type":"Presencial"}],"specialists":{"med_gen":{"specialistTitle":"MEDICO GEN.","professionalName":"Dr. Carlos Mendoza","lastAttentionDate":"10/01/2026 09:00 AM","frequency":"Mensual","targetDate":"10/02/2026 09:00 AM","isOverdue":true,"attentionsHistory":[{"id":"at-1","dateTime":"10/01/2026 09:00 AM","professional":"Dr. Carlos Mendoza","status":"Atendida"},{"id":"at-2","dateTime":"10/12/2025 08:30 AM","professional":"Dr. Carlos Mendoza","status":"Atendida"},{"id":"at-3","dateTime":"10/11/2025 10:00 AM","professional":"Dr. Carlos Mendoza","status":"Atendida"},{"id":"at-4","dateTime":"10/10/2025 09:00 AM","professional":"Dr. Carlos Mendoza","status":"Atendida"}]},"nutri":{"specialistTitle":"NUTRICIONISTA","professionalName":"Lic. Mariana Gómez","lastAttentionDate":"15/06/2026 10:30 AM","frequency":"Bimensual","targetDate":"15/08/2');
-    DBMS_LOB.WRITEAPPEND(v_json_data, 1500, '026 10:30 AM","isOverdue":false,"attentionsHistory":[{"id":"at-nut-1","dateTime":"15/06/2026 10:30 AM","professional":"Lic. Mariana Gómez","status":"Atendida"}]},"psicol":{"specialistTitle":"PSICOLOGIA","professionalName":"Dra. Claudia Ruiz","lastAttentionDate":"20/06/2026 02:00 PM","frequency":"Quincenal","targetDate":"04/08/2026 02:00 PM","isOverdue":false,"attentionsHistory":[{"id":"at-psi-1","dateTime":"20/06/2026 02:00 PM","professional":"Dra. Claudia Ruiz","status":"Atendida"}]},"esp_1":{"specialistTitle":"ESP. 1","professionalName":"Dr. Roberto Silva","lastAttentionDate":"01/07/2026 11:00 AM","frequency":"Trimestral","targetDate":"01/10/2026 11:00 AM","isOverdue":false,"attentionsHistory":[{"id":"at-car-1","dateTime":"01/07/2026 11:00 AM","professional":"Dr. Roberto Silva","status":"Atendida"}]},"esp_2":{"specialistTitle":"ESP. 2","professionalName":"Dr. Andrés Parra","lastAttentionDate":"12/03/2026 03:00 PM","frequency":"Semestral","targetDate":"12/09/2026 03:00 PM","isOverdue":false,"attentionsHistory":[{"id":"at-nef-1","dateTime":"12/03/2026 03:00 PM","professional":"Dr. Andrés Parra","status":"Atendida"}]},"esp_3":{"specialistTitle":"ESP. 3","professionalName":"Dra. Beatriz Franco","lastAttentionDate":"14/06/2026 08:00 AM","frequency":"Trimestral","targetDate":"15/09/2026 08:00 AM","isOverdue":false,"attentionsHistory":[{"id":"at-end-1","dateTime":"14/06/2026 08:00 AM","professional":"Dra. Beatriz Franco","status":"Atendida"}]},"esp_4":{"specialistTitle":"ESP. 4","');
-    DBMS_LOB.WRITEAPPEND(v_json_data, 1500, 'professionalName":"Dr. Gabriel Restrepo","lastAttentionDate":"20/05/2026 02:00 PM","frequency":"Bimensual","targetDate":"20/07/2026 02:00 PM","isOverdue":false,"attentionsHistory":[]}},"operationalNotes":[{"id":"op-101","author":"Anyeli Ledezma","role":"Coordinadora SIAU","timestamp":"2026-07-22 09:30","content":"Se gestionó orden de transporte asistido para cita presencial con Nefrología."}],"clinicalNotes":[{"id":"cl-101","author":"Dr. Fernando Hoyos","role":"Comité Médico","timestamp":"2026-07-20 11:00","content":"Paciente refiere leve mejoría en disnea de esfuerzo. Presión arterial ajustada a 125/82 mmHg."}]},{"id":"PAT-002","nombre":"Santiago Gómez Echeverri","identificacion":"CC 80.192.410","telefono":"+57 300 671 2234","email":"sgomez.echeverri@hotmail.com","direccion":"Carrera 70 #10-45, Bogotá","idConvenio":"SANITAS-201","convenioNombre":"CMP Caribe","prioridadInicial":3,"fechaProximaRevision":"22/08/2026","cohorte":"ACEPTADO","estado":"Aceptado","riesgo":"High","etiqueta":"Inconforme","retroalimentacion":"Inconforme","fase":"D","acta":{"numero":138,"fecha":"28 jun 2026","resumen":"Inclusión en programa de glucometrías continuas y monitoreo ambulatorio.","integrantes":["Dr. Fernando Hoyos","Dra. Beatriz Franco"]},"actasHistory":[{"numero":138,"fecha":"28 jun 2026","resumen":"Inclusión en programa de glucometrías continuas y monitoreo ambulatorio.","integrantes":["Dr. Fernando Hoyos","Dra. Beatriz Franco"]},{"numero":99,"fecha":"12 abr 2026","resumen":"Revisión por In');
-    DBMS_LOB.WRITEAPPEND(v_json_data, 1500, 'conformidad manifestada en atención domiciliaria.","integrantes":["Dra. Sofía López"]},{"numero":70,"fecha":"15 mar 2026","resumen":"Evaluación inicial de control glucémico y revisión de medicamentos.","integrantes":["Dr. Carlos Mendoza"]},{"numero":45,"fecha":"20 feb 2026","resumen":"Registro inicial de ingreso a programa ambulatorio de diabetes.","integrantes":["Katherine Mora"]}],"coordinador":"Katherine Mora","numeroCarga":"CARGA-104","hasAlarm":false,"alarmReasons":[],"tasas":{"cancelacionesPct":5,"cancelacionesNum":1,"inasistenciasPct":3,"inasistenciasNum":1,"reprogramacionesPct":7,"reprogramacionesNum":2,"history":[{"id":"t-21","date":"2026-07-05","specialty":"Med. Gen.","professional":"Dr. Jorge Castro","status":"Atendida"},{"id":"t-22","date":"2026-06-10","specialty":"Nutrición","professional":"Lic. Paola Tobón","status":"Atendida"}]},"cuadroMedico":[{"id":"cm-21","specialty":"Medicina General","professional":"Dr. Jorge Castro","inNetwork":true},{"id":"cm-22","specialty":"Nutrición","professional":"Lic. Paola Tobón","inNetwork":true},{"id":"cm-23","specialty":"Endocrinología","professional":"Dra. Beatriz Franco","inNetwork":true}],"agenda":[{"id":"ag-21","date":"2026-08-05","time":"10:00 AM","specialty":"Medicina General","professional":"Dr. Jorge Castro","status":"Programada","type":"Presencial"}],"specialists":{"med_gen":{"specialistTitle":"MEDICO GEN.","professionalName":"Dr. Jorge Castro","lastAttentionDate":"05/07/2026 09:00 AM","frequency":"Mensual","targetDate');
-    DBMS_LOB.WRITEAPPEND(v_json_data, 1500, '":"05/08/2026 09:00 AM","isOverdue":false,"attentionsHistory":[{"id":"at-201","dateTime":"05/07/2026 09:00 AM","professional":"Dr. Jorge Castro","status":"Atendida"}]},"nutri":{"specialistTitle":"NUTRICIONISTA","professionalName":"Lic. Paola Tobón","lastAttentionDate":"10/06/2026 10:00 AM","frequency":"Trimestral","targetDate":"10/09/2026 10:00 AM","isOverdue":false,"attentionsHistory":[]},"psicol":{"specialistTitle":"PSICOLOGIA","professionalName":"Sin asignar","lastAttentionDate":"No registra","frequency":"Mensual","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]},"esp_1":{"specialistTitle":"ESP. 1","professionalName":"Dra. Beatriz Franco","lastAttentionDate":"15/05/2026 11:00 AM","frequency":"Trimestral","targetDate":"15/08/2026 11:00 AM","isOverdue":false,"attentionsHistory":[]},"esp_2":{"specialistTitle":"ESP. 2","professionalName":"Sin asignar","lastAttentionDate":"No registra","frequency":"Semestral","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]},"esp_3":{"specialistTitle":"ESP. 3","professionalName":"Sin asignar","lastAttentionDate":"No registra","frequency":"Anual","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]},"esp_4":{"specialistTitle":"ESP. 4","professionalName":"Sin asignar","lastAttentionDate":"No registra","frequency":"Anual","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]}},"operationalNotes":[],"clinicalNotes":[]},{"id":"PAT-003","nombre":"Camila Andrea Rojas Ruiz","identificacion":"CC');
-    DBMS_LOB.WRITEAPPEND(v_json_data, 1500, ' 1.092.384.112","telefono":"+57 315 889 0011","email":"camila.rojas@gmail.com","direccion":"Calle 12 #4-50, Cali","idConvenio":"CALI-552","convenioNombre":"CMP Salud Mental Cali","prioridadInicial":5,"fechaProximaRevision":"10/09/2026","cohorte":"RECHAZO EL SERVICIO","estado":"Rechazado","riesgo":"Medium","etiqueta":"","retroalimentacion":"","fase":"E","hasRehuso":true,"rehusoInfo":{"professional":"Dr. Roberto Silva","specialty":"Cardiología"},"acta":{"numero":121,"fecha":"15 may 2026","resumen":"Paciente rechaza atención por Cardiología argumentando que prefiere su médico particular.","integrantes":["Dr. Fernando Hoyos","Angela Valencia"]},"actasHistory":[{"numero":121,"fecha":"15 may 2026","resumen":"Paciente rechaza atención por Cardiología argumentando que prefiere su médico particular.","integrantes":["Dr. Fernando Hoyos","Angela Valencia"]}],"coordinador":"Angela Valencia","numeroCarga":"CARGA-105","hasAlarm":true,"alarmReasons":["Registra Rehúso en atención especializada (Cardiología)"],"tasas":{"cancelacionesPct":40,"cancelacionesNum":4,"inasistenciasPct":20,"inasistenciasNum":2,"reprogramacionesPct":10,"reprogramacionesNum":1,"history":[]},"cuadroMedico":[],"agenda":[],"specialists":{"med_gen":{"specialistTitle":"MEDICO GEN.","professionalName":"Dr. Carlos Mendoza","lastAttentionDate":"01/06/2026 08:00 AM","frequency":"Mensual","targetDate":"01/07/2026 08:00 AM","isOverdue":false,"attentionsHistory":[]},"nutri":{"specialistTitle":"NUTRICIONISTA","professionalName":"S');
-    DBMS_LOB.WRITEAPPEND(v_json_data, 1500, 'in asignar","lastAttentionDate":"No registra","frequency":"Bimensual","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]},"psicol":{"specialistTitle":"PSICOLOGIA","professionalName":"Dra. Claudia Ruiz","lastAttentionDate":"10/06/2026 03:00 PM","frequency":"Quincenal","targetDate":"25/06/2026 03:00 PM","isOverdue":false,"attentionsHistory":[]},"esp_1":{"specialistTitle":"ESP. 1","professionalName":"Dr. Roberto Silva","lastAttentionDate":"12/04/2026 10:00 AM","frequency":"Trimestral","targetDate":"12/07/2026 10:00 AM","isOverdue":false,"hasRehuso":true,"attentionsHistory":[]},"esp_2":{"specialistTitle":"ESP. 2","professionalName":"Sin asignar","lastAttentionDate":"No registra","frequency":"Semestral","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]},"esp_3":{"specialistTitle":"ESP. 3","professionalName":"Sin asignar","lastAttentionDate":"No registra","frequency":"Anual","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]},"esp_4":{"specialistTitle":"ESP. 4","professionalName":"Sin asignar","lastAttentionDate":"No registra","frequency":"Anual","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]}},"operationalNotes":[{"id":"op-301","author":"Angela Valencia","role":"Coordinadora SIAU","timestamp":"2026-05-15 14:20","content":"Marcar Rehúso: Paciente indica que no desea consulta con Dr. Roberto Silva (Cardiología)."}],"clinicalNotes":[]},{"id":"PAT-004","nombre":"Hernán Darío Morales Paz","identificacion":"CC 19.382.910",');
-    DBMS_LOB.WRITEAPPEND(v_json_data, 1500, '"telefono":"+57 310 998 7766","email":"hernan.morales@gmail.com","direccion":"Avenida 6N #22-18, Barranquilla","idConvenio":"CARIBE-90","convenioNombre":"CMP Vive al 100 Caribe","prioridadInicial":2,"fechaProximaRevision":"05/08/2026","cohorte":"PROSPECTO","estado":"Activo","riesgo":"Low","etiqueta":"","retroalimentacion":"","fase":"M/E","acta":{"numero":0,"fecha":"","resumen":""},"actasHistory":[],"coordinador":"Anyeli Ledezma","numeroCarga":"CARGA-106","hasAlarm":false,"alarmReasons":[],"tasas":{"cancelacionesPct":0,"cancelacionesNum":0,"inasistenciasPct":0,"inasistenciasNum":0,"reprogramacionesPct":0,"reprogramacionesNum":0,"history":[]},"cuadroMedico":[{"id":"cm-41","specialty":"Medicina General","professional":"Dr. Carlos Mendoza","inNetwork":true}],"agenda":[],"specialists":{"med_gen":{"specialistTitle":"MEDICO GEN.","professionalName":"Dr. Carlos Mendoza","lastAttentionDate":"10/07/2026 09:00 AM","frequency":"Mensual","targetDate":"10/08/2026 09:00 AM","isOverdue":false,"attentionsHistory":[{"id":"at-401","dateTime":"10/07/2026 09:00 AM","professional":"Dr. Carlos Mendoza","status":"Atendida"}]},"nutri":{"specialistTitle":"NUTRICIONISTA","professionalName":"Lic. Mariana Gómez","lastAttentionDate":"12/07/2026 11:00 AM","frequency":"Trimestral","targetDate":"12/10/2026 11:00 AM","isOverdue":false,"attentionsHistory":[]},"psicol":{"specialistTitle":"PSICOLOGIA","professionalName":"Sin asignar","lastAttentionDate":"No registra","frequency":"Mensual","targetDate":"Pendiente');
-    DBMS_LOB.WRITEAPPEND(v_json_data, 1500, '","isOverdue":false,"attentionsHistory":[]},"esp_1":{"specialistTitle":"ESP. 1","professionalName":"Sin asignar","lastAttentionDate":"No registra","frequency":"Anual","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]},"esp_2":{"specialistTitle":"ESP. 2","professionalName":"Sin asignar","lastAttentionDate":"No registra","frequency":"Anual","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]},"esp_3":{"specialistTitle":"ESP. 3","professionalName":"Sin asignar","lastAttentionDate":"No registra","frequency":"Anual","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]},"esp_4":{"specialistTitle":"ESP. 4","professionalName":"Sin asignar","lastAttentionDate":"No registra","frequency":"Anual","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]}},"operationalNotes":[],"clinicalNotes":[]},{"id":"PAT-005","nombre":"Mariana Isaza Bermúdez","identificacion":"CC 43.910.822","telefono":"+57 318 765 4321","email":"mariana.isaza@gmail.com","direccion":"Transversal 39 #12-88, Medellín","idConvenio":"SURA-9102","convenioNombre":"EPS Suramericana Cuidate360","prioridadInicial":1,"fechaProximaRevision":"25/08/2026","cohorte":"ACTIVO","estado":"Activo","riesgo":"Critical","etiqueta":"","retroalimentacion":"Satisfecho","fase":"I","acta":{"numero":145,"fecha":"20 jul 2026","resumen":"Paciente prioritaria por urgencia cardiovascular y falta de adherencia.","integrantes":["Dr. Fernando Hoyos","Dra. Sofía López"]},"actasHistory":[{"numero":145,"f');
-    DBMS_LOB.WRITEAPPEND(v_json_data, 1500, 'echa":"20 jul 2026","resumen":"Paciente prioritaria por urgencia cardiovascular y falta de adherencia.","integrantes":["Dr. Fernando Hoyos","Dra. Sofía López"]}],"coordinador":"Anyeli Ledezma","numeroCarga":"CARGA-107","hasAlarm":true,"alarmReasons":["Atención de Cardiología vencida hace > 90 días","Paciente manifestó Rehúso en consulta especializada"],"tasas":{"cancelacionesPct":30,"cancelacionesNum":3,"inasistenciasPct":20,"inasistenciasNum":2,"reprogramacionesPct":10,"reprogramacionesNum":1,"history":[]},"cuadroMedico":[{"id":"cm-51","specialty":"Cardiología","professional":"Dr. Roberto Silva","inNetwork":true}],"agenda":[],"specialists":{"med_gen":{"specialistTitle":"MEDICO GEN.","professionalName":"Dr. Carlos Mendoza","lastAttentionDate":"01/03/2026 09:00 AM","frequency":"Mensual","targetDate":"01/04/2026 09:00 AM","isOverdue":true,"attentionsHistory":[]},"nutri":{"specialistTitle":"NUTRICIONISTA","professionalName":"Sin Asignar","lastAttentionDate":"No registra","frequency":"Bimensual","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]},"psicol":{"specialistTitle":"PSICOLOGIA","professionalName":"Dra. Claudia Ruiz","lastAttentionDate":"10/05/2026 10:00 AM","frequency":"Mensual","targetDate":"10/06/2026 10:00 AM","isOverdue":false,"attentionsHistory":[]},"esp_1":{"specialistTitle":"ESP. 1","professionalName":"Dr. Roberto Silva","lastAttentionDate":"10/01/2026 11:00 AM","frequency":"Trimestral","targetDate":"10/04/2026 11:00 AM","isOverdue":true,"hasRehuso"');
-    DBMS_LOB.WRITEAPPEND(v_json_data, 1500, ':true,"attentionsHistory":[]},"esp_2":{"specialistTitle":"ESP. 2","professionalName":"Sin Asignar","lastAttentionDate":"No registra","frequency":"Semestral","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]},"esp_3":{"specialistTitle":"ESP. 3","professionalName":"Sin Asignar","lastAttentionDate":"No registra","frequency":"Anual","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]},"esp_4":{"specialistTitle":"ESP. 4","professionalName":"Sin Asignar","lastAttentionDate":"No registra","frequency":"Anual","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]}},"operationalNotes":[],"clinicalNotes":[]},{"id":"PAT-006","nombre":"Guillermo León Ramírez","identificacion":"CC 71.234.567","telefono":"+57 301 555 1234","email":"guillermo.ramirez@yahoo.com","direccion":"Calle 10 #15-30, Envigado","idConvenio":"CARIBE-112","convenioNombre":"CMP Caribe","prioridadInicial":2,"fechaProximaRevision":"14/08/2026","cohorte":"PROSPECTO","estado":"Activo","riesgo":"High","etiqueta":"","retroalimentacion":"","fase":"D","acta":{"numero":0,"fecha":"","resumen":""},"actasHistory":[],"coordinador":"Katherine Mora","numeroCarga":"CARGA-108","hasAlarm":true,"alarmReasons":["No asiste a citas de Psicología en los últimos 60 días"],"tasas":{"cancelacionesPct":10,"cancelacionesNum":1,"inasistenciasPct":15,"inasistenciasNum":2,"reprogramacionesPct":5,"reprogramacionesNum":1,"history":[]},"cuadroMedico":[],"agenda":[],"specialists":{"med_gen":{"specialistTitle":"MEDI');
-    DBMS_LOB.WRITEAPPEND(v_json_data, 1500, 'CO GEN.","professionalName":"Dr. Carlos Mendoza","lastAttentionDate":"15/02/2026 08:30 AM","frequency":"Mensual","targetDate":"15/03/2026 08:30 AM","isOverdue":true,"attentionsHistory":[]},"nutri":{"specialistTitle":"NUTRICIONISTA","professionalName":"Lic. Mariana Gómez","lastAttentionDate":"01/06/2026 09:00 AM","frequency":"Bimensual","targetDate":"01/08/2026 09:00 AM","isOverdue":false,"attentionsHistory":[]},"psicol":{"specialistTitle":"PSICOLOGIA","professionalName":"Sin Asignar","lastAttentionDate":"No registra","frequency":"Mensual","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]},"esp_1":{"specialistTitle":"ESP. 1","professionalName":"Sin Asignar","lastAttentionDate":"No registra","frequency":"Trimestral","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]},"esp_2":{"specialistTitle":"ESP. 2","professionalName":"Sin Asignar","lastAttentionDate":"No registra","frequency":"Semestral","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]},"esp_3":{"specialistTitle":"ESP. 3","professionalName":"Sin Asignar","lastAttentionDate":"No registra","frequency":"Anual","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]},"esp_4":{"specialistTitle":"ESP. 4","professionalName":"Sin Asignar","lastAttentionDate":"No registra","frequency":"Anual","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]}},"operationalNotes":[],"clinicalNotes":[]},{"id":"PAT-007","nombre":"Luz Marina Castaño","identificacion":"CC 32.890.12');
-    DBMS_LOB.WRITEAPPEND(v_json_data, 1500, '3","telefono":"+57 314 888 9900","email":"luz.castano@hotmail.com","direccion":"Carrera 43A #1S-100, Sabaneta","idConvenio":"SURA-5541","convenioNombre":"EPS Suramericana Cuidate360","prioridadInicial":4,"fechaProximaRevision":"30/08/2026","cohorte":"ACTIVO","estado":"Activo","riesgo":"Medium","etiqueta":"","retroalimentacion":"Satisfecho","fase":"M/E","acta":{"numero":112,"fecha":"10 may 2026","resumen":"Paciente estable en programa de seguimiento ambulatorio.","integrantes":["Dra. Sofía López"]},"actasHistory":[],"coordinador":"Anyeli Ledezma","numeroCarga":"CARGA-109","hasAlarm":false,"alarmReasons":[],"tasas":{"cancelacionesPct":0,"cancelacionesNum":0,"inasistenciasPct":0,"inasistenciasNum":0,"reprogramacionesPct":5,"reprogramacionesNum":1,"history":[]},"cuadroMedico":[],"agenda":[],"specialists":{"med_gen":{"specialistTitle":"MEDICO GEN.","professionalName":"Dr. Carlos Mendoza","lastAttentionDate":"10/07/2026 10:00 AM","frequency":"Mensual","targetDate":"10/08/2026 10:00 AM","isOverdue":false,"attentionsHistory":[]},"nutri":{"specialistTitle":"NUTRICIONISTA","professionalName":"Sin Asignar","lastAttentionDate":"No registra","frequency":"Trimestral","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]},"psicol":{"specialistTitle":"PSICOLOGIA","professionalName":"Dra. Claudia Ruiz","lastAttentionDate":"12/06/2026 11:00 AM","frequency":"Quincenal","targetDate":"12/08/2026 11:00 AM","isOverdue":false,"attentionsHistory":[]},"esp_1":{"specialistTitle":"ESP. 1","p');
-    DBMS_LOB.WRITEAPPEND(v_json_data, 1500, 'rofessionalName":"Sin Asignar","lastAttentionDate":"No registra","frequency":"Trimestral","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]},"esp_2":{"specialistTitle":"ESP. 2","professionalName":"Sin Asignar","lastAttentionDate":"No registra","frequency":"Semestral","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]},"esp_3":{"specialistTitle":"ESP. 3","professionalName":"Sin Asignar","lastAttentionDate":"No registra","frequency":"Anual","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]},"esp_4":{"specialistTitle":"ESP. 4","professionalName":"Sin Asignar","lastAttentionDate":"No registra","frequency":"Anual","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]}},"operationalNotes":[],"clinicalNotes":[]},{"id":"PAT-008","nombre":"Felipe Osorio Tobón","identificacion":"CC 1.017.234.890","telefono":"+57 320 111 2233","email":"felipe.osorio@outlook.com","direccion":"Calle 50 #70-15, Medellín","idConvenio":"CALI-901","convenioNombre":"CMP Salud Mental Cali","prioridadInicial":3,"fechaProximaRevision":"02/09/2026","cohorte":"PROSPECTO","estado":"Activo","riesgo":"High","etiqueta":"Inconforme","retroalimentacion":"Inconforme","fase":"E","acta":{"numero":0,"fecha":"","resumen":""},"actasHistory":[],"coordinador":"Angela Valencia","numeroCarga":"CARGA-110","hasAlarm":true,"alarmReasons":["Solicitó cambio de profesional por disconformidad en atención"],"tasas":{"cancelacionesPct":25,"cancelacionesNum":2,"inasistenciasPct":15,');
-    DBMS_LOB.WRITEAPPEND(v_json_data, 1500, '"inasistenciasNum":1,"reprogramacionesPct":20,"reprogramacionesNum":2,"history":[]},"cuadroMedico":[],"agenda":[],"specialists":{"med_gen":{"specialistTitle":"MEDICO GEN.","professionalName":"Dr. Jorge Castro","lastAttentionDate":"01/06/2026 09:00 AM","frequency":"Mensual","targetDate":"01/07/2026 09:00 AM","isOverdue":false,"attentionsHistory":[]},"nutri":{"specialistTitle":"NUTRICIONISTA","professionalName":"Sin Asignar","lastAttentionDate":"No registra","frequency":"Trimestral","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]},"psicol":{"specialistTitle":"PSICOLOGIA","professionalName":"Dra. Claudia Ruiz","lastAttentionDate":"20/05/2026 02:00 PM","frequency":"Quincenal","targetDate":"20/06/2026 02:00 PM","isOverdue":false,"attentionsHistory":[]},"esp_1":{"specialistTitle":"ESP. 1","professionalName":"Sin Asignar","lastAttentionDate":"No registra","frequency":"Trimestral","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]},"esp_2":{"specialistTitle":"ESP. 2","professionalName":"Sin Asignar","lastAttentionDate":"No registra","frequency":"Semestral","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]},"esp_3":{"specialistTitle":"ESP. 3","professionalName":"Sin Asignar","lastAttentionDate":"No registra","frequency":"Anual","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]},"esp_4":{"specialistTitle":"ESP. 4","professionalName":"Sin Asignar","lastAttentionDate":"No registra","frequency":"Anual","targetDate":"Pendient');
-    DBMS_LOB.WRITEAPPEND(v_json_data, 1500, 'e","isOverdue":false,"attentionsHistory":[]}},"operationalNotes":[],"clinicalNotes":[]},{"id":"PAT-009","nombre":"Gloria Inés Peláez","identificacion":"CC 21.456.789","telefono":"+57 313 777 8899","email":"gloria.pelaez@gmail.com","direccion":"Carrera 80 #32-10, Itagüí","idConvenio":"SURA-3321","convenioNombre":"EPS Suramericana Cuidate360","prioridadInicial":1,"fechaProximaRevision":"05/09/2026","cohorte":"ACEPTADO","estado":"Aceptado","riesgo":"Critical","etiqueta":"","retroalimentacion":"Satisfecho","fase":"I","acta":{"numero":140,"fecha":"01 jul 2026","resumen":"Remisión urgente a Nefrología por deterioro de tasa de filtración glomerular.","integrantes":["Dr. Fernando Hoyos","Dr. Andrés Parra"]},"actasHistory":[],"coordinador":"Anyeli Ledezma","numeroCarga":"CARGA-111","hasAlarm":true,"alarmReasons":["Inasistencia recurrente (> 3 citas canceladas)","Vencimiento de control trimestral de Nefrología"],"tasas":{"cancelacionesPct":35,"cancelacionesNum":4,"inasistenciasPct":20,"inasistenciasNum":2,"reprogramacionesPct":15,"reprogramacionesNum":2,"history":[]},"cuadroMedico":[],"agenda":[],"specialists":{"med_gen":{"specialistTitle":"MEDICO GEN.","professionalName":"Dr. Carlos Mendoza","lastAttentionDate":"10/06/2026 09:00 AM","frequency":"Mensual","targetDate":"10/07/2026 09:00 AM","isOverdue":false,"attentionsHistory":[]},"nutri":{"specialistTitle":"NUTRICIONISTA","professionalName":"Lic. Mariana Gómez","lastAttentionDate":"01/05/2026 10:00 AM","frequency":"Trimestral","target');
-    DBMS_LOB.WRITEAPPEND(v_json_data, 1500, 'Date":"01/08/2026 10:00 AM","isOverdue":false,"attentionsHistory":[]},"psicol":{"specialistTitle":"PSICOLOGIA","professionalName":"Sin Asignar","lastAttentionDate":"No registra","frequency":"Mensual","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]},"esp_1":{"specialistTitle":"ESP. 1","professionalName":"Sin Asignar","lastAttentionDate":"No registra","frequency":"Trimestral","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]},"esp_2":{"specialistTitle":"ESP. 2","professionalName":"Dr. Andrés Parra","lastAttentionDate":"15/01/2026 03:00 PM","frequency":"Trimestral","targetDate":"15/04/2026 03:00 PM","isOverdue":true,"attentionsHistory":[]},"esp_3":{"specialistTitle":"ESP. 3","professionalName":"Sin Asignar","lastAttentionDate":"No registra","frequency":"Anual","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]},"esp_4":{"specialistTitle":"ESP. 4","professionalName":"Sin Asignar","lastAttentionDate":"No registra","frequency":"Anual","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]}},"operationalNotes":[],"clinicalNotes":[]},{"id":"PAT-010","nombre":"Andrés Felipe Agudelo","identificacion":"CC 1.037.654.321","telefono":"+57 302 444 5511","email":"andres.agudelo@gmail.com","direccion":"Calle 33 #65-40, Medellín","idConvenio":"CARIBE-442","convenioNombre":"CMP Vive al 100 Caribe","prioridadInicial":5,"fechaProximaRevision":"12/09/2026","cohorte":"ACTIVO","estado":"Activo","riesgo":"Low","etiqueta":"","retroalimentacio');
-    DBMS_LOB.WRITEAPPEND(v_json_data, 1500, 'n":"Satisfecho","fase":"M/E","acta":{"numero":98,"fecha":"14 feb 2026","resumen":"Control rutinario de ingreso con paraclínicos dentro de límites normales.","integrantes":["Dra. Sofía López"]},"actasHistory":[],"coordinador":"Katherine Mora","numeroCarga":"CARGA-112","hasAlarm":false,"alarmReasons":[],"tasas":{"cancelacionesPct":0,"cancelacionesNum":0,"inasistenciasPct":0,"inasistenciasNum":0,"reprogramacionesPct":0,"reprogramacionesNum":0,"history":[]},"cuadroMedico":[],"agenda":[],"specialists":{"med_gen":{"specialistTitle":"MEDICO GEN.","professionalName":"Dr. Carlos Mendoza","lastAttentionDate":"01/07/2026 08:00 AM","frequency":"Mensual","targetDate":"01/08/2026 08:00 AM","isOverdue":false,"attentionsHistory":[]},"nutri":{"specialistTitle":"NUTRICIONISTA","professionalName":"Lic. Mariana Gómez","lastAttentionDate":"15/06/2026 10:00 AM","frequency":"Trimestral","targetDate":"15/09/2026 10:00 AM","isOverdue":false,"attentionsHistory":[]},"psicol":{"specialistTitle":"PSICOLOGIA","professionalName":"Sin Asignar","lastAttentionDate":"No registra","frequency":"Mensual","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]},"esp_1":{"specialistTitle":"ESP. 1","professionalName":"Sin Asignar","lastAttentionDate":"No registra","frequency":"Anual","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]},"esp_2":{"specialistTitle":"ESP. 2","professionalName":"Sin Asignar","lastAttentionDate":"No registra","frequency":"Anual","targetDate":"Pendiente","isOverdue"');
-    DBMS_LOB.WRITEAPPEND(v_json_data, 1500, ':false,"attentionsHistory":[]},"esp_3":{"specialistTitle":"ESP. 3","professionalName":"Sin Asignar","lastAttentionDate":"No registra","frequency":"Anual","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]},"esp_4":{"specialistTitle":"ESP. 4","professionalName":"Sin Asignar","lastAttentionDate":"No registra","frequency":"Anual","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]}},"operationalNotes":[],"clinicalNotes":[]},{"id":"PAT-011","nombre":"Patricia Elena Villegas","identificacion":"CC 42.112.334","telefono":"+57 311 999 0022","email":"patricia.villegas@gmail.com","direccion":"Avenida El Poblado #10-20, Medellín","idConvenio":"SURA-7711","convenioNombre":"EPS Suramericana Cuidate360","prioridadInicial":2,"fechaProximaRevision":"18/09/2026","cohorte":"RECHAZO EL SERVICIO","estado":"Rechazado","riesgo":"Medium","etiqueta":"","retroalimentacion":"","fase":"E","hasRehuso":true,"rehusoInfo":{"professional":"Lic. Mariana Gómez","specialty":"Nutrición"},"acta":{"numero":119,"fecha":"02 may 2026","resumen":"Rehúso expreso de la paciente a planes nutricionales institucionalizados.","integrantes":["Angela Valencia"]},"actasHistory":[],"coordinador":"Angela Valencia","numeroCarga":"CARGA-113","hasAlarm":true,"alarmReasons":["Rehúso registrado para atención con Nutrición"],"tasas":{"cancelacionesPct":20,"cancelacionesNum":2,"inasistenciasPct":10,"inasistenciasNum":1,"reprogramacionesPct":10,"reprogramacionesNum":1,"history":[]},"cuadroMedico":[],"agenda');
-    DBMS_LOB.WRITEAPPEND(v_json_data, 1500, '":[],"specialists":{"med_gen":{"specialistTitle":"MEDICO GEN.","professionalName":"Dr. Carlos Mendoza","lastAttentionDate":"10/05/2026 09:00 AM","frequency":"Mensual","targetDate":"10/06/2026 09:00 AM","isOverdue":false,"attentionsHistory":[]},"nutri":{"specialistTitle":"NUTRICIONISTA","professionalName":"Lic. Mariana Gómez","lastAttentionDate":"02/05/2026 10:00 AM","frequency":"Bimensual","targetDate":"02/07/2026 10:00 AM","isOverdue":false,"hasRehuso":true,"attentionsHistory":[]},"psicol":{"specialistTitle":"PSICOLOGIA","professionalName":"Sin Asignar","lastAttentionDate":"No registra","frequency":"Mensual","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]},"esp_1":{"specialistTitle":"ESP. 1","professionalName":"Sin Asignar","lastAttentionDate":"No registra","frequency":"Trimestral","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]},"esp_2":{"specialistTitle":"ESP. 2","professionalName":"Sin Asignar","lastAttentionDate":"No registra","frequency":"Semestral","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]},"esp_3":{"specialistTitle":"ESP. 3","professionalName":"Sin Asignar","lastAttentionDate":"No registra","frequency":"Anual","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]},"esp_4":{"specialistTitle":"ESP. 4","professionalName":"Sin Asignar","lastAttentionDate":"No registra","frequency":"Anual","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]}},"operationalNotes":[],"clinicalNotes":[]},{"id');
-    DBMS_LOB.WRITEAPPEND(v_json_data, 1500, '":"PAT-012","nombre":"Carlos Alberto Jaramillo","identificacion":"CC 15.890.123","telefono":"+57 316 333 4455","email":"carlos.jaramillo@yahoo.es","direccion":"Carrera 25 #45-12, Manizales","idConvenio":"CARIBE-991","convenioNombre":"CMP Caribe","prioridadInicial":3,"fechaProximaRevision":"20/09/2026","cohorte":"ACTIVO","estado":"Activo","riesgo":"Medium","etiqueta":"","retroalimentacion":"Satisfecho","fase":"M/E","acta":{"numero":0,"fecha":"","resumen":""},"actasHistory":[],"coordinador":"Katherine Mora","numeroCarga":"CARGA-114","hasAlarm":false,"alarmReasons":[],"tasas":{"cancelacionesPct":5,"cancelacionesNum":1,"inasistenciasPct":0,"inasistenciasNum":0,"reprogramacionesPct":5,"reprogramacionesNum":1,"history":[]},"cuadroMedico":[],"agenda":[],"specialists":{"med_gen":{"specialistTitle":"MEDICO GEN.","professionalName":"Dr. Jorge Castro","lastAttentionDate":"12/07/2026 09:00 AM","frequency":"Mensual","targetDate":"12/08/2026 09:00 AM","isOverdue":false,"attentionsHistory":[]},"nutri":{"specialistTitle":"NUTRICIONISTA","professionalName":"Sin Asignar","lastAttentionDate":"No registra","frequency":"Trimestral","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]},"psicol":{"specialistTitle":"PSICOLOGIA","professionalName":"Sin Asignar","lastAttentionDate":"No registra","frequency":"Mensual","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]},"esp_1":{"specialistTitle":"ESP. 1","professionalName":"Sin Asignar","lastAttentionDate":"No registra","fre');
-    DBMS_LOB.WRITEAPPEND(v_json_data, 1500, 'quency":"Anual","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]},"esp_2":{"specialistTitle":"ESP. 2","professionalName":"Sin Asignar","lastAttentionDate":"No registra","frequency":"Anual","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]},"esp_3":{"specialistTitle":"ESP. 3","professionalName":"Sin Asignar","lastAttentionDate":"No registra","frequency":"Anual","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]},"esp_4":{"specialistTitle":"ESP. 4","professionalName":"Sin Asignar","lastAttentionDate":"No registra","frequency":"Anual","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]}},"operationalNotes":[],"clinicalNotes":[]},{"id":"PAT-013","nombre":"Diana Marcela Cardona","identificacion":"CC 1.020.456.789","telefono":"+57 305 777 1122","email":"diana.cardona@hotmail.com","direccion":"Calle 15 #8-30, Pereira","idConvenio":"CALI-223","convenioNombre":"CMP Salud Mental Cali","prioridadInicial":4,"fechaProximaRevision":"22/09/2026","cohorte":"PROSPECTO","estado":"Activo","riesgo":"Low","etiqueta":"","retroalimentacion":"Satisfecho","fase":"M/E","acta":{"numero":0,"fecha":"","resumen":""},"actasHistory":[],"coordinador":"Angela Valencia","numeroCarga":"CARGA-115","hasAlarm":false,"alarmReasons":[],"tasas":{"cancelacionesPct":0,"cancelacionesNum":0,"inasistenciasPct":0,"inasistenciasNum":0,"reprogramacionesPct":0,"reprogramacionesNum":0,"history":[]},"cuadroMedico":[],"agenda":[],"specialists":{"med_gen":{"specialistT');
-    DBMS_LOB.WRITEAPPEND(v_json_data, 1500, 'itle":"MEDICO GEN.","professionalName":"Dr. Carlos Mendoza","lastAttentionDate":"15/07/2026 10:00 AM","frequency":"Mensual","targetDate":"15/08/2026 10:00 AM","isOverdue":false,"attentionsHistory":[]},"nutri":{"specialistTitle":"NUTRICIONISTA","professionalName":"Sin Asignar","lastAttentionDate":"No registra","frequency":"Bimensual","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]},"psicol":{"specialistTitle":"PSICOLOGIA","professionalName":"Dra. Claudia Ruiz","lastAttentionDate":"10/07/2026 02:00 PM","frequency":"Quincenal","targetDate":"25/07/2026 02:00 PM","isOverdue":false,"attentionsHistory":[]},"esp_1":{"specialistTitle":"ESP. 1","professionalName":"Sin Asignar","lastAttentionDate":"No registra","frequency":"Anual","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]},"esp_2":{"specialistTitle":"ESP. 2","professionalName":"Sin Asignar","lastAttentionDate":"No registra","frequency":"Anual","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]},"esp_3":{"specialistTitle":"ESP. 3","professionalName":"Sin Asignar","lastAttentionDate":"No registra","frequency":"Anual","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]},"esp_4":{"specialistTitle":"ESP. 4","professionalName":"Sin Asignar","lastAttentionDate":"No registra","frequency":"Anual","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]}},"operationalNotes":[],"clinicalNotes":[]},{"id":"PAT-014","nombre":"Mauricio Eduardo Henao","identificacion":"CC 9');
-    DBMS_LOB.WRITEAPPEND(v_json_data, 1500, '8.765.432","telefono":"+57 317 222 3344","email":"mauricio.henao@gmail.com","direccion":"Carrera 12 #34-56, Bello","idConvenio":"SURA-8833","convenioNombre":"EPS Suramericana Cuidate360","prioridadInicial":1,"fechaProximaRevision":"28/09/2026","cohorte":"ACTIVO","estado":"Activo","riesgo":"Critical","etiqueta":"","retroalimentacion":"Satisfecho","fase":"I","acta":{"numero":148,"fecha":"22 jul 2026","resumen":"Alerta por descompensación glucémica y citas de Endocrinología vencidas.","integrantes":["Dr. Fernando Hoyos","Dra. Beatriz Franco"]},"actasHistory":[],"coordinador":"Anyeli Ledezma","numeroCarga":"CARGA-116","hasAlarm":true,"alarmReasons":["Paciente >90 días sin control de Endocrinología","Alto porcentaje de inasistencias (>30%)"],"tasas":{"cancelacionesPct":30,"cancelacionesNum":3,"inasistenciasPct":35,"inasistenciasNum":4,"reprogramacionesPct":10,"reprogramacionesNum":1,"history":[]},"cuadroMedico":[],"agenda":[],"specialists":{"med_gen":{"specialistTitle":"MEDICO GEN.","professionalName":"Dr. Carlos Mendoza","lastAttentionDate":"01/06/2026 09:00 AM","frequency":"Mensual","targetDate":"01/07/2026 09:00 AM","isOverdue":false,"attentionsHistory":[]},"nutri":{"specialistTitle":"NUTRICIONISTA","professionalName":"Lic. Mariana Gómez","lastAttentionDate":"10/05/2026 10:00 AM","frequency":"Trimestral","targetDate":"10/08/2026 10:00 AM","isOverdue":false,"attentionsHistory":[]},"psicol":{"specialistTitle":"PSICOLOGIA","professionalName":"Sin Asignar","lastAttentionDate":"No r');
-    DBMS_LOB.WRITEAPPEND(v_json_data, 940, 'egistra","frequency":"Mensual","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]},"esp_1":{"specialistTitle":"ESP. 1","professionalName":"Sin Asignar","lastAttentionDate":"No registra","frequency":"Trimestral","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]},"esp_2":{"specialistTitle":"ESP. 2","professionalName":"Sin Asignar","lastAttentionDate":"No registra","frequency":"Semestral","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]},"esp_3":{"specialistTitle":"ESP. 3","professionalName":"Dra. Beatriz Franco","lastAttentionDate":"10/02/2026 08:00 AM","frequency":"Trimestral","targetDate":"10/05/2026 08:00 AM","isOverdue":true,"attentionsHistory":[]},"esp_4":{"specialistTitle":"ESP. 4","professionalName":"Sin Asignar","lastAttentionDate":"No registra","frequency":"Anual","targetDate":"Pendiente","isOverdue":false,"attentionsHistory":[]}},"operationalNotes":[],"clinicalNotes":[]}]');
+    FOR r IN c_pacientes LOOP
+      IF NOT v_first THEN
+        v_item := ',';
+        DBMS_LOB.WRITEAPPEND(v_json_data, LENGTH(v_item), v_item);
+      END IF;
+      v_first := FALSE;
 
-    DBMS_LOB.WRITEAPPEND(v_json_data, 1, '}');
+      CASE r.id_nivel_riesgo
+        WHEN 1 THEN v_riesgo_desc := 'High';
+        WHEN 2 THEN v_riesgo_desc := 'Medium';
+        WHEN 3 THEN v_riesgo_desc := 'Low';
+        WHEN 4 THEN v_riesgo_desc := 'Critical';
+        ELSE v_riesgo_desc := NULL;
+      END CASE;
+
+      v_item := '{"id": "' || r.id || '"' ||
+                ', "nombres": "' || REPLACE(r.nombres, '"', '\"') || '"' ||
+                ', "apellidos": "' || REPLACE(r.apellidos, '"', '\"') || '"' ||
+                ', "nombre": "' || REPLACE(r.nombres || ' ' || r.apellidos, '"', '\"') || '"' ||
+                ', "id_tipo_identificacion": ' || NVL(TO_CHAR(r.id_tipo_identificacion), 'null') ||
+                ', "tipo_identificacion_abrev": "' || REPLACE(r.tipo_identificacion_abrev, '"', '\"') || '"' ||
+                ', "tipo_identificacion_desc": "' || REPLACE(r.tipo_identificacion_desc, '"', '\"') || '"' ||
+                ', "identificacion": "' || REPLACE(r.identificacion, '"', '\"') || '"' ||
+                ', "telefono": "' || REPLACE(r.telefono, '"', '\"') || '"' ||
+                ', "email": "' || REPLACE(r.correo_electronico, '"', '\"') || '"' ||
+                ', "direccion": "' || REPLACE(r.direccion, '"', '\"') || '"' ||
+                ', "id_coordinador": ' || NVL(TO_CHAR(r.id_coordinador), 'null') ||
+                ', "coordinador": ' || CASE WHEN r.coordinador_nombre IS NOT NULL THEN '"' || REPLACE(r.coordinador_nombre, '"', '\"') || '"' ELSE 'null' END ||
+                ', "id_nivel_riesgo": ' || NVL(TO_CHAR(r.id_nivel_riesgo), 'null') ||
+                ', "riesgo": ' || CASE WHEN v_riesgo_desc IS NOT NULL THEN '"' || v_riesgo_desc || '"' ELSE 'null' END ||
+                ', "estado": null' ||
+                ', "cohorte": null' ||
+                ', "fase": null' ||
+                ', "idConvenio": null' ||
+                ', "convenioNombre": null' ||
+                ', "numeroCarga": null' ||
+                ', "hasAlarm": false' ||
+                ', "alarmReasons": []' ||
+                ', "acta": null' ||
+                ', "actasHistory": []' ||
+                ', "tasas": null' ||
+                ', "cuadroMedico": []' ||
+                ', "agenda": []' ||
+                ', "specialists": null' ||
+                ', "operationalNotes": []' ||
+                ', "clinicalNotes": []' ||
+                '}';
+      DBMS_LOB.WRITEAPPEND(v_json_data, LENGTH(v_item), v_item);
+    END LOOP;
+
+    v_item := ']}';
+    DBMS_LOB.WRITEAPPEND(v_json_data, LENGTH(v_item), v_item);
 
     p_json_salida := v_json_data;
 
   EXCEPTION
     WHEN OTHERS THEN
-      p_json_salida := '{"codigo_respuesta": -1, "mensaje_respuesta": "Error en pkgln_pacientes_giris.prc_obtener_pacientes: ' 
+      p_json_salida := '{"codigo_respuesta": -1, "mensaje_respuesta": "Error en prc_obtener_pacientes_pagina: ' 
                        || REPLACE(SQLERRM, '"', '\"') || '", "pacientes": []}';
+  END prc_obtener_pacientes_pagina;
+
+  ------------------------------------------------------------------------------
+  -- PROCEDIMIENTO: prc_obtener_pacientes (Compatibilidad)
+  ------------------------------------------------------------------------------
+  PROCEDURE prc_obtener_pacientes (
+    p_json_entrada IN  CLOB,
+    p_json_salida  OUT CLOB
+  ) IS
+  BEGIN
+    prc_obtener_pacientes_pagina(p_json_entrada, p_json_salida);
   END prc_obtener_pacientes;
+
+  ------------------------------------------------------------------------------
+  -- PROCEDIMIENTO: prc_obtener_tipos_identificacion
+  ------------------------------------------------------------------------------
+  PROCEDURE prc_obtener_tipos_identificacion (
+    p_json_salida OUT CLOB
+  ) IS
+    v_json  CLOB;
+    v_first BOOLEAN := TRUE;
+    v_item  VARCHAR2(4000);
+    CURSOR c_tipos IS
+        SELECT id, abreviatura, descripcion
+          FROM tkr_tipos_identificacion
+      ORDER BY abreviatura;
+  BEGIN
+    DBMS_LOB.CREATETEMPORARY(v_json, TRUE);
+    v_item := '{"codigo_respuesta": 0, "mensaje_respuesta": "Tipos de identificación obtenidos exitosamente", "tipos_identificacion": [';
+    DBMS_LOB.WRITEAPPEND(v_json, LENGTH(v_item), v_item);
+
+    FOR r IN c_tipos LOOP
+      IF NOT v_first THEN
+        v_item := ',';
+        DBMS_LOB.WRITEAPPEND(v_json, LENGTH(v_item), v_item);
+      END IF;
+      v_first := FALSE;
+
+      v_item := '{"id": ' || r.id || 
+                ', "abreviatura": "' || REPLACE(r.abreviatura, '"', '\"') || '"' ||
+                ', "descripcion": "' || REPLACE(r.descripcion, '"', '\"') || '"}';
+      DBMS_LOB.WRITEAPPEND(v_json, LENGTH(v_item), v_item);
+    END LOOP;
+
+    v_item := ']}';
+    DBMS_LOB.WRITEAPPEND(v_json, LENGTH(v_item), v_item);
+    p_json_salida := v_json;
+  EXCEPTION
+    WHEN OTHERS THEN
+      p_json_salida := '{"codigo_respuesta": -1, "mensaje_respuesta": "Error en prc_obtener_tipos_identificacion: ' 
+                       || REPLACE(SQLERRM, '"', '\"') || '"}';
+  END prc_obtener_tipos_identificacion;
+
+  ------------------------------------------------------------------------------
+  -- PROCEDIMIENTO: prc_obtener_coordinadores
+  ------------------------------------------------------------------------------
+  PROCEDURE prc_obtener_coordinadores (
+    p_json_salida OUT CLOB
+  ) IS
+    v_json  CLOB;
+    v_first BOOLEAN := TRUE;
+    v_item  VARCHAR2(4000);
+    CURSOR c_coordinadores IS
+       SELECT u.id,
+              u.nombres,
+              u.apellidos,
+              u.id_tipo_identificacion,
+              u.identificacion,
+              u.telefono,
+              u.correo_electronico,
+              u.direccion
+         FROM tkr_usuarios u
+        WHERE EXISTS
+              (SELECT 1
+                 FROM tkr_accesos a,
+                      tkr_roles_accesos ra
+                WHERE a.id_usuario = u.id
+                  AND ra.id_acceso = a.id
+                  AND ra.id_rol = 11)
+        ORDER BY u.nombres,
+                 u.apellidos;
+  BEGIN
+    DBMS_LOB.CREATETEMPORARY(v_json, TRUE);
+    v_item := '{"codigo_respuesta": 0, "mensaje_respuesta": "Coordinadores obtenidos exitosamente", "coordinadores": [';
+    DBMS_LOB.WRITEAPPEND(v_json, LENGTH(v_item), v_item);
+
+    FOR r IN c_coordinadores LOOP
+      IF NOT v_first THEN
+        v_item := ',';
+        DBMS_LOB.WRITEAPPEND(v_json, LENGTH(v_item), v_item);
+      END IF;
+      v_first := FALSE;
+
+      v_item := '{"id": ' || r.id || 
+                ', "nombres": "' || REPLACE(r.nombres, '"', '\"') || '"' ||
+                ', "apellidos": "' || REPLACE(r.apellidos, '"', '\"') || '"' ||
+                ', "id_tipo_identificacion": ' || NVL(TO_CHAR(r.id_tipo_identificacion), 'null') ||
+                ', "identificacion": "' || REPLACE(r.identificacion, '"', '\"') || '"' ||
+                ', "telefono": "' || REPLACE(r.telefono, '"', '\"') || '"' ||
+                ', "correo_electronico": "' || REPLACE(r.correo_electronico, '"', '\"') || '"' ||
+                ', "direccion": "' || REPLACE(r.direccion, '"', '\"') || '"}';
+      DBMS_LOB.WRITEAPPEND(v_json, LENGTH(v_item), v_item);
+    END LOOP;
+
+    v_item := ']}';
+    DBMS_LOB.WRITEAPPEND(v_json, LENGTH(v_item), v_item);
+    p_json_salida := v_json;
+  EXCEPTION
+    WHEN OTHERS THEN
+      p_json_salida := '{"codigo_respuesta": -1, "mensaje_respuesta": "Error en prc_obtener_coordinadores: ' 
+                       || REPLACE(SQLERRM, '"', '\"') || '"}';
+  END prc_obtener_coordinadores;
+
+  ------------------------------------------------------------------------------
+  -- PROCEDIMIENTO: prc_obtener_estados_cohorte
+  ------------------------------------------------------------------------------
+  PROCEDURE prc_obtener_estados_cohorte (
+    p_json_salida OUT CLOB
+  ) IS
+    v_json  CLOB;
+    v_first BOOLEAN := TRUE;
+    v_item  VARCHAR2(4000);
+    CURSOR c_estados IS
+        SELECT id, descripcion
+          FROM tkr_estados_cohorte
+      ORDER BY descripcion;
+  BEGIN
+    DBMS_LOB.CREATETEMPORARY(v_json, TRUE);
+    v_item := '{"codigo_respuesta": 0, "mensaje_respuesta": "Estados de cohorte obtenidos exitosamente", "estados_cohorte": [';
+    DBMS_LOB.WRITEAPPEND(v_json, LENGTH(v_item), v_item);
+
+    FOR r IN c_estados LOOP
+      IF NOT v_first THEN
+        v_item := ',';
+        DBMS_LOB.WRITEAPPEND(v_json, LENGTH(v_item), v_item);
+      END IF;
+      v_first := FALSE;
+
+      v_item := '{"id": ' || r.id || 
+                ', "descripcion": "' || REPLACE(r.descripcion, '"', '\"') || '"}';
+      DBMS_LOB.WRITEAPPEND(v_json, LENGTH(v_item), v_item);
+    END LOOP;
+
+    v_item := ']}';
+    DBMS_LOB.WRITEAPPEND(v_json, LENGTH(v_item), v_item);
+    p_json_salida := v_json;
+  EXCEPTION
+    WHEN OTHERS THEN
+      p_json_salida := '{"codigo_respuesta": -1, "mensaje_respuesta": "Error en prc_obtener_estados_cohorte: ' 
+                       || REPLACE(SQLERRM, '"', '\"') || '"}';
+  END prc_obtener_estados_cohorte;
 
   ------------------------------------------------------------------------------
   -- PROCEDIMIENTO: prc_guardar_paciente

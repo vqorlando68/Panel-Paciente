@@ -3,7 +3,6 @@ import dotenv from 'dotenv';
 import oracledb from 'oracledb';
 import { getOracleConfig } from './oracle-config';
 
-// Load local environment variables from .env.local / .env
 dotenv.config({ path: '.env.local' });
 dotenv.config();
 
@@ -25,7 +24,9 @@ export interface ApiResponse extends ServerResponse {
  * REGLA DE ARQUITECTURA:
  * Sin sentencias DML (SELECT/INSERT/UPDATE/DELETE) en este código.
  * Toda interacción con la base de datos se realiza EXCLUSIVAMENTE invocando
- * el paquete de PL/SQL: pkgln_pacientes_giris.prc_obtener_pacientes.
+ * el paquete de PL/SQL: pkgln_pacientes_giris.
+ *   - prc_obtener_total_paginas (Cálculo de paginación)
+ *   - prc_obtener_pacientes_pagina (Obtención de datos de página con especialidades ordenadas)
  */
 export default async function handler(req: any, res: any) {
   if (req.method !== 'GET' && req.method !== 'POST') {
@@ -44,9 +45,11 @@ export default async function handler(req: any, res: any) {
     queryObj[key] = val;
   });
 
+  const action = queryObj.action || req.body?.action || 'pagina';
+
   const jsonEntrada = {
     pagina: Number(queryObj.pagina || req.body?.pagina || 1),
-    registros_por_pagina: Number(queryObj.registros_por_pagina || req.body?.registros_por_pagina || 50),
+    registros_por_pagina: Number(queryObj.registros_por_pagina || req.body?.registros_por_pagina || 10),
     filtros: {
       estado: (queryObj.estado || req.body?.filtros?.estado || 'Todos'),
       cohorte: (queryObj.cohorte || req.body?.filtros?.cohorte || 'Todos'),
@@ -71,13 +74,39 @@ export default async function handler(req: any, res: any) {
 
     connection = await oracledb.getConnection(config);
 
-    const result: any = await connection.execute(
-      `BEGIN pkgln_pacientes_giris.prc_obtener_pacientes(:p_json_entrada, :p_json_salida); END;`,
-      {
-        p_json_entrada: p_json_entrada_str,
+    let procedureName = 'prc_obtener_pacientes_pagina';
+    let executeSql = `BEGIN pkgln_pacientes_giris.${procedureName}(:p_json_entrada, :p_json_salida); END;`;
+    let bindParams: any = {
+      p_json_entrada: p_json_entrada_str,
+      p_json_salida: { type: oracledb.STRING, dir: oracledb.BIND_OUT, maxSize: 5000000 }
+    };
+
+    if (action === 'total_paginas') {
+      procedureName = 'prc_obtener_total_paginas';
+      executeSql = `BEGIN pkgln_pacientes_giris.${procedureName}(:p_json_entrada, :p_json_salida); END;`;
+    } else if (action === 'tipos_identificacion') {
+      procedureName = 'prc_obtener_tipos_identificacion';
+      executeSql = `BEGIN pkgln_pacientes_giris.${procedureName}(:p_json_salida); END;`;
+      bindParams = {
         p_json_salida: { type: oracledb.STRING, dir: oracledb.BIND_OUT, maxSize: 5000000 }
-      }
-    );
+      };
+    } else if (action === 'coordinadores') {
+      procedureName = 'prc_obtener_coordinadores';
+      executeSql = `BEGIN pkgln_pacientes_giris.${procedureName}(:p_json_salida); END;`;
+      bindParams = {
+        p_json_salida: { type: oracledb.STRING, dir: oracledb.BIND_OUT, maxSize: 5000000 }
+      };
+    } else if (action === 'estados_cohorte') {
+      procedureName = 'prc_obtener_estados_cohorte';
+      executeSql = `BEGIN pkgln_pacientes_giris.${procedureName}(:p_json_salida); END;`;
+      bindParams = {
+        p_json_salida: { type: oracledb.STRING, dir: oracledb.BIND_OUT, maxSize: 5000000 }
+      };
+    }
+
+    console.log(`[Oracle API] Executing pkgln_pacientes_giris.${procedureName}`);
+
+    const result: any = await connection.execute(executeSql, bindParams);
 
     await connection.close();
 
@@ -97,7 +126,7 @@ export default async function handler(req: any, res: any) {
     if (connection) {
       try { await connection.close(); } catch (e) {}
     }
-    console.error('[Oracle API Error] Failed executing pkgln_pacientes_giris.prc_obtener_pacientes:', error.message);
+    console.error('[Oracle API Error] Failed executing PL/SQL package:', error.message);
     
     const errPayload = {
       codigo_respuesta: -1,

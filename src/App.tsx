@@ -107,18 +107,19 @@ export default function App() {
 
   // Helper: check if a patient has any overdue specialist
   const patientHasOverdueSpecialist = (patient: Patient): boolean => {
+    if (!patient || !patient.specialists) return false;
     return Object.values(patient.specialists).some((spec) => Boolean(spec?.isOverdue));
   };
 
   // Extract unique coordinators list
   const coordinatorsList = useMemo(() => {
-    const list = Array.from(new Set([...COORDINADORES_LIST, ...patients.map((p) => p.coordinador)])).filter(Boolean);
+    const list = Array.from(new Set([...COORDINADORES_LIST, ...patients.map((p) => p.coordinador)])).filter((item): item is string => Boolean(item));
     return list.sort();
   }, [patients]);
 
   // Extract unique convenios list
   const conveniosList = useMemo(() => {
-    const list = Array.from(new Set(patients.map((p) => p.convenioNombre))).filter(Boolean);
+    const list = Array.from(new Set(patients.map((p) => p.convenioNombre))).filter((item): item is string => Boolean(item));
     return list.sort();
   }, [patients]);
 
@@ -164,11 +165,12 @@ export default function App() {
 
       // Convenio Nombre Filter (supports multi-select array or single string)
       if (filters.convenioNombre !== 'Todos') {
+        const pConvenio = patient.convenioNombre || '';
         if (Array.isArray(filters.convenioNombre)) {
-          if (filters.convenioNombre.length > 0 && !filters.convenioNombre.includes(patient.convenioNombre)) {
+          if (filters.convenioNombre.length > 0 && !filters.convenioNombre.includes(pConvenio)) {
             return false;
           }
-        } else if (patient.convenioNombre !== filters.convenioNombre) {
+        } else if (pConvenio !== filters.convenioNombre) {
           return false;
         }
       }
@@ -176,7 +178,7 @@ export default function App() {
       // Identificacion Filter
       if (
         filters.identificacion.trim() &&
-        !patient.identificacion.toLowerCase().includes(filters.identificacion.toLowerCase().trim())
+        !(patient.identificacion || '').toLowerCase().includes(filters.identificacion.toLowerCase().trim())
       ) {
         return false;
       }
@@ -184,7 +186,7 @@ export default function App() {
       // Nombres y Apellidos Filter
       if (
         filters.nombresApellidos.trim() &&
-        !patient.nombre.toLowerCase().includes(filters.nombresApellidos.toLowerCase().trim())
+        !(patient.nombre || '').toLowerCase().includes(filters.nombresApellidos.toLowerCase().trim())
       ) {
         return false;
       }
@@ -192,7 +194,7 @@ export default function App() {
       // Numero de Carga Filter
       if (
         filters.numeroCarga.trim() &&
-        !patient.numeroCarga.toLowerCase().includes(filters.numeroCarga.toLowerCase().trim())
+        !(patient.numeroCarga || '').toLowerCase().includes(filters.numeroCarga.toLowerCase().trim())
       ) {
         return false;
       }
@@ -215,11 +217,11 @@ export default function App() {
         if (ff === 'Inconforme' && patient.etiqueta !== 'Inconforme' && patient.retroalimentacion !== 'Inconforme') return false;
         if (ff === 'Críticos' && patient.riesgo !== 'Critical' && patient.riesgo !== 'High') return false;
         if (ff === '>90 días') {
-          const hasMoreThan90Days = Object.values(patient.specialists).some((s) => Boolean((s as SpecialistInfo)?.isOverdue));
+          const hasMoreThan90Days = patient.specialists ? Object.values(patient.specialists).some((s) => Boolean((s as SpecialistInfo)?.isOverdue)) : false;
           if (!hasMoreThan90Days) return false;
         }
         if (ff === 'Rehúso') {
-          const hasRehuso = patient.hasRehuso || Object.values(patient.specialists).some((s) => Boolean((s as SpecialistInfo)?.hasRehuso));
+          const hasRehuso = patient.hasRehuso || (patient.specialists ? Object.values(patient.specialists).some((s) => Boolean((s as SpecialistInfo)?.hasRehuso)) : false);
           if (!hasRehuso) return false;
         }
         if (ff === 'Aceptados' && patient.cohorte !== 'ACEPTADO' && patient.estado !== 'Aceptado') return false;

@@ -138,16 +138,16 @@ export const PatientTable: React.FC<PatientTableProps> = ({
 
       switch (sortField) {
         case 'nombre':
-          valA = a.nombre.toLowerCase();
-          valB = b.nombre.toLowerCase();
+          valA = (a.nombre || '').toLowerCase();
+          valB = (b.nombre || '').toLowerCase();
           break;
         case 'prioridadInicial':
           valA = a.prioridadInicial ?? 99;
           valB = b.prioridadInicial ?? 99;
           break;
         case 'convenioNombre':
-          valA = a.convenioNombre.toLowerCase();
-          valB = b.convenioNombre.toLowerCase();
+          valA = (a.convenioNombre || '').toLowerCase();
+          valB = (b.convenioNombre || '').toLowerCase();
           break;
         case 'cohorte':
           valA = (a.cohorte || '').toLowerCase();
@@ -155,20 +155,20 @@ export const PatientTable: React.FC<PatientTableProps> = ({
           break;
         case 'riesgo':
           const riesgoWeight = { Critical: 4, High: 3, Medium: 2, Low: 1 };
-          valA = riesgoWeight[a.riesgo] || 0;
-          valB = riesgoWeight[b.riesgo] || 0;
+          valA = a.riesgo ? (riesgoWeight[a.riesgo] || 0) : 0;
+          valB = b.riesgo ? (riesgoWeight[b.riesgo] || 0) : 0;
           break;
         case 'etiqueta':
           valA = (a.etiqueta || a.retroalimentacion || '').toLowerCase();
           valB = (b.etiqueta || b.retroalimentacion || '').toLowerCase();
           break;
         case 'fase':
-          valA = a.fase.toLowerCase();
-          valB = b.fase.toLowerCase();
+          valA = (a.fase || '').toLowerCase();
+          valB = (b.fase || '').toLowerCase();
           break;
         case 'coordinador':
-          valA = a.coordinador.toLowerCase();
-          valB = b.coordinador.toLowerCase();
+          valA = (a.coordinador || '').toLowerCase();
+          valB = (b.coordinador || '').toLowerCase();
           break;
         case 'numeroCarga':
           valA = (a.numeroCarga || '').toLowerCase();
@@ -185,8 +185,8 @@ export const PatientTable: React.FC<PatientTableProps> = ({
         case 'esp_2':
         case 'esp_3':
         case 'esp_4':
-          const specA = a.specialists[sortField];
-          const specB = b.specialists[sortField];
+          const specA = a.specialists?.[sortField];
+          const specB = b.specialists?.[sortField];
           valA = (specA?.isOverdue ? '1_' : '0_') + (specA?.targetDate || '9999-99-99');
           valB = (specB?.isOverdue ? '1_' : '0_') + (specB?.targetDate || '9999-99-99');
           break;
@@ -562,10 +562,10 @@ export const PatientTable: React.FC<PatientTableProps> = ({
             {renderHeader('MEDICO GEN.', 'med_gen', 'min-w-[155px] bg-[#f9fafb] dark:bg-[#0f172a] border-l border-[#e2e8eb] dark:border-[#334155] text-[#033d59] dark:text-[#f8fafc]')}
             {renderHeader('NUTRICIONISTA', 'nutri', 'min-w-[155px] bg-[#f9fafb] dark:bg-[#0f172a] text-[#033d59] dark:text-[#f8fafc]')}
             {renderHeader('PSICOLOGIA', 'psicol', 'min-w-[155px] bg-[#f9fafb] dark:bg-[#0f172a] text-[#033d59] dark:text-[#f8fafc]')}
-            {renderHeader('ESP. 1', 'esp_1', 'min-w-[155px] bg-[#f9fafb] dark:bg-[#0f172a] text-[#033d59] dark:text-[#f8fafc]')}
-            {renderHeader('ESP. 2', 'esp_2', 'min-w-[155px] bg-[#f9fafb] dark:bg-[#0f172a] text-[#033d59] dark:text-[#f8fafc]')}
-            {renderHeader('ESP. 3', 'esp_3', 'min-w-[155px] bg-[#f9fafb] dark:bg-[#0f172a] text-[#033d59] dark:text-[#f8fafc]')}
-            {renderHeader('ESP. 4', 'esp_4', 'min-w-[155px] bg-[#f9fafb] dark:bg-[#0f172a] border-r border-[#e2e8eb] dark:border-[#334155] text-[#033d59] dark:text-[#f8fafc]')}
+            {renderHeader('CARDIOLOGÍA', 'esp_1', 'min-w-[155px] bg-[#f9fafb] dark:bg-[#0f172a] text-[#033d59] dark:text-[#f8fafc]')}
+            {renderHeader('ENDOCRINOLOGÍA', 'esp_2', 'min-w-[155px] bg-[#f9fafb] dark:bg-[#0f172a] text-[#033d59] dark:text-[#f8fafc]')}
+            {renderHeader('NEFROLOGÍA', 'esp_3', 'min-w-[155px] bg-[#f9fafb] dark:bg-[#0f172a] text-[#033d59] dark:text-[#f8fafc]')}
+            {renderHeader('NEUROLOGÍA', 'esp_4', 'min-w-[155px] bg-[#f9fafb] dark:bg-[#0f172a] border-r border-[#e2e8eb] dark:border-[#334155] text-[#033d59] dark:text-[#f8fafc]')}
 
             {/* Col 13: NOTA OP (Sticky on sm+) */}
             <th className="sm:sticky sm:right-[56px] z-20 bg-[#f9fafb] dark:bg-[#0f172a] px-2 text-center border-l border-[#e2e8eb] dark:border-[#334155] min-w-[56px] max-w-[56px]">

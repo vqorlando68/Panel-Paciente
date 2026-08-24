@@ -78,36 +78,38 @@ export interface AgendaItem {
 
 export interface Patient {
   id: string;
+  nombres?: string | null;
+  apellidos?: string | null;
   nombre: string;
   avatarUrl?: string;
   identificacion: string; // e.g., "CC 1.020.482.910"
-  telefono: string;
-  email: string;
-  direccion: string;
-  idConvenio: string; // ID Convenio
-  convenioNombre: string; // e.g. "EPS Suramericana Cuidate360"
-  prioridadInicial?: number; // 1 to 10
-  fechaProximaRevision?: string; // e.g. "18/08/2026"
-  cohorte: string;
-  estado: EstadoPaciente;
-  riesgo: NivelRiesgo;
-  etiqueta: string; // "Inconforme" or ""
-  retroalimentacion?: string;
-  fase: FasePaciente;
-  acta: ActaInfo;
+  telefono?: string | null;
+  email?: string | null;
+  direccion?: string | null;
+  idConvenio?: string | null; // ID Convenio
+  convenioNombre?: string | null; // e.g. "EPS Suramericana Cuidate360"
+  prioridadInicial?: number | null; // 1 to 10
+  fechaProximaRevision?: string | null; // e.g. "18/08/2026"
+  cohorte?: string | null;
+  estado?: EstadoPaciente | null;
+  riesgo?: NivelRiesgo | null;
+  etiqueta?: string | null; // "Inconforme" or ""
+  retroalimentacion?: string | null;
+  fase?: FasePaciente | null;
+  acta?: ActaInfo | null;
   actasHistory?: ActaInfo[];
-  coordinador: string;
-  numeroCarga: string;
+  coordinador?: string | null;
+  numeroCarga?: string | null;
   hasRehuso?: boolean;
   rehusoInfo?: { professional: string; specialty: string };
-  tasas: TasasData;
-  hasAlarm: boolean;
-  alarmReasons: string[];
-  cuadroMedico: CuadroMedicoItem[];
-  agenda: AgendaItem[];
-  specialists: Record<SpecialistKey, SpecialistInfo>;
-  operationalNotes: NoteEntry[];
-  clinicalNotes: NoteEntry[];
+  tasas?: TasasData | null;
+  hasAlarm?: boolean;
+  alarmReasons?: string[];
+  cuadroMedico?: CuadroMedicoItem[];
+  agenda?: AgendaItem[];
+  specialists?: Record<SpecialistKey, SpecialistInfo> | null;
+  operationalNotes?: NoteEntry[];
+  clinicalNotes?: NoteEntry[];
 }
 
 export interface FilterState {

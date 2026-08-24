@@ -52,8 +52,8 @@ export const EditPatientModal: React.FC<EditPatientModalProps> = ({
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1 text-xs">
-          {/* Row 1: ID, Nombre Completo, Identificación */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Row 1: ID, Nombres, Apellidos, Identificación */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label className="block text-[11px] font-semibold text-[#035476] dark:text-[#94a3b8] mb-1 uppercase">
                 ID Paciente
@@ -68,12 +68,39 @@ export const EditPatientModal: React.FC<EditPatientModalProps> = ({
 
             <div>
               <label className="block text-[11px] font-semibold text-[#035476] dark:text-[#94a3b8] mb-1 uppercase">
-                Nombre Completo
+                Nombres
               </label>
               <input
                 type="text"
-                value={formData.nombre}
-                onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+                value={formData.nombres ?? ''}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setFormData({
+                    ...formData,
+                    nombres: val,
+                    nombre: `${val} ${formData.apellidos || ''}`.trim(),
+                  });
+                }}
+                className="w-full bg-[#f9fafb] dark:bg-[#0f172a] border border-[#e2e8eb] dark:border-[#334155] rounded-md px-3 py-2 text-[#033d59] dark:text-[#f8fafc] focus:outline-none focus:border-[#00aae1]"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-semibold text-[#035476] dark:text-[#94a3b8] mb-1 uppercase">
+                Apellidos
+              </label>
+              <input
+                type="text"
+                value={formData.apellidos ?? ''}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setFormData({
+                    ...formData,
+                    apellidos: val,
+                    nombre: `${formData.nombres || ''} ${val}`.trim(),
+                  });
+                }}
                 className="w-full bg-[#f9fafb] dark:bg-[#0f172a] border border-[#e2e8eb] dark:border-[#334155] rounded-md px-3 py-2 text-[#033d59] dark:text-[#f8fafc] focus:outline-none focus:border-[#00aae1]"
                 required
               />
