@@ -10,6 +10,7 @@ export type SpecialistKey = 'med_gen' | 'nutri' | 'psicol' | 'esp_1' | 'esp_2' |
 
 export interface SpecialistAttentionItem {
   id: string;
+  codigoCita?: string;
   dateTime: string; // DD/MM/YYYY HH:MM AM/PM or YYYY-MM-DD HH:mm
   professional: string;
   status: string;
@@ -19,6 +20,7 @@ export interface SpecialistInfo {
   specialistTitle: string; // e.g. "Med. Gen.", "Cardiología", etc.
   professionalName: string;
   lastAttentionDate: string; // YYYY-MM-DD or DD/MM/YYYY HH:MM AM/PM
+  lastAttentionCode?: string; // Código de la última cita
   frequency: string; // e.g. "Semanal", "Quincenal", "Mensual", "Bimensual", "Trimestral", "Semestral", "Anual"
   attentionsCount?: number; // Cantidad de atenciones
   targetDate: string; // YYYY-MM-DD or DD/MM/YYYY HH:MM AM/PM

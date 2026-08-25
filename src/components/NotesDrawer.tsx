@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Patient, NoteEntry, UserRole, SpecialistInfo } from '../types';
-import { X, Pencil, Stethoscope, Send, User, Clock, MessageSquare, Plus, UserCheck } from 'lucide-react';
+import { X, Pencil, Stethoscope, Send, User, Clock, MessageSquare, Plus, UserCheck, FileText } from 'lucide-react';
+import { EpicrisisViewer } from './EpicrisisViewer';
 
 interface NotesDrawerProps {
   patient: Patient;
@@ -116,7 +117,7 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({
             </div>
             <div>
               <h3 className="font-bold text-sm text-[#033d59] dark:text-[#f8fafc]">
-                {isOperational ? 'Notas Operativas (SIAU)' : 'Notas Clínicas (Médicas)'}
+                {isOperational ? 'Notas Operativas (SIAU)' : 'Evolución y Epicrisis Clínica'}
               </h3>
               <p className="text-xs text-[#035476] dark:text-[#94a3b8]">
                 {patient.nombre} • <span className="font-mono">{patient.identificacion}</span>
@@ -142,8 +143,19 @@ export const NotesDrawer: React.FC<NotesDrawerProps> = ({
           </span>
         </div>
 
-        {/* Notes Timeline Stream */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-[#f9fafb]/50 dark:bg-[#0f172a]/50">
+        {/* Body Container (Scrollable Area) */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#f9fafb]/50 dark:bg-[#0f172a]/50">
+          {/* Epicrisis del Paciente (campo epicrisis_paciente del JSON de f_cargar_gestion) */}
+          {!isOperational && (
+            <EpicrisisViewer epicrisisRaw={patient.epicrisis} />
+          )}
+
+          {/* Notes Timeline Stream Header */}
+          <div className="pt-2 border-t border-[#e2e8eb]/60 dark:border-[#334155]/60">
+            <h4 className="text-[11px] font-bold text-[#035476] dark:text-[#94a3b8] uppercase tracking-wider mb-2">
+              Histórico de Evoluciones Clínicas
+            </h4>
+          </div>
           {notesList.length === 0 ? (
             <div className="text-center py-12 text-[#035476] dark:text-[#94a3b8] space-y-2">
               <MessageSquare className="w-8 h-8 mx-auto text-[#035476]/40 dark:text-gray-600" />

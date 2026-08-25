@@ -29,6 +29,7 @@ import { CuadroMedicoDrawer } from './components/CuadroMedicoDrawer';
 import { AgendaDrawer } from './components/AgendaDrawer';
 import { TasasDrawer } from './components/TasasDrawer';
 import { OracleDocModal } from './components/OracleDocModal';
+import { EpicrisisModal } from './components/EpicrisisModal';
 
 export default function App() {
   const [patients, setPatients] = useState<Patient[]>(INITIAL_PATIENTS);
@@ -104,6 +105,7 @@ export default function App() {
   const [cuadroMedicoPatient, setCuadroMedicoPatient] = useState<Patient | null>(null);
   const [agendaPatient, setAgendaPatient] = useState<Patient | null>(null);
   const [tasasPatient, setTasasPatient] = useState<Patient | null>(null);
+  const [epicrisisPatient, setEpicrisisPatient] = useState<Patient | null>(null);
 
   // Helper: check if a patient has any overdue specialist
   const patientHasOverdueSpecialist = (patient: Patient): boolean => {
@@ -488,6 +490,7 @@ export default function App() {
           onUpdateRetro={handleUpdateRetro}
           onOpenActa={(patient) => setActaModalPatient(patient)}
           onOpenNotesDrawer={(patient, type) => setNotesDrawerState({ patient, type })}
+          onOpenEvolucion={(patient) => setEpicrisisPatient(patient)}
           onEditSpecialist={(patient, key, info) => setEditingSpecialist({ patient, key, info })}
           onOpenCostAnalysis={(patient) => setCostAnalysisPatient(patient)}
           onOpenCuadroMedico={(patient) => setCuadroMedicoPatient(patient)}
@@ -605,6 +608,13 @@ export default function App() {
         <TasasDrawer
           patient={tasasPatient}
           onClose={() => setTasasPatient(null)}
+        />
+      )}
+
+      {epicrisisPatient && (
+        <EpicrisisModal
+          patient={epicrisisPatient}
+          onClose={() => setEpicrisisPatient(null)}
         />
       )}
 

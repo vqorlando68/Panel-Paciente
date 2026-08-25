@@ -72,6 +72,7 @@ interface PatientTableProps {
   onUpdateCoordinador?: (patientId: string, newCoordinador: string) => void;
   onOpenActa: (patient: Patient) => void;
   onOpenNotesDrawer: (patient: Patient, type: 'op' | 'cli') => void;
+  onOpenEvolucion?: (patient: Patient) => void;
   onEditSpecialist: (patient: Patient, key: SpecialistKey, info: SpecialistInfo) => void;
   onOpenCostAnalysis: (patient: Patient) => void;
   onOpenCuadroMedico: (patient: Patient) => void;
@@ -90,6 +91,7 @@ export const PatientTable: React.FC<PatientTableProps> = ({
   onUpdateCoordinador,
   onOpenActa,
   onOpenNotesDrawer,
+  onOpenEvolucion,
   onEditSpecialist,
   onOpenCostAnalysis,
   onOpenCuadroMedico,
@@ -655,7 +657,7 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                           isOpen={isMenuOpen}
                           onToggle={() => setActiveMenuPatientId(isMenuOpen ? null : patient.id)}
                           onOpenActas={(p) => onOpenActa(p)}
-                          onOpenEvolucion={(p) => onOpenNotesDrawer(p, 'cli')}
+                          onOpenEvolucion={(p) => (onOpenEvolucion ? onOpenEvolucion(p) : onOpenNotesDrawer(p, 'cli'))}
                           onOpenNuevaActa={(p) => onOpenActa(p)}
                           onOpenCostos={(p) => onOpenCostAnalysis(p)}
                           onOpenCuadroMedico={(p) => onOpenCuadroMedico(p)}

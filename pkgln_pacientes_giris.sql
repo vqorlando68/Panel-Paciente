@@ -402,10 +402,14 @@ CREATE OR REPLACE PACKAGE BODY pkgln_pacientes_giris IS
       v_buf := ', "epicrisis": ';
       DBMS_LOB.WRITEAPPEND(v_json_data, LENGTH(v_buf), v_buf);
       IF v_epicrisis IS NOT NULL AND DBMS_LOB.GETLENGTH(v_epicrisis) > 0 THEN
-        DBMS_LOB.WRITEAPPEND(v_json_data, 1, '"');
-        v_buf := REPLACE(REPLACE(REPLACE(DBMS_LOB.SUBSTR(v_epicrisis, 1000, 1), '\', '\\'), '"', '\"'), CHR(10), '\n');
-        DBMS_LOB.WRITEAPPEND(v_json_data, LENGTH(v_buf), v_buf);
-        DBMS_LOB.WRITEAPPEND(v_json_data, 1, '"');
+        IF DBMS_LOB.SUBSTR(v_epicrisis, 1, 1) IN ('{', '[') THEN
+          DBMS_LOB.APPEND(v_json_data, v_epicrisis);
+        ELSE
+          DBMS_LOB.WRITEAPPEND(v_json_data, 1, '"');
+          v_buf := REPLACE(REPLACE(REPLACE(DBMS_LOB.SUBSTR(v_epicrisis, 32000, 1), '\', '\\'), '"', '\"'), CHR(10), '\n');
+          DBMS_LOB.WRITEAPPEND(v_json_data, LENGTH(v_buf), v_buf);
+          DBMS_LOB.WRITEAPPEND(v_json_data, 1, '"');
+        END IF;
       ELSE
         DBMS_LOB.WRITEAPPEND(v_json_data, 4, 'null');
       END IF;
@@ -413,10 +417,14 @@ CREATE OR REPLACE PACKAGE BODY pkgln_pacientes_giris IS
       v_buf := ', "epicrisis_paciente": ';
       DBMS_LOB.WRITEAPPEND(v_json_data, LENGTH(v_buf), v_buf);
       IF v_epicrisis IS NOT NULL AND DBMS_LOB.GETLENGTH(v_epicrisis) > 0 THEN
-        DBMS_LOB.WRITEAPPEND(v_json_data, 1, '"');
-        v_buf := REPLACE(REPLACE(REPLACE(DBMS_LOB.SUBSTR(v_epicrisis, 1000, 1), '\', '\\'), '"', '\"'), CHR(10), '\n');
-        DBMS_LOB.WRITEAPPEND(v_json_data, LENGTH(v_buf), v_buf);
-        DBMS_LOB.WRITEAPPEND(v_json_data, 1, '"');
+        IF DBMS_LOB.SUBSTR(v_epicrisis, 1, 1) IN ('{', '[') THEN
+          DBMS_LOB.APPEND(v_json_data, v_epicrisis);
+        ELSE
+          DBMS_LOB.WRITEAPPEND(v_json_data, 1, '"');
+          v_buf := REPLACE(REPLACE(REPLACE(DBMS_LOB.SUBSTR(v_epicrisis, 32000, 1), '\', '\\'), '"', '\"'), CHR(10), '\n');
+          DBMS_LOB.WRITEAPPEND(v_json_data, LENGTH(v_buf), v_buf);
+          DBMS_LOB.WRITEAPPEND(v_json_data, 1, '"');
+        END IF;
       ELSE
         DBMS_LOB.WRITEAPPEND(v_json_data, 4, 'null');
       END IF;

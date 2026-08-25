@@ -75,6 +75,94 @@ const DEFAULT_SPECIALISTS: Record<SpecialistKey, SpecialistInfo> = {
 export class PatientService {
   private static patientsCache: Patient[] = [...INITIAL_PATIENTS];
 
+  private static buildSpecialistsFromAttentions(raw: any): Record<SpecialistKey, SpecialistInfo> {
+    const defaultMap: Record<SpecialistKey, SpecialistInfo> = {
+      med_gen: { specialistTitle: 'MEDICO GEN.', professionalName: 'Sin Asignar', lastAttentionDate: '—', frequency: 'Sin definir', targetDate: '—', attentionsHistory: [] },
+      nutri:   { specialistTitle: 'NUTRICIONISTA', professionalName: 'Sin Asignar', lastAttentionDate: '—', frequency: 'Sin definir', targetDate: '—', attentionsHistory: [] },
+      psicol:  { specialistTitle: 'PSICOLOGIA', professionalName: 'Sin Asignar', lastAttentionDate: '—', frequency: 'Sin definir', targetDate: '—', attentionsHistory: [] },
+      esp_1:   { specialistTitle: 'CARDIOLOGÍA', professionalName: 'Sin Asignar', lastAttentionDate: '—', frequency: 'Sin definir', targetDate: '—', attentionsHistory: [] },
+      esp_2:   { specialistTitle: 'ENDOCRINOLOGÍA', professionalName: 'Sin Asignar', lastAttentionDate: '—', frequency: 'Sin definir', targetDate: '—', attentionsHistory: [] },
+      esp_3:   { specialistTitle: 'NEFROLOGÍA', professionalName: 'Sin Asignar', lastAttentionDate: '—', frequency: 'Sin definir', targetDate: '—', attentionsHistory: [] },
+      esp_4:   { specialistTitle: 'NEUROLOGÍA', professionalName: 'Sin Asignar', lastAttentionDate: '—', frequency: 'Sin definir', targetDate: '—', attentionsHistory: [] },
+    };
+
+    if (raw.specialists && typeof raw.specialists === 'object') {
+      Object.keys(raw.specialists).forEach((k) => {
+        const key = k as SpecialistKey;
+        if (defaultMap[key]) {
+          defaultMap[key] = { ...defaultMap[key], ...raw.specialists[key] };
+        }
+      });
+    }
+
+    const atenciones = Array.isArray(raw.atenciones_programadas)
+      ? raw.atenciones_programadas
+      : Array.isArray(raw.agenda)
+      ? raw.agenda
+      : [];
+
+    const getKey = (specName: string, idSpec?: number | string): SpecialistKey | null => {
+      const idNum = idSpec ? Number(idSpec) : 0;
+      if (idNum === 17) return 'med_gen';
+      if (idNum === 37) return 'nutri';
+      if (idNum === 36) return 'psicol';
+      if (idNum === 101) return 'esp_1';
+      if (idNum === 102) return 'esp_2';
+      if (idNum === 103) return 'esp_3';
+      if (idNum === 104) return 'esp_4';
+
+      const s = (specName || '').toLowerCase().trim();
+      if (s.includes('medicin') || s.includes('médic') || s.includes('gen') || s === 'med_gen') return 'med_gen';
+      if (s.includes('nutri') || s === 'nutri') return 'nutri';
+      if (s.includes('psico') || s === 'psicol') return 'psicol';
+      if (s.includes('cardio') || s === 'esp_1') return 'esp_1';
+      if (s.includes('endocrino') || s === 'esp_2') return 'esp_2';
+      if (s.includes('nefro') || s === 'esp_3') return 'esp_3';
+      if (s.includes('neuro') || s === 'esp_4') return 'esp_4';
+
+      return null;
+    };
+
+    atenciones.forEach((item: any) => {
+      const specName = item.nombre_especialidad || item.especialidad || item.specialty || '';
+      const idSpec = item.id_especialidad;
+      const key = getKey(specName, idSpec);
+
+      if (key) {
+        const profName = item.nombre_profesional || item.profesional || item.professional || item.medico || 'Sin Asignar';
+        const fecha = item.fecha_cita || item.fecha || item.date || item.fecha_programada || '—';
+        const estado = item.estado_cita || item.estado || item.status || 'Programada';
+        const freq = item.frecuencia || item.frequency || 'Sin definir';
+        const codCita = item.codigo_cita || item.codigo || item.id_cita || (item.id ? String(item.id) : undefined);
+
+        const current = defaultMap[key];
+        const history = current.attentionsHistory ? [...current.attentionsHistory] : [];
+        history.push({
+          id: String(item.id || item.codigo_cita || Math.random()),
+          codigoCita: codCita ? String(codCita) : undefined,
+          dateTime: fecha,
+          professional: profName,
+          status: estado,
+        });
+
+        const lastCod = codCita ? String(codCita) : undefined;
+
+        defaultMap[key] = {
+          ...current,
+          professionalName: profName !== 'Sin Asignar' ? profName : current.professionalName,
+          lastAttentionDate: fecha !== '—' ? fecha : current.lastAttentionDate,
+          lastAttentionCode: lastCod || current.lastAttentionCode,
+          targetDate: fecha !== '—' ? fecha : current.targetDate,
+          frequency: freq !== 'Sin definir' ? freq : current.frequency,
+          attentionsCount: history.length,
+          attentionsHistory: history,
+        };
+      }
+    });
+
+    return defaultMap;
+  }
+
   private static normalizePatient(raw: any): Patient {
     const rawRiesgo = raw.riesgo || (
       raw.id_nivel_riesgo === 1 ? 'High' :
@@ -125,7 +213,7 @@ export class PatientService {
             type: a.type || 'Presencial',
           }))
         : [],
-      specialists: raw.specialists ?? null,
+      specialists: this.buildSpecialistsFromAttentions(raw),
       operationalNotes: Array.isArray(raw.operationalNotes || raw.observaciones_operativas)
         ? (raw.operationalNotes || raw.observaciones_operativas).map((n: any) => ({
             id: n.id ? String(n.id) : String(Math.random()),
