@@ -99,7 +99,7 @@ export class PatientService {
       idConvenio: raw.idConvenio ?? null,
       convenioNombre: raw.convenioNombre ?? null,
       prioridadInicial: typeof raw.prioridadInicial === 'number' ? raw.prioridadInicial : null,
-      fechaProximaRevision: raw.fechaProximaRevision ?? null,
+      fechaProximaRevision: raw.fechaProximaRevision || raw.fecha_proxima_revision || null,
       cohorte: raw.cohorte ?? null,
       estado: raw.estado ?? null,
       riesgo: (rawRiesgo && ['Critical', 'High', 'Medium', 'Low'].includes(rawRiesgo) ? rawRiesgo : null) as any,
@@ -114,10 +114,37 @@ export class PatientService {
       alarmReasons: Array.isArray(raw.alarmReasons) ? raw.alarmReasons : [],
       tasas: raw.tasas ?? null,
       cuadroMedico: Array.isArray(raw.cuadroMedico) ? raw.cuadroMedico : [],
-      agenda: Array.isArray(raw.agenda) ? raw.agenda : [],
+      agenda: Array.isArray(raw.agenda || raw.atenciones_programadas)
+        ? (raw.agenda || raw.atenciones_programadas).map((a: any) => ({
+            id: a.id || a.codigo_cita ? String(a.id || a.codigo_cita) : String(Math.random()),
+            date: a.date || a.fecha_cita || '',
+            time: a.time || '',
+            specialty: a.specialty || a.nombre_especialidad || '',
+            professional: a.professional || a.nombre_profesional || '',
+            status: a.status || a.estado_cita || 'Programada',
+            type: a.type || 'Presencial',
+          }))
+        : [],
       specialists: raw.specialists ?? null,
-      operationalNotes: Array.isArray(raw.operationalNotes) ? raw.operationalNotes : [],
-      clinicalNotes: Array.isArray(raw.clinicalNotes) ? raw.clinicalNotes : [],
+      operationalNotes: Array.isArray(raw.operationalNotes || raw.observaciones_operativas)
+        ? (raw.operationalNotes || raw.observaciones_operativas).map((n: any) => ({
+            id: n.id ? String(n.id) : String(Math.random()),
+            author: n.author || n.nombre_usuario || 'Sistema',
+            role: n.role || n.rol || 'Coordinador',
+            timestamp: n.timestamp || n.fecha_observacion || '',
+            content: n.content || n.observacion || '',
+          }))
+        : [],
+      clinicalNotes: Array.isArray(raw.clinicalNotes || raw.observaciones_clinicas)
+        ? (raw.clinicalNotes || raw.observaciones_clinicas).map((n: any) => ({
+            id: n.id ? String(n.id) : String(Math.random()),
+            author: n.author || n.nombre_usuario || 'Sistema',
+            role: n.role || n.rol || 'Médico',
+            timestamp: n.timestamp || n.fecha_observacion || '',
+            content: n.content || n.observacion || '',
+          }))
+        : [],
+      epicrisis: raw.epicrisis || raw.epicrisis_paciente || null,
     };
   }
 
@@ -129,14 +156,17 @@ export class PatientService {
       const response = await fetch('/api/patients');
       if (response.ok) {
         const data = await response.json();
-        if (data && Array.isArray(data.pacientes) && data.pacientes.length > 0) {
+        console.log('[PatientService] API Response:', data);
+        if (data && data.codigo_respuesta === 0 && Array.isArray(data.pacientes) && data.pacientes.length > 0) {
           const normalized = data.pacientes.map((p: any) => this.normalizePatient(p));
           this.patientsCache = normalized;
           return normalized;
+        } else if (data && data.mensaje_respuesta) {
+          console.error('[PatientService] Oracle Message:', data.mensaje_respuesta);
         }
       }
     } catch (error) {
-      console.warn('[PatientService] Error calling /api/patients, using local dataset fallback:', error);
+      console.warn('[PatientService] Error calling /api/patients:', error);
     }
     return [...this.patientsCache];
   }

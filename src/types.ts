@@ -110,6 +110,7 @@ export interface Patient {
   specialists?: Record<SpecialistKey, SpecialistInfo> | null;
   operationalNotes?: NoteEntry[];
   clinicalNotes?: NoteEntry[];
+  epicrisis?: string | null;
 }
 
 export interface FilterState {

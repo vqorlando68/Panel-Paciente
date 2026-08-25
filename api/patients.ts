@@ -112,6 +112,7 @@ export default async function handler(req: any, res: any) {
 
     const rawSalida = result.outBinds.p_json_salida;
     console.log('[Oracle API] Response length from PL/SQL package:', rawSalida ? rawSalida.length : 0);
+    console.log('[Oracle API Payload]:', rawSalida);
 
     const jsonSalida = JSON.parse(rawSalida);
 
