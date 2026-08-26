@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Patient,
   UserRole,
@@ -22,6 +22,8 @@ import {
   Pencil,
   Stethoscope,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   ShieldAlert,
   MoreVertical,
   ArrowUp,
@@ -199,6 +201,23 @@ export const PatientTable: React.FC<PatientTableProps> = ({
       return 0;
     });
   }, [patients, sortField, sortDirection]);
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  // Total pages and paginated slice
+  const totalPages = Math.max(1, Math.ceil(sortedPatients.length / itemsPerPage));
+  const startIndex = sortedPatients.length === 0 ? 0 : (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(sortedPatients.length, currentPage * itemsPerPage);
+  const paginatedPatients = sortedPatients.slice(startIndex, endIndex);
+
+  // Reset to page 1 if current page becomes out of bounds or filters change
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(1);
+    }
+  }, [patients.length, totalPages, currentPage]);
 
   // Handle patient name click for popover toggle
   const handleNameClick = (e: React.MouseEvent, patient: Patient) => {
@@ -590,7 +609,7 @@ export const PatientTable: React.FC<PatientTableProps> = ({
               </td>
             </tr>
           ) : (
-            sortedPatients.map((patient) => {
+            paginatedPatients.map((patient) => {
               const isMenuOpen = activeMenuPatientId === patient.id;
               const isAlarmOpen = activeAlarmTooltipPatientId === patient.id;
               const isAdherenciaOpen = adherenciaPatientId === patient.id;
@@ -816,6 +835,65 @@ export const PatientTable: React.FC<PatientTableProps> = ({
           )}
         </tbody>
       </table>
+
+      {/* Pagination Controls Bar */}
+      <div className="bg-white dark:bg-[#1e293b] border-t border-[#e2e8eb] dark:border-[#334155] px-6 py-3 flex flex-wrap items-center justify-between gap-4 text-xs font-sans text-[#035476] dark:text-[#94a3b8] rounded-b-xl shadow-2xs">
+        {/* Left Side: Items per page selector & counter */}
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-gray-500 dark:text-gray-400">Mostrar</span>
+            <select
+              value={itemsPerPage}
+              onChange={(e) => {
+                setItemsPerPage(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+              className="bg-[#f8fafc] dark:bg-[#0f172a] border border-[#e2e8eb] dark:border-[#334155] rounded-lg px-2.5 py-1 text-xs font-bold text-[#033d59] dark:text-[#f8fafc] focus:outline-hidden focus:ring-2 focus:ring-[#00aae1] cursor-pointer"
+            >
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+            </select>
+            <span className="text-gray-500 dark:text-gray-400">registros por página</span>
+          </div>
+
+          <div className="h-4 w-px bg-gray-200 dark:bg-gray-700 hidden sm:block" />
+
+          <span>
+            Mostrando <strong className="text-[#033d59] dark:text-[#f8fafc]">{sortedPatients.length === 0 ? 0 : startIndex + 1}</strong> -{' '}
+            <strong className="text-[#033d59] dark:text-[#f8fafc]">{endIndex}</strong> de{' '}
+            <strong className="text-[#033d59] dark:text-[#f8fafc]">{sortedPatients.length}</strong> pacientes
+          </span>
+        </div>
+
+        {/* Right Side: Page navigation controls */}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+            disabled={currentPage === 1}
+            className="px-3 py-1.5 rounded-lg border border-[#e2e8eb] dark:border-[#334155] bg-[#f8fafc] dark:bg-[#0f172a] font-bold text-[#033d59] dark:text-[#f8fafc] hover:bg-[#00aae1] hover:text-white disabled:opacity-40 disabled:hover:bg-[#f8fafc] disabled:hover:text-[#033d59] transition-all cursor-pointer flex items-center gap-1"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            <span>Anterior</span>
+          </button>
+
+          <span className="px-3 py-1 text-xs font-bold text-[#035476] dark:text-[#94a3b8]">
+            Página <strong className="text-[#00aae1] dark:text-[#38bdf8]">{currentPage}</strong> de{' '}
+            <strong className="text-[#033d59] dark:text-[#f8fafc]">{totalPages}</strong>
+          </span>
+
+          <button
+            type="button"
+            onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+            disabled={currentPage === totalPages || totalPages === 0}
+            className="px-3 py-1.5 rounded-lg border border-[#e2e8eb] dark:border-[#334155] bg-[#f8fafc] dark:bg-[#0f172a] font-bold text-[#033d59] dark:text-[#f8fafc] hover:bg-[#00aae1] hover:text-white disabled:opacity-40 disabled:hover:bg-[#f8fafc] disabled:hover:text-[#033d59] transition-all cursor-pointer flex items-center gap-1"
+          >
+            <span>Siguiente</span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
 
       {/* Render Patient Hover Popover */}
       {hoveredPatient && (

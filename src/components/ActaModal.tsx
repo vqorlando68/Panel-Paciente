@@ -142,14 +142,36 @@ export const ActaModal: React.FC<ActaModalProps> = ({
                   </div>
                 </div>
 
-                <div>
-                  <h4 className="font-bold text-[#035476] dark:text-[#94a3b8] mb-1 uppercase tracking-wider text-[10px]">
-                    Resumen de Decisiones
-                  </h4>
-                  <p className="text-xs text-[#033d59] dark:text-[#f8fafc] leading-relaxed">
-                    {patient.acta.resumen}
-                  </p>
-                </div>
+                {patient.acta.observaciones_clinicas ? (
+                  <div className="space-y-1">
+                    <h4 className="font-bold text-[#00aae1] dark:text-[#38bdf8] uppercase tracking-wider text-[10px]">
+                      Observaciones Clínicas
+                    </h4>
+                    <p className="text-xs text-[#033d59] dark:text-[#f8fafc] leading-relaxed whitespace-pre-wrap font-sans">
+                      {patient.acta.observaciones_clinicas}
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <h4 className="font-bold text-[#035476] dark:text-[#94a3b8] mb-1 uppercase tracking-wider text-[10px]">
+                      Resumen de Decisiones
+                    </h4>
+                    <p className="text-xs text-[#033d59] dark:text-[#f8fafc] leading-relaxed whitespace-pre-wrap font-sans">
+                      {patient.acta.resumen}
+                    </p>
+                  </div>
+                )}
+
+                {patient.acta.observaciones_operativas && (
+                  <div className="space-y-1 pt-1 border-t border-[#00aae1]/10">
+                    <h4 className="font-bold text-[#b45309] dark:text-[#fbbf24] uppercase tracking-wider text-[10px]">
+                      Observaciones Operativas
+                    </h4>
+                    <p className="text-xs text-[#033d59] dark:text-[#f8fafc] leading-relaxed whitespace-pre-wrap font-sans">
+                      {patient.acta.observaciones_operativas}
+                    </p>
+                  </div>
+                )}
 
                 {patient.acta.integrantes && patient.acta.integrantes.length > 0 && (
                   <div>
@@ -235,9 +257,31 @@ export const ActaModal: React.FC<ActaModalProps> = ({
                               </span>
                             </div>
 
-                            <p className="p-2.5 bg-white dark:bg-[#0f172a] rounded-md border border-[#e2e8eb] dark:border-[#334155] leading-relaxed text-[#033d59] dark:text-[#f8fafc]">
-                              {actaItem.resumen}
-                            </p>
+                            {actaItem.observaciones_clinicas ? (
+                              <div className="space-y-1">
+                                <span className="font-bold text-[#00aae1] dark:text-[#38bdf8] text-[10px] uppercase block tracking-wider">
+                                  Observaciones Clínicas:
+                                </span>
+                                <p className="p-2.5 bg-white dark:bg-[#0f172a] rounded-md border border-[#e2e8eb] dark:border-[#334155] leading-relaxed text-[#033d59] dark:text-[#f8fafc] whitespace-pre-wrap font-sans">
+                                  {actaItem.observaciones_clinicas}
+                                </p>
+                              </div>
+                            ) : (
+                              <p className="p-2.5 bg-white dark:bg-[#0f172a] rounded-md border border-[#e2e8eb] dark:border-[#334155] leading-relaxed text-[#033d59] dark:text-[#f8fafc] whitespace-pre-wrap font-sans">
+                                {actaItem.resumen}
+                              </p>
+                            )}
+
+                            {actaItem.observaciones_operativas && (
+                              <div className="space-y-1">
+                                <span className="font-bold text-[#b45309] dark:text-[#fbbf24] text-[10px] uppercase block tracking-wider">
+                                  Observaciones Operativas:
+                                </span>
+                                <p className="p-2.5 bg-[#fffbeb] dark:bg-[#0f172a] rounded-md border border-[#fef3c7] dark:border-[#334155] leading-relaxed text-[#78350f] dark:text-[#fbbf24] whitespace-pre-wrap font-sans">
+                                  {actaItem.observaciones_operativas}
+                                </p>
+                              </div>
+                            )}
 
                             {actaItem.integrantes && actaItem.integrantes.length > 0 && (
                               <div className="pt-1">

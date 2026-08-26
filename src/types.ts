@@ -41,6 +41,8 @@ export interface ActaInfo {
   numero: number;
   fecha: string;
   resumen: string;
+  observaciones_clinicas?: string;
+  observaciones_operativas?: string;
   integrantes?: string[];
 }
 

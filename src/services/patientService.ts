@@ -1,4 +1,4 @@
-import { Patient, SpecialistKey, SpecialistInfo } from '../types';
+import { Patient, SpecialistKey, SpecialistInfo, ActaInfo } from '../types';
 import { INITIAL_PATIENTS } from '../mockData';
 
 const DEFAULT_SPECIALISTS: Record<SpecialistKey, SpecialistInfo> = {
@@ -163,6 +163,87 @@ export class PatientService {
     return defaultMap;
   }
 
+  private static parseJsonSafely(input: any): any {
+    if (!input) return null;
+    if (typeof input === 'object') return input;
+    if (typeof input === 'string') {
+      try {
+        let s = input.trim();
+        if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+          s = JSON.parse(s);
+        }
+        return JSON.parse(s);
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }
+
+  private static buildActasHistory(raw: any): ActaInfo[] {
+    let rawActasArr: any[] = [];
+    if (Array.isArray(raw.actas_medicas)) {
+      rawActasArr = raw.actas_medicas;
+    } else if (Array.isArray(raw.actas_registradas)) {
+      rawActasArr = raw.actas_registradas;
+    } else if (Array.isArray(raw.actas)) {
+      rawActasArr = raw.actas;
+    } else if (Array.isArray(raw.actasHistory)) {
+      rawActasArr = raw.actasHistory;
+    } else if (Array.isArray(raw.json_result)) {
+      rawActasArr = raw.json_result;
+    } else {
+      const parsed =
+        this.parseJsonSafely(raw.actas_medicas) ||
+        this.parseJsonSafely(raw.actas_registradas) ||
+        this.parseJsonSafely(raw.actas) ||
+        this.parseJsonSafely(raw.json_result);
+      if (Array.isArray(parsed)) {
+        rawActasArr = parsed;
+      }
+    }
+
+    return rawActasArr.map((a: any) => {
+      let item = a;
+      if (typeof a === 'string') {
+        item = this.parseJsonSafely(a) || {};
+      }
+      const num = Number(item.numero_acta ?? item.numero ?? item.id ?? 101);
+      const fecha = String(item.fecha_acta ?? item.fecha ?? item.fecha_acta_medica ?? '').trim();
+      const obsClinicas = String(item.observaciones_clinicas ?? item.observaciones ?? item.resumen ?? '').trim();
+      const obsOperativas = String(item.observaciones_operativas ?? '').trim();
+
+      const resumenText = [obsClinicas, obsOperativas ? `\n[Observaciones Operativas]: ${obsOperativas}` : '']
+        .filter(Boolean)
+        .join('\n');
+
+      return {
+        numero: isNaN(num) ? 101 : num,
+        fecha: fecha || '—',
+        resumen: resumenText || 'Sin observaciones registradas',
+        observaciones_clinicas: obsClinicas,
+        observaciones_operativas: obsOperativas,
+        integrantes: Array.isArray(item.integrantes) ? item.integrantes : undefined,
+      };
+    });
+  }
+
+  private static buildCurrentActa(raw: any): ActaInfo | null {
+    const history = this.buildActasHistory(raw);
+    if (history.length > 0) return history[0];
+    if (raw.acta && typeof raw.acta === 'object') {
+      return {
+        numero: Number(raw.acta.numero || raw.acta.numero_acta || 101),
+        fecha: String(raw.acta.fecha || raw.acta.fecha_acta || ''),
+        resumen: String(raw.acta.resumen || raw.acta.observaciones_clinicas || raw.acta.observaciones || ''),
+        observaciones_clinicas: raw.acta.observaciones_clinicas || raw.acta.observaciones,
+        observaciones_operativas: raw.acta.observaciones_operativas,
+        integrantes: Array.isArray(raw.acta.integrantes) ? raw.acta.integrantes : undefined,
+      };
+    }
+    return null;
+  }
+
   private static normalizePatient(raw: any): Patient {
     const rawRiesgo = raw.riesgo || (
       raw.id_nivel_riesgo === 1 ? 'High' :
@@ -194,8 +275,8 @@ export class PatientService {
       etiqueta: raw.etiqueta ?? null,
       retroalimentacion: raw.retroalimentacion ?? null,
       fase: raw.fase ?? null,
-      acta: raw.acta ?? null,
-      actasHistory: Array.isArray(raw.actasHistory) ? raw.actasHistory : [],
+      acta: this.buildCurrentActa(raw),
+      actasHistory: this.buildActasHistory(raw),
       coordinador: raw.coordinador || raw.coordinador_nombre || null,
       numeroCarga: raw.numeroCarga ?? null,
       hasAlarm: Boolean(raw.hasAlarm),
