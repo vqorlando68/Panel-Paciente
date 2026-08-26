@@ -91,17 +91,16 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         </div>
 
-        {/* Oracle DB Integration Doc Button */}
+        {/* Oracle DB Integration Doc Button (Oculto visualmente, accesible con Ctrl + Alt + D) */}
         {onOpenOracleDoc && (
           <button
             type="button"
             onClick={onOpenOracleDoc}
-            title="Ver documentación del paquete Oracle PL/SQL (Atajo: Ctrl + Alt + D)"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#effaff] dark:bg-[#00aae1]/10 text-[#00aae1] dark:text-[#38bdf8] border border-[#00aae1]/30 hover:bg-[#00aae1] hover:text-white dark:hover:bg-[#00aae1] dark:hover:text-white transition-all cursor-pointer text-xs font-semibold shadow-2xs"
+            tabIndex={-1}
+            aria-hidden="true"
+            className="hidden"
           >
-            <Database className="w-4 h-4" />
-            <span className="hidden sm:inline">Oracle DB Doc</span>
-            <span className="text-[10px] opacity-80 font-mono px-1 rounded bg-black/10 dark:bg-white/10">Ctrl+Alt+D</span>
+            Oracle DB Doc
           </button>
         )}
 

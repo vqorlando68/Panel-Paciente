@@ -12,6 +12,15 @@ export const OracleDocModal: React.FC<OracleDocModalProps> = ({ isOpen, onClose 
   const [testResult, setTestResult] = useState<any>(null);
   const [isTesting, setIsTesting] = useState(false);
 
+  const [copiedTest, setCopiedTest] = useState(false);
+
+  const handleCopyTestResult = () => {
+    if (!testResult) return;
+    navigator.clipboard.writeText(JSON.stringify(testResult, null, 2));
+    setCopiedTest(true);
+    setTimeout(() => setCopiedTest(false), 2000);
+  };
+
   const handleTestConnection = async () => {
     setIsTesting(true);
     setTestResult(null);
@@ -284,19 +293,39 @@ export const OracleDocModal: React.FC<OracleDocModalProps> = ({ isOpen, onClose 
 
                 {testResult ? (
                   <div className="space-y-3 pt-3 border-t border-[#e2e8eb] dark:border-[#334155]">
-                    <div className="flex items-center gap-2">
-                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                        testResult.status === 'connection_success'
-                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                          : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
-                      }`}>
-                        {testResult.status === 'connection_success' ? '✓ Conexión Exitosa' : '❌ Error de Conexión'}
-                      </span>
-                      {testResult.tiempo_respuesta_ms && (
-                        <span className="font-mono text-xs text-gray-500">
-                          ({testResult.tiempo_respuesta_ms} ms)
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                          testResult.status === 'connection_success'
+                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                            : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+                        }`}>
+                          {testResult.status === 'connection_success' ? '✓ Conexión Exitosa' : '❌ Error de Conexión'}
                         </span>
-                      )}
+                        {testResult.tiempo_respuesta_ms && (
+                          <span className="font-mono text-xs text-gray-500">
+                            ({testResult.tiempo_respuesta_ms} ms)
+                          </span>
+                        )}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleCopyTestResult}
+                        className="px-3 py-1 bg-white dark:bg-[#1e293b] border border-[#e2e8eb] dark:border-[#334155] rounded-lg text-xs font-semibold text-[#035476] dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                      >
+                        {copiedTest ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 text-emerald-500" />
+                            <span className="text-emerald-600 dark:text-emerald-400 font-bold">¡Copiado!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3.5 h-3.5 text-gray-500" />
+                            <span>Copiar Resultado</span>
+                          </>
+                        )}
+                      </button>
                     </div>
 
                     <div className="bg-[#0f172a] text-emerald-400 p-4 rounded-xl font-mono text-xs overflow-x-auto border border-emerald-900/50 shadow-inner">
