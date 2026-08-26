@@ -331,11 +331,14 @@ export class PatientService {
           this.patientsCache = normalized;
           return normalized;
         } else if (data && data.mensaje_respuesta) {
-          console.error('[PatientService] Oracle Message:', data.mensaje_respuesta);
+          console.warn('[PatientService] Oracle Response:', data.mensaje_respuesta);
         }
       }
     } catch (error) {
       console.warn('[PatientService] Error calling /api/patients:', error);
+    }
+    if (!this.patientsCache || this.patientsCache.length === 0) {
+      this.patientsCache = [...INITIAL_PATIENTS];
     }
     return [...this.patientsCache];
   }

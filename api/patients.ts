@@ -72,6 +72,20 @@ export default async function handler(req: any, res: any) {
     const config = getOracleConfig();
     console.log('[Oracle API] Connecting to Oracle DB at:', config.connectString, 'User:', config.user);
 
+    if (!config.user || !config.connectString) {
+      const errMsg = 'Variables de entorno de Oracle (ORACLE_DB_USER / ORACLE_DB_CONNECTION_STRING) no configuradas en Vercel.';
+      console.warn('[Oracle API Error]:', errMsg);
+      const errPayload = {
+        codigo_respuesta: -1,
+        mensaje_respuesta: errMsg,
+        pacientes: []
+      };
+      if (res.status && res.json) return res.status(200).json(errPayload);
+      res.statusCode = 200;
+      res.setHeader('Content-Type', 'application/json');
+      return res.end(JSON.stringify(errPayload));
+    }
+
     connection = await oracledb.getConnection(config);
 
     let procedureName = 'prc_obtener_pacientes_pagina';
