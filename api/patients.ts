@@ -5,13 +5,21 @@ import { getOracleConfig } from './oracle-config';
 dotenv.config({ path: '.env.local' });
 dotenv.config();
 
-async function getOracleDb() {
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+
+async function getOracleDb(): Promise<any> {
   try {
     const mod = await import('oracledb');
     return mod.default || mod;
-  } catch (err: any) {
-    console.error('[Oracle API] Error al cargar el módulo node-oracledb:', err);
-    throw new Error(`Error al importar el paquete node-oracledb en Vercel: ${err.message}`);
+  } catch (e1: any) {
+    try {
+      const cjsMod = require('oracledb');
+      return cjsMod.default || cjsMod;
+    } catch (e2: any) {
+      console.error('[Oracle API Error] No se pudo cargar el módulo oracledb:', e1?.message, e2?.message);
+      return null;
+    }
   }
 }
 
@@ -99,6 +107,22 @@ export default async function handler(req: any, res: any) {
       }
 
       const oracledb = await getOracleDb();
+      if (!oracledb) {
+        const nullPayload = {
+          status: 'error_oracledb_module',
+          mensaje: 'El módulo node-oracledb no pudo ser cargado en el entorno Serverless de Vercel (falta de archivos binarios .node nativos de Linux).',
+          variables_detectadas: {
+            ORACLE_DB_USER: testConfig.user ? 'Configurada' : 'FALTA',
+            ORACLE_DB_CONNECTION_STRING: testConfig.connectString ? 'Configurada' : 'FALTA',
+            ORACLE_DB_PASSWORD: testConfig.password ? 'Configurada' : 'FALTA',
+          }
+        };
+        if (res.status && res.json) return res.status(200).json(nullPayload);
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        return res.end(JSON.stringify(nullPayload));
+      }
+
       connTest = await oracledb.getConnection(testConfig);
       const testResult: any = await connTest.execute('SELECT 1 AS TEST_VAL FROM DUAL');
       await connTest.close();
@@ -155,6 +179,20 @@ export default async function handler(req: any, res: any) {
     }
 
     const oracledb = await getOracleDb();
+    if (!oracledb) {
+      const errMsg = 'El módulo node-oracledb no se pudo cargar en este entorno Serverless de Vercel (falta de binarios nativos .node de Linux).';
+      console.warn('[Oracle API Error]:', errMsg);
+      const errPayload = {
+        codigo_respuesta: -1,
+        mensaje_respuesta: errMsg,
+        pacientes: []
+      };
+      if (res.status && res.json) return res.status(200).json(errPayload);
+      res.statusCode = 200;
+      res.setHeader('Content-Type', 'application/json');
+      return res.end(JSON.stringify(errPayload));
+    }
+
     connection = await oracledb.getConnection(config);
 
     let procedureName = 'prc_obtener_pacientes_pagina';
