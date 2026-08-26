@@ -1,10 +1,19 @@
 import type { IncomingMessage, ServerResponse } from 'http';
 import dotenv from 'dotenv';
-import oracledb from 'oracledb';
 import { getOracleConfig } from './oracle-config';
 
 dotenv.config({ path: '.env.local' });
 dotenv.config();
+
+async function getOracleDb() {
+  try {
+    const mod = await import('oracledb');
+    return mod.default || mod;
+  } catch (err: any) {
+    console.error('[Oracle API] Error al cargar el módulo node-oracledb:', err);
+    throw new Error(`Error al importar el paquete node-oracledb en Vercel: ${err.message}`);
+  }
+}
 
 export interface ApiRequest extends IncomingMessage {
   query?: Record<string, string | string[]>;
@@ -89,6 +98,7 @@ export default async function handler(req: any, res: any) {
         return res.end(JSON.stringify(testPayload));
       }
 
+      const oracledb = await getOracleDb();
       connTest = await oracledb.getConnection(testConfig);
       const testResult: any = await connTest.execute('SELECT 1 AS TEST_VAL FROM DUAL');
       await connTest.close();
@@ -144,6 +154,7 @@ export default async function handler(req: any, res: any) {
       return res.end(JSON.stringify(errPayload));
     }
 
+    const oracledb = await getOracleDb();
     connection = await oracledb.getConnection(config);
 
     let procedureName = 'prc_obtener_pacientes_pagina';
