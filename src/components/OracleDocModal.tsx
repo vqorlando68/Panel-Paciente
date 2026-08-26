@@ -17,7 +17,18 @@ export const OracleDocModal: React.FC<OracleDocModalProps> = ({ isOpen, onClose 
     setTestResult(null);
     try {
       const res = await fetch('/api/patients?action=test');
-      const data = await res.json();
+      const text = await res.text();
+      let data: any;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = {
+          status: 'error_http_500',
+          http_code: res.status,
+          mensaje: `El servidor Vercel retornó una página de error en formato no-JSON (${res.status}): ${text.substring(0, 400)}...`,
+          raw_response: text
+        };
+      }
       setTestResult(data);
     } catch (e: any) {
       setTestResult({ status: 'error', mensaje: e.message });
