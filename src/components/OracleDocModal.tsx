@@ -7,8 +7,24 @@ interface OracleDocModalProps {
 }
 
 export const OracleDocModal: React.FC<OracleDocModalProps> = ({ isOpen, onClose }) => {
-  const [activeTab, setActiveTab] = useState<'proc_listar' | 'proc_total' | 'fields' | 'overview'>('proc_listar');
+  const [activeTab, setActiveTab] = useState<'proc_listar' | 'proc_total' | 'fields' | 'test_connection'>('test_connection');
   const [copied, setCopied] = useState(false);
+  const [testResult, setTestResult] = useState<any>(null);
+  const [isTesting, setIsTesting] = useState(false);
+
+  const handleTestConnection = async () => {
+    setIsTesting(true);
+    setTestResult(null);
+    try {
+      const res = await fetch('/api/patients?action=test');
+      const data = await res.json();
+      setTestResult(data);
+    } catch (e: any) {
+      setTestResult({ status: 'error', mensaje: e.message });
+    } finally {
+      setIsTesting(false);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -182,6 +198,18 @@ export const OracleDocModal: React.FC<OracleDocModalProps> = ({ isOpen, onClose 
         {/* Tabs Bar */}
         <div className="flex items-center px-6 border-b border-[#e2e8eb] dark:border-[#334155] bg-gray-50 dark:bg-[#1e293b]/50 gap-2 shrink-0 overflow-x-auto">
           <button
+            onClick={() => setActiveTab('test_connection')}
+            className={`py-3 px-4 text-xs font-bold border-b-2 flex items-center gap-2 transition-colors cursor-pointer ${
+              activeTab === 'test_connection'
+                ? 'border-[#00aae1] text-[#00aae1] dark:text-[#38bdf8]'
+                : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-[#033d59] dark:hover:text-white'
+            }`}
+          >
+            <Database className="w-4 h-4 text-[#00aae1]" />
+            <span>🧪 Diagnóstico de Conexión en Vivo</span>
+          </button>
+
+          <button
             onClick={() => setActiveTab('proc_listar')}
             className={`py-3 px-4 text-xs font-semibold border-b-2 flex items-center gap-2 transition-colors cursor-pointer ${
               activeTab === 'proc_listar'
@@ -190,7 +218,7 @@ export const OracleDocModal: React.FC<OracleDocModalProps> = ({ isOpen, onClose 
             }`}
           >
             <Code className="w-4 h-4" />
-            <span>prc_obtener_pacientes_pagina (Página + Especialidades)</span>
+            <span>prc_obtener_pacientes_pagina</span>
           </button>
 
           <button
@@ -220,6 +248,59 @@ export const OracleDocModal: React.FC<OracleDocModalProps> = ({ isOpen, onClose 
 
         {/* Modal Content */}
         <div className="p-6 overflow-y-auto flex-1 space-y-6 text-sm">
+          {activeTab === 'test_connection' && (
+            <div className="space-y-6">
+              <div className="p-5 rounded-xl bg-white dark:bg-[#0f172a] border border-[#e2e8eb] dark:border-[#334155] shadow-2xs space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h4 className="font-bold text-sm text-[#033d59] dark:text-[#f8fafc]">
+                      Prueba de Conexión a Oracle DB desde Servidor (Vercel API)
+                    </h4>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      Prueba en tiempo real ejecutando <code>SELECT 1 FROM DUAL</code> e inspección de variables de entorno.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleTestConnection}
+                    disabled={isTesting}
+                    className="px-4 py-2 bg-[#00aae1] hover:bg-[#0196d4] text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-2 disabled:opacity-50"
+                  >
+                    <Database className="w-4 h-4" />
+                    <span>{isTesting ? 'Probando conexión...' : 'Ejecutar Diagnóstico Ahora'}</span>
+                  </button>
+                </div>
+
+                {testResult ? (
+                  <div className="space-y-3 pt-3 border-t border-[#e2e8eb] dark:border-[#334155]">
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                        testResult.status === 'connection_success'
+                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                          : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+                      }`}>
+                        {testResult.status === 'connection_success' ? '✓ Conexión Exitosa' : '❌ Error de Conexión'}
+                      </span>
+                      {testResult.tiempo_respuesta_ms && (
+                        <span className="font-mono text-xs text-gray-500">
+                          ({testResult.tiempo_respuesta_ms} ms)
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="bg-[#0f172a] text-emerald-400 p-4 rounded-xl font-mono text-xs overflow-x-auto border border-emerald-900/50 shadow-inner">
+                      <pre>{JSON.stringify(testResult, null, 2)}</pre>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-4 bg-gray-50 dark:bg-[#0f172a] rounded-xl text-center text-xs text-gray-500 border border-dashed border-gray-300 dark:border-gray-700">
+                    Haz clic en <strong>"Ejecutar Diagnóstico Ahora"</strong> para verificar el estado de la conexión a Oracle BD.
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {activeTab === 'proc_listar' && (
             <div className="space-y-6">
               <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-blue-900 dark:text-blue-200 flex items-start gap-3">

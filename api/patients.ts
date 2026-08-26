@@ -67,6 +67,64 @@ export default async function handler(req: any, res: any) {
 
   const p_json_entrada_str = JSON.stringify(jsonEntrada);
 
+  // Diagnostic Connection Test Endpoint
+  if (action === 'test') {
+    const startTime = Date.now();
+    let connTest;
+    try {
+      const testConfig = getOracleConfig();
+      if (!testConfig.user || !testConfig.connectString) {
+        const testPayload = {
+          status: 'error_missing_env_vars',
+          mensaje: 'Variables de entorno de Oracle (ORACLE_DB_USER / ORACLE_DB_CONNECTION_STRING) no configuradas en Vercel Dashboard.',
+          variables_detectadas: {
+            ORACLE_DB_USER: testConfig.user ? 'Configurada' : 'FALTA',
+            ORACLE_DB_CONNECTION_STRING: testConfig.connectString ? 'Configurada' : 'FALTA',
+            ORACLE_DB_PASSWORD: testConfig.password ? 'Configurada' : 'FALTA',
+          }
+        };
+        if (res.status && res.json) return res.status(200).json(testPayload);
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        return res.end(JSON.stringify(testPayload));
+      }
+
+      connTest = await oracledb.getConnection(testConfig);
+      const testResult: any = await connTest.execute('SELECT 1 AS TEST_VAL FROM DUAL');
+      await connTest.close();
+      connTest = null;
+
+      const durationMs = Date.now() - startTime;
+      const successPayload = {
+        status: 'connection_success',
+        mensaje: '¡Conexión a la Base de Datos Oracle exitosa!',
+        tiempo_respuesta_ms: durationMs,
+        prueba_query: testResult.rows,
+        variables_detectadas: {
+          ORACLE_DB_USER: testConfig.user,
+          ORACLE_DB_CONNECTION_STRING: testConfig.connectString,
+          ORACLE_DB_PASSWORD: '****'
+        }
+      };
+      if (res.status && res.json) return res.status(200).json(successPayload);
+      res.statusCode = 200;
+      res.setHeader('Content-Type', 'application/json');
+      return res.end(JSON.stringify(successPayload));
+    } catch (testErr: any) {
+      if (connTest) { try { await connTest.close(); } catch (e) {} }
+      const errPayload = {
+        status: 'connection_failed',
+        mensaje: `Error al conectar a Oracle BD: ${testErr.message}`,
+        error_code: testErr.code || testErr.number,
+        tiempo_respuesta_ms: Date.now() - startTime
+      };
+      if (res.status && res.json) return res.status(200).json(errPayload);
+      res.statusCode = 200;
+      res.setHeader('Content-Type', 'application/json');
+      return res.end(JSON.stringify(errPayload));
+    }
+  }
+
   let connection;
   try {
     const config = getOracleConfig();
