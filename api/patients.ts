@@ -1,4 +1,23 @@
-import { getOracleConfig } from './oracle-config';
+// Interface & helper for Oracle configuration
+interface OracleDbConfig {
+  user: string;
+  password?: string;
+  connectString: string;
+  poolMin?: number;
+  poolMax?: number;
+  poolIncrement?: number;
+}
+
+const getOracleConfig = (): OracleDbConfig => {
+  return {
+    user: process.env.ORACLE_DB_USER || process.env.ORACLE_USER || '',
+    password: process.env.ORACLE_DB_PASSWORD || process.env.ORACLE_PASSWORD || '',
+    connectString: process.env.ORACLE_DB_CONNECTION_STRING || process.env.ORACLE_CONNECT_STRING || '',
+    poolMin: 1,
+    poolMax: 5,
+    poolIncrement: 1,
+  };
+};
 
 // Safe helper for JSON responses
 function sendJson(res: any, status: number, data: any) {
@@ -70,7 +89,7 @@ export default async function handler(req: any, res: any) {
       if (!oracledb) {
         return sendJson(res, 200, {
           status: 'error_oracledb_module',
-          mensaje: 'El modulo node-oracledb no pudo ser cargado en el entorno Serverless de Vercel.',
+          mensaje: 'El modulo node-oracledb no pudo ser cargado en el entorno Serverless de Vercel (falta de soporte para binarios C/C++ en AWS Lambda).',
           variables_detectadas: {
             ORACLE_DB_USER: testConfig.user ? 'Configurada' : 'FALTA',
             ORACLE_DB_CONNECTION_STRING: testConfig.connectString ? 'Configurada' : 'FALTA',
