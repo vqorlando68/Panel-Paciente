@@ -208,9 +208,9 @@ export default async function handler(req: any, res: any) {
     };
 
     if (res.status && res.json) {
-      return res.status(500).json(errPayload);
+      return res.status(200).json(errPayload);
     } else {
-      res.statusCode = 500;
+      res.statusCode = 200;
       res.setHeader('Content-Type', 'application/json');
       return res.end(JSON.stringify(errPayload));
     }
