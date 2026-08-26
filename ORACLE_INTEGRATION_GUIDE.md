@@ -1,5 +1,5 @@
 # Guía de Conexión a Oracle Database y Despliegue en Vercel
-
+ 
 Este proyecto está configurado y optimizado para funcionar inicialmente con **datos dummy** en el panel cliente de React (Vite + Tailwind v4) y poder conectarse a una **Base de Datos Oracle** desplegada en **Vercel** sin cambiar los componentes de UI.
 
 ---
