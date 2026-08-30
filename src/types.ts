@@ -164,4 +164,94 @@ export const COORDINADORES_LIST = [
   'Angela Valencia',
 ];
 
+export interface CostAnalysisArtifacts {
+  normalized_xlsx?: string;
+  analisis_costos_html?: string;
+  result_json?: string;
+}
+
+export interface IngresoEgresoItem {
+  Cedula_Costos: number | string;
+  fecha_ingreso: string;
+  fecha_egreso: string;
+  riesgo: string;
+}
+
+export interface CUPSCostItem {
+  Mes_Emision: string;
+  Mes_Reporte: string;
+  Cedula_Costos: number;
+  'Nombre Afiliado'?: string;
+  nombre_afiliado?: string;
+  EdadC?: number;
+  Nomenclador_C: string;
+  Des_CUPS_Unificado: string;
+  'Costo Total': number;
+  fecha_servicio: string;
+}
+
+export interface UserCalculatedCosts {
+  total_cost: number;
+  total_services: number;
+  pre_cost: number;
+  post_cost: number;
+  pre_services: number;
+  post_services: number;
+  monthly_costs?: Record<string, number>;
+  monthly_services?: Record<string, number>;
+}
+
+export interface GlobalCalculatedCosts {
+  cohort_patients: number;
+  total_cost: number;
+  total_services: number;
+  pre_cost: number;
+  post_cost: number;
+  pre_services: number;
+  post_services: number;
+  pmpm_pre: number;
+  pmpm_post: number;
+}
+
+export interface CostosMesStat {
+  costo_total: number;
+  pacientes_con_consumo: number;
+  pacientes_activos: number;
+  numero_servicios: number;
+  costo_promedio: number;
+}
+
+export interface CostosGeneralData {
+  fecha_final: string;
+  mes_maximo: number;
+  estadisticas_urgencias: Record<string, CostosMesStat>;
+  estadisticas_hospitalizacion: Record<string, CostosMesStat>;
+  pacientes_activos_por_mes: Record<string, number[]>;
+}
+
+export interface CostosData {
+  mes_corte: string;
+  general: CostosGeneralData;
+  pmpm_pre: number;
+  pmpm_post: number;
+  diferencia_pmpm: number;
+}
+
+export interface CostAnalysisResponse {
+  job_id: string;
+  status: string;
+  message: string;
+  analysis_option: string;
+  artifacts?: CostAnalysisArtifacts;
+  user_data?: {
+    ingresos_egresos?: IngresoEgresoItem[];
+    q1_q2?: CUPSCostItem[];
+  };
+  user_calculated?: UserCalculatedCosts;
+  global_calculated?: GlobalCalculatedCosts;
+  costos_data?: CostosData;
+  requested_user_id?: string;
+  errors?: any[];
+}
+
 

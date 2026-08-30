@@ -1,5 +1,6 @@
-import { Patient, SpecialistKey, SpecialistInfo, ActaInfo } from '../types';
+import { Patient, SpecialistKey, SpecialistInfo, ActaInfo, CostAnalysisResponse } from '../types';
 import { INITIAL_PATIENTS } from '../mockData';
+import { DEFAULT_COST_ANALYSIS_DATA } from '../mockCostData';
 
 const DEFAULT_SPECIALISTS: Record<SpecialistKey, SpecialistInfo> = {
   med_gen: {
@@ -368,4 +369,31 @@ export class PatientService {
     this.patientsCache = [...INITIAL_PATIENTS];
     return this.patientsCache;
   }
+
+  /**
+   * Fetch Cost Analysis by calling Oracle function f_traer_costos(:mes_corte, :identificacion)
+   */
+  static async getCostAnalysis(mesCorte: string = 'Marzo_2026', identificacion: string = '6070110'): Promise<CostAnalysisResponse> {
+    try {
+      const cleanIdentificacion = identificacion.replace(/\D/g, '') || identificacion || '6070110';
+      const cleanMes = mesCorte.replace(' ', '_') || 'Marzo_2026';
+      const params = new URLSearchParams({
+        action: 'costos',
+        mes_corte: cleanMes,
+        identificacion: cleanIdentificacion,
+      });
+
+      const response = await fetch(`/api/patients?${params.toString()}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data && (data.job_id || data.user_data || data.global_calculated)) {
+          return data as CostAnalysisResponse;
+        }
+      }
+    } catch (error) {
+      console.warn('[PatientService] Error calling /api/patients?action=costos:', error);
+    }
+    return DEFAULT_COST_ANALYSIS_DATA;
+  }
 }
+
