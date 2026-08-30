@@ -1,3 +1,7 @@
+import dotenv from 'dotenv';
+dotenv.config({ path: '.env.local' });
+dotenv.config();
+
 // Interface & helper for Oracle configuration
 interface OracleDbConfig {
   user: string;
@@ -180,7 +184,16 @@ export default async function handler(req: any, res: any) {
         p_json_salida: { type: oracledb.STRING, dir: oracledb.BIND_OUT, maxSize: 5000000 }
       };
 
-      if (action === 'total_paginas') {
+      if (action === 'costos') {
+        const mesCorte = String(queryObj.mes_corte || req.body?.mes_corte || 'Marzo_2026');
+        const cedula = String(queryObj.identificacion || req.body?.identificacion || queryObj.cedula || req.body?.cedula || '6070110');
+        executeSql = `BEGIN :p_json_salida := f_traer_costos(:p_mes_corte, :p_identificacion); END;`;
+        bindParams = {
+          p_mes_corte: mesCorte,
+          p_identificacion: cedula,
+          p_json_salida: { type: oracledb.STRING, dir: oracledb.BIND_OUT, maxSize: 10000000 }
+        };
+      } else if (action === 'total_paginas') {
         procedureName = 'prc_obtener_total_paginas';
         executeSql = `BEGIN pkgln_pacientes_giris.${procedureName}(:p_json_entrada, :p_json_salida); END;`;
       } else if (action === 'tipos_identificacion') {
