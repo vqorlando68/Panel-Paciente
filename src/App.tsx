@@ -33,6 +33,7 @@ import { EpicrisisModal } from './components/EpicrisisModal';
 
 export default function App() {
   const [patients, setPatients] = useState<Patient[]>(INITIAL_PATIENTS);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [activeRole, setActiveRole] = useState<UserRole>('comite_medico');
 
   // Theme state: 'light' | 'dark'
@@ -43,9 +44,6 @@ export default function App() {
   // Oracle Doc Modal State
   const [isOracleDocOpen, setIsOracleDocOpen] = useState(false);
 
-  useEffect(() => {
-    PatientService.getPatients().then((data) => setPatients(data));
-  }, []);
 
   // Sync theme with html document element class
   useEffect(() => {
@@ -84,7 +82,64 @@ export default function App() {
     nombresApellidos: '',
     numeroCarga: '',
     soloVencidas: false,
+    soloAlarmas: false,
+    fastFilter: 'Todos',
   });
+
+  // Server-side Pagination & Search State
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(10);
+  const [paginationMeta, setPaginationMeta] = useState({
+    total_registros: 0,
+    total_paginas: 1,
+  });
+
+  // Debounced search queries for Oracle DB
+  const [debouncedIdentificacion, setDebouncedIdentificacion] = useState(filters.identificacion);
+  const [debouncedNombre, setDebouncedNombre] = useState(filters.nombresApellidos);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedIdentificacion(filters.identificacion);
+    }, 450);
+    return () => clearTimeout(handler);
+  }, [filters.identificacion]);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedNombre(filters.nombresApellidos);
+    }, 450);
+    return () => clearTimeout(handler);
+  }, [filters.nombresApellidos]);
+
+  // Reset to page 1 when search filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedIdentificacion, debouncedNombre]);
+
+  // Load paginated patients from Oracle
+  useEffect(() => {
+    setIsLoading(true);
+    PatientService.getPatientsPaged({
+      pagina: currentPage,
+      registros_por_pagina: itemsPerPage,
+      identificacion: debouncedIdentificacion,
+      nombresApellidos: debouncedNombre,
+    })
+      .then((res) => {
+        setPatients(res.pacientes);
+        setPaginationMeta({
+          total_registros: res.paginacion.total_registros,
+          total_paginas: res.paginacion.total_paginas,
+        });
+      })
+      .catch((err) => {
+        console.error('[App] Error al cargar pacientes:', err);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  }, [currentPage, itemsPerPage, debouncedIdentificacion, debouncedNombre]);
 
   // Modal / Drawer States
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
@@ -179,16 +234,16 @@ export default function App() {
 
       // Identificacion Filter
       if (
-        filters.identificacion.trim() &&
-        !(patient.identificacion || '').toLowerCase().includes(filters.identificacion.toLowerCase().trim())
+        debouncedIdentificacion.trim() &&
+        !(patient.identificacion || '').toLowerCase().includes(debouncedIdentificacion.toLowerCase().trim())
       ) {
         return false;
       }
 
       // Nombres y Apellidos Filter
       if (
-        filters.nombresApellidos.trim() &&
-        !(patient.nombre || '').toLowerCase().includes(filters.nombresApellidos.toLowerCase().trim())
+        debouncedNombre.trim() &&
+        !(patient.nombre || '').toLowerCase().includes(debouncedNombre.toLowerCase().trim())
       ) {
         return false;
       }
@@ -232,10 +287,10 @@ export default function App() {
 
       return true;
     });
-  }, [patients, filters]);
+  }, [patients, filters, debouncedIdentificacion, debouncedNombre]);
 
   // Metrics Counters
-  const totalPatients = patients.length;
+  const totalPatients = paginationMeta.total_registros > 0 ? paginationMeta.total_registros : patients.length;
   const overdueCount = patients.filter(patientHasOverdueSpecialist).length;
   const activeCount = patients.filter((p) => p.estado === 'Activo').length;
   const inconformeCount = patients.filter(
@@ -258,6 +313,7 @@ export default function App() {
       soloAlarmas: false,
       fastFilter: 'Todos',
     });
+    setCurrentPage(1);
   };
 
   const handleSavePatient = (updatedPatient: Patient) => {
@@ -481,6 +537,18 @@ export default function App() {
         <PatientTable
           patients={filteredPatients}
           activeRole={activeRole}
+          isLoading={isLoading}
+          serverPagination={{
+            currentPage,
+            totalPages: paginationMeta.total_paginas,
+            totalRecords: paginationMeta.total_registros,
+            itemsPerPage,
+            onPageChange: (newPage) => setCurrentPage(newPage),
+            onItemsPerPageChange: (newSize) => {
+              setItemsPerPage(newSize);
+              setCurrentPage(1);
+            },
+          }}
           onEditPatient={(patient) => setEditingPatient(patient)}
           onUpdatePrioridad={handleUpdatePrioridad}
           onUpdateStatus={handleUpdateStatus}

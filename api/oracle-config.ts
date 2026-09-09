@@ -23,7 +23,7 @@ export const getOracleConfig = (): OracleDbConfig => {
   return {
     user: process.env.ORACLE_DB_USER || process.env.ORACLE_USER || '',
     password: process.env.ORACLE_DB_PASSWORD || process.env.ORACLE_PASSWORD || '',
-    connectString: process.env.ORACLE_DB_CONNECTION_STRING || process.env.ORACLE_CONNECT_STRING || '',
+    connectString: process.env.ORACLE_DB_CONNECTION_STRING || process.env.ORACLE_DB_CONNECT_STRING || process.env.ORACLE_CONNECT_STRING || '',
     poolMin: 1,
     poolMax: 5,
     poolIncrement: 1,

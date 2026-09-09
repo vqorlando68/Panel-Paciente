@@ -85,9 +85,20 @@ export const DEFAULT_COLUMN_WIDTHS: Record<string, number> = {
   nota_cli: 56,
 };
 
+export interface ServerPaginationProps {
+  currentPage: number;
+  totalPages: number;
+  totalRecords: number;
+  itemsPerPage: number;
+  onPageChange: (page: number) => void;
+  onItemsPerPageChange: (itemsPerPage: number) => void;
+}
+
 interface PatientTableProps {
   patients: Patient[];
   activeRole: UserRole;
+  isLoading?: boolean;
+  serverPagination?: ServerPaginationProps;
   onEditPatient: (patient: Patient) => void;
   onUpdatePrioridad?: (patientId: string, priority: number) => void;
   onUpdateStatus: (patientId: string, newStatus: EstadoPaciente) => void;
@@ -107,6 +118,8 @@ interface PatientTableProps {
 export const PatientTable: React.FC<PatientTableProps> = ({
   patients,
   activeRole,
+  isLoading = false,
+  serverPagination,
   onEditPatient,
   onUpdatePrioridad,
   onUpdateStatus,
@@ -286,22 +299,28 @@ export const PatientTable: React.FC<PatientTableProps> = ({
     });
   }, [patients, sortField, sortDirection]);
 
-  // Pagination State
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  // Pagination State (fallback for client-only)
+  const [clientCurrentPage, setClientCurrentPage] = useState(1);
+  const [clientItemsPerPage, setClientItemsPerPage] = useState(10);
 
-  // Total pages and paginated slice
-  const totalPages = Math.max(1, Math.ceil(sortedPatients.length / itemsPerPage));
-  const startIndex = sortedPatients.length === 0 ? 0 : (currentPage - 1) * itemsPerPage;
-  const endIndex = Math.min(sortedPatients.length, currentPage * itemsPerPage);
-  const paginatedPatients = sortedPatients.slice(startIndex, endIndex);
+  const isServerPaged = Boolean(serverPagination);
+  const activeCurrentPage = isServerPaged ? serverPagination!.currentPage : clientCurrentPage;
+  const activeItemsPerPage = isServerPaged ? serverPagination!.itemsPerPage : clientItemsPerPage;
+  const activeTotalPages = isServerPaged
+    ? Math.max(1, serverPagination!.totalPages)
+    : Math.max(1, Math.ceil(sortedPatients.length / clientItemsPerPage));
+  const activeTotalRecords = isServerPaged ? serverPagination!.totalRecords : sortedPatients.length;
+
+  const startIndex = activeTotalRecords === 0 ? 0 : (activeCurrentPage - 1) * activeItemsPerPage;
+  const endIndex = Math.min(activeTotalRecords, activeCurrentPage * activeItemsPerPage);
+  const paginatedPatients = isServerPaged ? sortedPatients : sortedPatients.slice(startIndex, endIndex);
 
   // Reset to page 1 if current page becomes out of bounds or filters change
   useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(1);
+    if (!isServerPaged && clientCurrentPage > activeTotalPages) {
+      setClientCurrentPage(1);
     }
-  }, [patients.length, totalPages, currentPage]);
+  }, [isServerPaged, sortedPatients.length, activeTotalPages, clientCurrentPage]);
 
   // Handle patient name click for popover toggle
   const handleNameClick = (e: React.MouseEvent, patient: Patient) => {
@@ -766,7 +785,16 @@ export const PatientTable: React.FC<PatientTableProps> = ({
 
         {/* Table Body */}
         <tbody className="divide-y divide-[#e2e8eb] dark:divide-[#334155] text-xs bg-white dark:bg-[#1e293b]">
-          {sortedPatients.length === 0 ? (
+          {isLoading ? (
+            <tr>
+              <td colSpan={19} className="py-16 text-center text-[#00aae1] dark:text-[#38bdf8] font-medium">
+                <div className="flex flex-col items-center justify-center gap-3">
+                  <div className="w-8 h-8 border-3 border-[#00aae1] border-t-transparent rounded-full animate-spin" />
+                  <span className="text-xs text-[#035476] dark:text-[#94a3b8]">Cargando pacientes desde Oracle Database...</span>
+                </div>
+              </td>
+            </tr>
+          ) : sortedPatients.length === 0 ? (
             <tr>
               <td colSpan={19} className="py-12 text-center text-[#035476] dark:text-[#94a3b8] font-medium">
                 No se encontraron pacientes que coincidan con los criterios de búsqueda.
@@ -1154,10 +1182,15 @@ export const PatientTable: React.FC<PatientTableProps> = ({
           <div className="flex items-center gap-2">
             <span className="text-gray-500 dark:text-gray-400">Mostrar</span>
             <select
-              value={itemsPerPage}
+              value={activeItemsPerPage}
               onChange={(e) => {
-                setItemsPerPage(Number(e.target.value));
-                setCurrentPage(1);
+                const newSize = Number(e.target.value);
+                if (isServerPaged) {
+                  serverPagination!.onItemsPerPageChange(newSize);
+                } else {
+                  setClientItemsPerPage(newSize);
+                  setClientCurrentPage(1);
+                }
               }}
               className="bg-[#f8fafc] dark:bg-[#0f172a] border border-[#e2e8eb] dark:border-[#334155] rounded-lg px-2.5 py-1 text-xs font-bold text-[#033d59] dark:text-[#f8fafc] focus:outline-hidden focus:ring-2 focus:ring-[#00aae1] cursor-pointer"
             >
@@ -1171,9 +1204,9 @@ export const PatientTable: React.FC<PatientTableProps> = ({
           <div className="h-4 w-px bg-gray-200 dark:bg-gray-700 hidden sm:block" />
 
           <span>
-            Mostrando <strong className="text-[#033d59] dark:text-[#f8fafc]">{sortedPatients.length === 0 ? 0 : startIndex + 1}</strong> -{' '}
+            Mostrando <strong className="text-[#033d59] dark:text-[#f8fafc]">{activeTotalRecords === 0 ? 0 : startIndex + 1}</strong> -{' '}
             <strong className="text-[#033d59] dark:text-[#f8fafc]">{endIndex}</strong> de{' '}
-            <strong className="text-[#033d59] dark:text-[#f8fafc]">{sortedPatients.length}</strong> pacientes
+            <strong className="text-[#033d59] dark:text-[#f8fafc]">{activeTotalRecords}</strong> pacientes
           </span>
 
           <div className="h-4 w-px bg-gray-200 dark:bg-gray-700 hidden sm:block" />
@@ -1192,8 +1225,15 @@ export const PatientTable: React.FC<PatientTableProps> = ({
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-            disabled={currentPage === 1}
+            onClick={() => {
+              const newP = Math.max(1, activeCurrentPage - 1);
+              if (isServerPaged) {
+                serverPagination!.onPageChange(newP);
+              } else {
+                setClientCurrentPage(newP);
+              }
+            }}
+            disabled={activeCurrentPage === 1}
             className="px-3 py-1.5 rounded-lg border border-[#e2e8eb] dark:border-[#334155] bg-[#f8fafc] dark:bg-[#0f172a] font-bold text-[#033d59] dark:text-[#f8fafc] hover:bg-[#00aae1] hover:text-white disabled:opacity-40 disabled:hover:bg-[#f8fafc] disabled:hover:text-[#033d59] transition-all cursor-pointer flex items-center gap-1"
           >
             <ChevronLeft className="w-4 h-4" />
@@ -1201,14 +1241,21 @@ export const PatientTable: React.FC<PatientTableProps> = ({
           </button>
 
           <span className="px-3 py-1 text-xs font-bold text-[#035476] dark:text-[#94a3b8]">
-            Página <strong className="text-[#00aae1] dark:text-[#38bdf8]">{currentPage}</strong> de{' '}
-            <strong className="text-[#033d59] dark:text-[#f8fafc]">{totalPages}</strong>
+            Página <strong className="text-[#00aae1] dark:text-[#38bdf8]">{activeCurrentPage}</strong> de{' '}
+            <strong className="text-[#033d59] dark:text-[#f8fafc]">{activeTotalPages}</strong>
           </span>
 
           <button
             type="button"
-            onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-            disabled={currentPage === totalPages || totalPages === 0}
+            onClick={() => {
+              const newP = Math.min(activeTotalPages, activeCurrentPage + 1);
+              if (isServerPaged) {
+                serverPagination!.onPageChange(newP);
+              } else {
+                setClientCurrentPage(newP);
+              }
+            }}
+            disabled={activeCurrentPage === activeTotalPages || activeTotalPages === 0}
             className="px-3 py-1.5 rounded-lg border border-[#e2e8eb] dark:border-[#334155] bg-[#f8fafc] dark:bg-[#0f172a] font-bold text-[#033d59] dark:text-[#f8fafc] hover:bg-[#00aae1] hover:text-white disabled:opacity-40 disabled:hover:bg-[#f8fafc] disabled:hover:text-[#033d59] transition-all cursor-pointer flex items-center gap-1"
           >
             <span>Siguiente</span>

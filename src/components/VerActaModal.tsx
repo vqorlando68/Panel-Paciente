@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   X,
   FileText,
@@ -28,6 +28,9 @@ import {
   ChevronUp,
   Lightbulb,
   ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  Table,
   BarChart3,
   Pill,
 } from 'lucide-react';
@@ -79,11 +82,71 @@ const TIMELINE_PALETTES = [
   },
 ];
 
+const SPANISH_MONTHS: Record<string, number> = {
+  enero: 0, ene: 0, febrero: 1, feb: 1, marzo: 2, mar: 2, abril: 3, abr: 3, mayo: 4, may: 4,
+  junio: 5, jun: 5, julio: 6, jul: 6, agosto: 7, ago: 7, septiembre: 8, sep: 8, setiembre: 8,
+  octubre: 9, oct: 9, noviembre: 10, nov: 10, diciembre: 11, dic: 11,
+};
+
+// Parser para fechas de atenciones y citas
+const parseAtencionDate = (dStr?: string | null): Date | null => {
+  if (!dStr) return null;
+  const str = String(dStr).trim();
+
+  // Formato en español: "Diciembre 08 de 2026 11:50 AM" o "Septiembre 09 de 2026"
+  const esMatch = str.match(/([A-Za-z]+)\s+(\d{1,2})(?:\s+de\s+|\s+)(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM|am|pm)?)?/i);
+  if (esMatch) {
+    const monthName = esMatch[1].toLowerCase();
+    const month = SPANISH_MONTHS[monthName];
+    if (month !== undefined) {
+      const day = parseInt(esMatch[2], 10);
+      const year = parseInt(esMatch[3], 10);
+      let hour = esMatch[4] ? parseInt(esMatch[4], 10) : 0;
+      const min = esMatch[5] ? parseInt(esMatch[5], 10) : 0;
+      const sec = esMatch[6] ? parseInt(esMatch[6], 10) : 0;
+      const ampm = esMatch[7]?.toUpperCase();
+      if (ampm === 'PM' && hour < 12) hour += 12;
+      if (ampm === 'AM' && hour === 12) hour = 0;
+      return new Date(year, month, day, hour, min, sec);
+    }
+  }
+
+  // DD/MM/YYYY
+  const dmyMatch = str.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+  if (dmyMatch) {
+    return new Date(parseInt(dmyMatch[3], 10), parseInt(dmyMatch[2], 10) - 1, parseInt(dmyMatch[1], 10));
+  }
+
+  // ISO o nativo
+  const parsed = new Date(str);
+  if (!isNaN(parsed.getTime())) return parsed;
+
+  return null;
+};
+
 // Parser para mostrar año y día/mes de forma destacada en la infografía
 const parseDateDisplay = (dateStr?: string | null) => {
   if (!dateStr) return { year: '—', dayMonth: '—', fullDate: 'Sin fecha' };
   const str = String(dateStr).trim();
   const months = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
+
+  // Formato español: "Septiembre 09 de 2026 11:50 AM"
+  const esMatch = str.match(/^([A-Za-z]+)\s+(\d{1,2})(?:\s+de\s+|\s+)(\d{4})(?:\s+(.+))?/i);
+  if (esMatch) {
+    const monthName = esMatch[1].toLowerCase();
+    const mIdx = SPANISH_MONTHS[monthName];
+    if (mIdx !== undefined) {
+      const year = esMatch[3];
+      const d = parseInt(esMatch[2], 10);
+      const mName = months[mIdx];
+      const timeStr = esMatch[4] ? ` ${esMatch[4]}` : '';
+      return {
+        year,
+        dayMonth: `${d < 10 ? '0' + d : d} ${mName}`,
+        fullDate: `${d < 10 ? '0' + d : d}/${String(mIdx + 1).padStart(2, '0')}/${year}${timeStr}`,
+      };
+    }
+  }
 
   // YYYY-MM-DD
   const iso = str.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
@@ -142,11 +205,36 @@ export const VerActaModal: React.FC<VerActaModalProps> = ({
     especialidades: true,
   });
 
+  const especialidadesRef = useRef<HTMLDivElement>(null);
+
   const toggleCitasSection = (key: 'historias' | 'atenciones' | 'especialidades') => {
-    setCitasExpanded(prev => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
+    setCitasExpanded(prev => {
+      const nextState = !prev[key];
+      if (key === 'especialidades' && nextState) {
+        setTimeout(() => {
+          especialidadesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 120);
+      }
+      return {
+        ...prev,
+        [key]: nextState,
+      };
+    });
+  };
+
+  // Selector de vista y orden para Atenciones y Citas Programadas
+  const [atencionesViewMode, setAtencionesViewMode] = useState<'timeline' | 'tabla'>('timeline');
+  type AtencionSortField = 'fecha' | 'especialidad' | 'estado';
+  const [atencionSortField, setAtencionSortField] = useState<AtencionSortField>('fecha');
+  const [atencionSortDir, setAtencionSortDir] = useState<'asc' | 'desc'>('asc');
+
+  const handleSortAtenciones = (field: AtencionSortField) => {
+    if (atencionSortField === field) {
+      setAtencionSortDir(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setAtencionSortField(field);
+      setAtencionSortDir('asc');
+    }
   };
 
   const loadActaDetails = async (actaId: number | string) => {
@@ -250,6 +338,36 @@ export const VerActaModal: React.FC<VerActaModalProps> = ({
       setTimeout(() => setCopiedEpicrisisJson(false), 2000);
     });
   };
+
+  // Atenciones y Citas ordenadas según el modo de visualización y campos de ordenación
+  const sortedAtenciones = useMemo(() => {
+    const list: any[] = Array.isArray(data?.atenciones_programadas) ? data.atenciones_programadas : [];
+    if (!list.length) return [];
+    return [...list].sort((a: any, b: any) => {
+      const timeA = parseAtencionDate(a.fecha_cita || a.fecha)?.getTime() || 0;
+      const timeB = parseAtencionDate(b.fecha_cita || b.fecha)?.getTime() || 0;
+
+      if (atencionesViewMode === 'timeline') {
+        // Modo Línea de Tiempo: siempre cronológico de primero la más cercana (ascendente)
+        return timeA - timeB;
+      }
+
+      // Modo Tabla: ordenable por fecha, especialidad o estado
+      let cmp = 0;
+      if (atencionSortField === 'fecha') {
+        cmp = timeA - timeB;
+      } else if (atencionSortField === 'especialidad') {
+        const espA = String(a.nombre_especialidad || a.especialidad || '').toLowerCase();
+        const espB = String(b.nombre_especialidad || b.especialidad || '').toLowerCase();
+        cmp = espA.localeCompare(espB);
+      } else if (atencionSortField === 'estado') {
+        const estA = String(a.estado_cita || a.estado || '').toLowerCase();
+        const estB = String(b.estado_cita || b.estado || '').toLowerCase();
+        cmp = estA.localeCompare(estB);
+      }
+      return atencionSortDir === 'asc' ? cmp : -cmp;
+    });
+  }, [data?.atenciones_programadas, atencionesViewMode, atencionSortField, atencionSortDir]);
 
   if (!isOpen) return null;
 
@@ -680,7 +798,7 @@ export const VerActaModal: React.FC<VerActaModalProps> = ({
 
                 {/* TAB 4: CITAS Y ARCHIVOS */}
                 {activeTab === 'citas_archivos' && (
-                  <div className="flex flex-col gap-3.5 max-h-[520px] overflow-y-auto pr-1">
+                  <div className="flex flex-col gap-3.5">
                     {/* Sección 1: Historias Anteriores / Archivos */}
                     <div className="border border-[#e2e8eb] dark:border-[#334155] rounded-xl overflow-hidden bg-white dark:bg-slate-900">
                       <button
@@ -701,7 +819,7 @@ export const VerActaModal: React.FC<VerActaModalProps> = ({
                           {historiasAnteriores.length === 0 ? (
                             <div className="text-center py-6 text-slate-400 text-xs">No hay historias anteriores registradas.</div>
                           ) : (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-[220px] overflow-y-auto pr-1.5">
                               {historiasAnteriores.map((h: any, i: number) => (
                                 <div key={i} className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2">
                                   <div className="truncate">
@@ -741,18 +859,246 @@ export const VerActaModal: React.FC<VerActaModalProps> = ({
                           {atencionesProgramadas.length === 0 ? (
                             <div className="text-center py-6 text-slate-400 text-xs">No hay atenciones programadas registradas.</div>
                           ) : (
-                            <div className="flex flex-col gap-2">
-                              {atencionesProgramadas.map((ap: any, i: number) => (
-                                <div key={i} className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3 text-xs">
-                                  <div>
-                                    <span className="font-bold text-[#033d59] dark:text-[#f8fafc]">{ap.nombre_especialidad || ap.especialidad || 'Cita médica'}</span>
-                                    <span className="text-slate-500 ml-2 font-mono">{ap.fecha_cita || ap.fecha || '—'}</span>
-                                  </div>
-                                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#effaff] text-[#00aae1] dark:bg-[#00aae1]/20 dark:text-[#38bdf8]">
-                                    {ap.estado_cita || ap.estado || 'Programada'}
+                            <div>
+                              {/* Barra superior: Selector de vista */}
+                              <div className="flex flex-wrap items-center justify-between gap-3 mb-4 pb-3 border-b border-slate-200 dark:border-slate-800">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                                    {atencionesViewMode === 'timeline'
+                                      ? 'Orden cronológico (de primero la más cercana)'
+                                      : 'Haz clic en los encabezados de columna para ordenar'}
                                   </span>
                                 </div>
-                              ))}
+
+                                <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
+                                  <button
+                                    type="button"
+                                    onClick={() => setAtencionesViewMode('timeline')}
+                                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                                      atencionesViewMode === 'timeline'
+                                        ? 'bg-white dark:bg-[#00aae1] text-[#00aae1] dark:text-white shadow-xs'
+                                        : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                                    }`}
+                                    title="Ver como Línea de Tiempo cronológica"
+                                  >
+                                    <TrendingUp className="w-3.5 h-3.5" />
+                                    <span>Línea de Tiempo</span>
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => setAtencionesViewMode('tabla')}
+                                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                                      atencionesViewMode === 'tabla'
+                                        ? 'bg-white dark:bg-[#00aae1] text-[#00aae1] dark:text-white shadow-xs'
+                                        : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                                    }`}
+                                    title="Ver como Tabla ordenable"
+                                  >
+                                    <Table className="w-3.5 h-3.5" />
+                                    <span>Tabla</span>
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* VISTA 1: LÍNEA DE TIEMPO (Cronológica: de primero la más cercana) */}
+                              {atencionesViewMode === 'timeline' && (
+                                <div className="max-h-[460px] overflow-y-auto px-2 py-4">
+                                  <div className="relative max-w-4xl mx-auto">
+                                    {/* Eje central vertical (Spine) */}
+                                    <div className="absolute top-4 bottom-6 left-1/2 -translate-x-1/2 w-1 bg-gradient-to-b from-slate-600 via-slate-400 to-slate-200 dark:from-slate-500 dark:to-slate-800 rounded-full z-0" />
+
+                                    {sortedAtenciones.map((ap: any, idx: number) => {
+                                      const palette = TIMELINE_PALETTES[idx % TIMELINE_PALETTES.length];
+                                      const IconComponent = palette.Icon;
+                                      const dateInfo = parseDateDisplay(ap.fecha_cita || ap.fecha);
+                                      const isLeft = idx % 2 === 0;
+
+                                      return (
+                                        <div
+                                          key={idx}
+                                          className="relative z-10 flex items-center mb-8 last:mb-2 w-full"
+                                        >
+                                          {/* Lado Izquierdo */}
+                                          <div className="flex-1 flex items-center justify-end pr-6 sm:pr-8">
+                                            {isLeft ? (
+                                              /* Tarjeta a la Izquierda */
+                                              <div
+                                                className="bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border max-w-sm w-full text-right"
+                                                style={{ borderColor: palette.border, borderRightWidth: '4px', borderRightColor: palette.color }}
+                                              >
+                                                <div className="text-[10px] font-extrabold tracking-wider uppercase mb-1" style={{ color: palette.color }}>
+                                                  CITA {String(idx + 1).padStart(2, '0')}
+                                                </div>
+                                                <div className="text-xs text-slate-400 font-mono mb-1.5 flex items-center justify-end gap-1">
+                                                  <Calendar className="w-3 h-3" style={{ color: palette.color }} />
+                                                  <span>{dateInfo.fullDate}</span>
+                                                </div>
+                                                <div className="text-xs font-bold text-[#033d59] dark:text-[#f8fafc] mb-1">
+                                                  {ap.nombre_especialidad || ap.especialidad || 'Cita médica'}
+                                                </div>
+                                                {ap.nombre_profesional && (
+                                                  <div className="text-[11px] text-slate-500 mb-1.5">
+                                                    Dr(a). {ap.nombre_profesional}
+                                                  </div>
+                                                )}
+                                                <span className="inline-block text-[10px] px-2 py-0.5 rounded font-bold bg-[#effaff] text-[#00aae1] dark:bg-[#00aae1]/20 dark:text-[#38bdf8] border border-[#00aae1]/30">
+                                                  {ap.estado_cita || ap.estado || 'Programada'}
+                                                </span>
+                                              </div>
+                                            ) : (
+                                              /* Fecha a la Izquierda */
+                                              <div className="flex flex-col items-end">
+                                                <span className="text-2xl sm:text-3xl font-black text-[#033d59] dark:text-[#f8fafc] leading-none">
+                                                  {dateInfo.year}
+                                                </span>
+                                                <span className="text-xs font-bold tracking-wider uppercase mt-1" style={{ color: palette.color }}>
+                                                  {dateInfo.dayMonth}
+                                                </span>
+                                              </div>
+                                            )}
+                                          </div>
+
+                                          {/* Nodo Central */}
+                                          <div
+                                            className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 border-2 bg-white dark:bg-slate-900 z-20 shadow-md"
+                                            style={{ borderColor: palette.color, boxShadow: `0 0 12px ${palette.glow}` }}
+                                          >
+                                            <IconComponent className="w-4 h-4" style={{ color: palette.color }} />
+                                          </div>
+
+                                          {/* Lado Derecho */}
+                                          <div className="flex-1 flex items-center justify-start pl-6 sm:pl-8">
+                                            {!isLeft ? (
+                                              /* Tarjeta a la Derecha */
+                                              <div
+                                                className="bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border max-w-sm w-full text-left"
+                                                style={{ borderColor: palette.border, borderLeftWidth: '4px', borderLeftColor: palette.color }}
+                                              >
+                                                <div className="text-[10px] font-extrabold tracking-wider uppercase mb-1" style={{ color: palette.color }}>
+                                                  CITA {String(idx + 1).padStart(2, '0')}
+                                                </div>
+                                                <div className="text-xs text-slate-400 font-mono mb-1.5 flex items-center gap-1">
+                                                  <Calendar className="w-3 h-3" style={{ color: palette.color }} />
+                                                  <span>{dateInfo.fullDate}</span>
+                                                </div>
+                                                <div className="text-xs font-bold text-[#033d59] dark:text-[#f8fafc] mb-1">
+                                                  {ap.nombre_especialidad || ap.especialidad || 'Cita médica'}
+                                                </div>
+                                                {ap.nombre_profesional && (
+                                                  <div className="text-[11px] text-slate-500 mb-1.5">
+                                                    Dr(a). {ap.nombre_profesional}
+                                                  </div>
+                                                )}
+                                                <span className="inline-block text-[10px] px-2 py-0.5 rounded font-bold bg-[#effaff] text-[#00aae1] dark:bg-[#00aae1]/20 dark:text-[#38bdf8] border border-[#00aae1]/30">
+                                                  {ap.estado_cita || ap.estado || 'Programada'}
+                                                </span>
+                                              </div>
+                                            ) : (
+                                              /* Fecha a la Derecha */
+                                              <div className="flex flex-col items-start">
+                                                <span className="text-2xl sm:text-3xl font-black text-[#033d59] dark:text-[#f8fafc] leading-none">
+                                                  {dateInfo.year}
+                                                </span>
+                                                <span className="text-xs font-bold tracking-wider uppercase mt-1" style={{ color: palette.color }}>
+                                                  {dateInfo.dayMonth}
+                                                </span>
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* VISTA 2: TABLA ORDENABLE */}
+                              {atencionesViewMode === 'tabla' && (
+                                <div className="max-h-[380px] overflow-y-auto border border-slate-200 dark:border-slate-800 rounded-xl">
+                                  <table className="w-full text-xs text-left border-collapse">
+                                    <thead className="sticky top-0 z-10 bg-slate-100 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 text-[#033d59] dark:text-[#f8fafc]">
+                                      <tr>
+                                        <th
+                                          onClick={() => handleSortAtenciones('fecha')}
+                                          className="p-3 font-bold cursor-pointer hover:bg-slate-200/70 dark:hover:bg-slate-800 transition-colors select-none"
+                                          title="Clic para ordenar por Fecha"
+                                        >
+                                          <div className="flex items-center gap-1.5">
+                                            <Calendar className="w-3.5 h-3.5 text-[#00aae1]" />
+                                            <span>Fecha</span>
+                                            {atencionSortField === 'fecha' ? (
+                                              atencionSortDir === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-[#00aae1]" /> : <ArrowDown className="w-3.5 h-3.5 text-[#00aae1]" />
+                                            ) : (
+                                              <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
+                                            )}
+                                          </div>
+                                        </th>
+                                        <th
+                                          onClick={() => handleSortAtenciones('especialidad')}
+                                          className="p-3 font-bold cursor-pointer hover:bg-slate-200/70 dark:hover:bg-slate-800 transition-colors select-none"
+                                          title="Clic para ordenar por Especialidad"
+                                        >
+                                          <div className="flex items-center gap-1.5">
+                                            <Stethoscope className="w-3.5 h-3.5 text-[#00aae1]" />
+                                            <span>Especialidad</span>
+                                            {atencionSortField === 'especialidad' ? (
+                                              atencionSortDir === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-[#00aae1]" /> : <ArrowDown className="w-3.5 h-3.5 text-[#00aae1]" />
+                                            ) : (
+                                              <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
+                                            )}
+                                          </div>
+                                        </th>
+                                        <th
+                                          onClick={() => handleSortAtenciones('estado')}
+                                          className="p-3 font-bold cursor-pointer hover:bg-slate-200/70 dark:hover:bg-slate-800 transition-colors select-none text-right"
+                                          title="Clic para ordenar por Estado de la Cita"
+                                        >
+                                          <div className="flex items-center justify-end gap-1.5">
+                                            <Activity className="w-3.5 h-3.5 text-[#00aae1]" />
+                                            <span>Estado de la Cita</span>
+                                            {atencionSortField === 'estado' ? (
+                                              atencionSortDir === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-[#00aae1]" /> : <ArrowDown className="w-3.5 h-3.5 text-[#00aae1]" />
+                                            ) : (
+                                              <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
+                                            )}
+                                          </div>
+                                        </th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                      {sortedAtenciones.map((ap: any, idx: number) => {
+                                        const dateInfo = parseDateDisplay(ap.fecha_cita || ap.fecha);
+                                        return (
+                                          <tr key={idx} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
+                                            <td className="p-3 text-slate-600 dark:text-slate-300 font-mono">
+                                              <div className="flex items-center gap-2">
+                                                <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                                <span>{ap.fecha_cita || ap.fecha || dateInfo.fullDate}</span>
+                                              </div>
+                                            </td>
+                                            <td className="p-3">
+                                              <span className="font-bold text-[#033d59] dark:text-[#f8fafc]">
+                                                {ap.nombre_especialidad || ap.especialidad || 'Cita médica'}
+                                              </span>
+                                              {ap.nombre_profesional && (
+                                                <div className="text-[11px] text-slate-500 mt-0.5">
+                                                  Dr(a). {ap.nombre_profesional}
+                                                </div>
+                                              )}
+                                            </td>
+                                            <td className="p-3 text-right">
+                                              <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-[#effaff] text-[#00aae1] dark:bg-[#00aae1]/20 dark:text-[#38bdf8] border border-[#00aae1]/30">
+                                                {ap.estado_cita || ap.estado || 'Programada'}
+                                              </span>
+                                            </td>
+                                          </tr>
+                                        );
+                                      })}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
@@ -760,7 +1106,7 @@ export const VerActaModal: React.FC<VerActaModalProps> = ({
                     </div>
 
                     {/* Sección 3: Programación de Especialidades */}
-                    <div className="border border-[#e2e8eb] dark:border-[#334155] rounded-xl overflow-hidden bg-white dark:bg-slate-900">
+                    <div ref={especialidadesRef} className="border border-[#e2e8eb] dark:border-[#334155] rounded-xl overflow-hidden bg-white dark:bg-slate-900 scroll-mt-3">
                       <button
                         type="button"
                         onClick={() => toggleCitasSection('especialidades')}

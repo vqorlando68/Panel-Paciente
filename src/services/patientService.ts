@@ -68,11 +68,18 @@ const DEFAULT_SPECIALISTS: Record<SpecialistKey, SpecialistInfo> = {
   },
 };
 
-/**
- * Service layer for Patient data operations.
- * Executes HTTP calls to Vercel Serverless API endpoints (`/api/patients`)
- * which in turn execute `pkgln_pacientes_giris.prc_obtener_pacientes`.
- */
+export interface PatientsPagination {
+  pagina_actual: number;
+  registros_por_pagina: number;
+  total_registros: number;
+  total_paginas: number;
+}
+
+export interface GetPatientsResult {
+  pacientes: Patient[];
+  paginacion: PatientsPagination;
+}
+
 export class PatientService {
   private static patientsCache: Patient[] = [...INITIAL_PATIENTS];
 
@@ -330,18 +337,40 @@ export class PatientService {
   }
 
   /**
-   * Fetch all patients calling the Oracle PL/SQL Package endpoint /api/patients
+   * Fetch paginated patients calling the Oracle PL/SQL Package endpoint /api/patients
    */
-  static async getPatients(): Promise<Patient[]> {
+  static async getPatientsPaged(filters?: {
+    pagina?: number;
+    registros_por_pagina?: number;
+    identificacion?: string;
+    nombresApellidos?: string;
+  }): Promise<GetPatientsResult> {
     try {
-      const response = await fetch('/api/patients');
+      const query = new URLSearchParams();
+      if (filters?.pagina) query.set('pagina', String(filters.pagina));
+      if (filters?.registros_por_pagina) query.set('registros_por_pagina', String(filters.registros_por_pagina));
+      if (filters?.identificacion && filters.identificacion.trim()) {
+        query.set('identificacion', filters.identificacion.trim());
+      }
+      if (filters?.nombresApellidos && filters.nombresApellidos.trim()) {
+        query.set('nombresApellidos', filters.nombresApellidos.trim());
+      }
+
+      const url = `/api/patients${query.toString() ? '?' + query.toString() : ''}`;
+      const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
         console.log('[PatientService] API Response:', data);
-        if (data && data.codigo_respuesta === 0 && Array.isArray(data.pacientes) && data.pacientes.length > 0) {
+        if (data && data.codigo_respuesta === 0 && Array.isArray(data.pacientes)) {
           const normalized = data.pacientes.map((p: any) => this.normalizePatient(p));
           this.patientsCache = normalized;
-          return normalized;
+          const paginacion: PatientsPagination = data.paginacion || {
+            pagina_actual: filters?.pagina || 1,
+            registros_por_pagina: filters?.registros_por_pagina || 10,
+            total_registros: normalized.length,
+            total_paginas: Math.max(1, Math.ceil(normalized.length / (filters?.registros_por_pagina || 10))),
+          };
+          return { pacientes: normalized, paginacion };
         } else if (data && data.mensaje_respuesta) {
           console.warn('[PatientService] Oracle Response:', data.mensaje_respuesta);
         }
@@ -349,10 +378,28 @@ export class PatientService {
     } catch (error) {
       console.warn('[PatientService] Error calling /api/patients:', error);
     }
-    if (!this.patientsCache || this.patientsCache.length === 0) {
-      this.patientsCache = [...INITIAL_PATIENTS];
-    }
-    return [...this.patientsCache];
+    return {
+      pacientes: [...this.patientsCache],
+      paginacion: {
+        pagina_actual: 1,
+        registros_por_pagina: 10,
+        total_registros: this.patientsCache.length,
+        total_paginas: Math.max(1, Math.ceil(this.patientsCache.length / 10)),
+      },
+    };
+  }
+
+  /**
+   * Fetch all patients calling the Oracle PL/SQL Package endpoint /api/patients
+   */
+  static async getPatients(filters?: {
+    pagina?: number;
+    registros_por_pagina?: number;
+    identificacion?: string;
+    nombresApellidos?: string;
+  }): Promise<Patient[]> {
+    const res = await this.getPatientsPaged(filters);
+    return res.pacientes;
   }
 
   /**

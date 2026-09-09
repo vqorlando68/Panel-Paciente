@@ -115,21 +115,29 @@ CREATE OR REPLACE PACKAGE BODY pkgln_pacientes_giris IS
     v_registros_pag  NUMBER := 10;
     v_total_reg      NUMBER := 0;
     v_total_pag      NUMBER := 1;
+    v_identificacion VARCHAR2(100);
+    v_nombre         VARCHAR2(200);
   BEGIN
     IF p_json_entrada IS NOT NULL AND LENGTH(p_json_entrada) > 0 THEN
       BEGIN
-        v_registros_pag := NVL(TO_NUMBER(JSON_VALUE(p_json_entrada, '$.registros_por_pagina')), 10);
+        v_registros_pag  := NVL(TO_NUMBER(JSON_VALUE(p_json_entrada, '$.registros_por_pagina')), 10);
+        v_identificacion := TRIM(JSON_VALUE(p_json_entrada, '$.filtros.identificacion'));
+        v_nombre         := TRIM(JSON_VALUE(p_json_entrada, '$.filtros.nombresApellidos'));
       EXCEPTION
         WHEN OTHERS THEN
-          v_registros_pag := 10;
+          v_registros_pag  := 10;
+          v_identificacion := NULL;
+          v_nombre         := NULL;
       END;
     END IF;
 
     SELECT COUNT(*)
       INTO v_total_reg
       FROM tkr_usuarios u
-     WHERE u.paciente_giris = 'S'
-        OR EXISTS (SELECT 1 FROM tkr_usuarios_cohorte uc WHERE uc.id_usuario = u.id);
+     WHERE (u.paciente_giris = 'S'
+        OR EXISTS (SELECT 1 FROM tkr_usuarios_cohorte uc WHERE uc.id_usuario = u.id))
+       AND (v_identificacion IS NULL OR u.identificacion LIKE '%' || v_identificacion || '%')
+       AND (v_nombre IS NULL OR UPPER(u.nombres || ' ' || u.apellidos) LIKE '%' || UPPER(v_nombre) || '%');
 
     IF v_registros_pag > 0 THEN
       v_total_pag := CEIL(v_total_reg / v_registros_pag);
@@ -155,6 +163,8 @@ CREATE OR REPLACE PACKAGE BODY pkgln_pacientes_giris IS
     v_registros_pag  NUMBER := 10;
     v_total_reg      NUMBER := 0;
     v_total_pag      NUMBER := 1;
+    v_identificacion VARCHAR2(100);
+    v_nombre         VARCHAR2(200);
 
     v_hdr            CLOB;
     v_json_data      CLOB;
@@ -167,60 +177,76 @@ CREATE OR REPLACE PACKAGE BODY pkgln_pacientes_giris IS
     v_agenda         CLOB;
     v_epicrisis      CLOB;
 
-    CURSOR c_pacientes IS
-      SELECT u.id,
-             u.nombres,
-             u.apellidos,
-             u.id_tipo_identificacion,
-             (SELECT ti.abreviatura FROM tkr_tipos_identificacion ti WHERE ti.id = u.id_tipo_identificacion) tipo_identificacion_abrev,
-             (SELECT ti.descripcion FROM tkr_tipos_identificacion ti WHERE ti.id = u.id_tipo_identificacion) tipo_identificacion_desc,
-             u.identificacion,
-             u.telefono,
-             u.correo_electronico,
-             u.direccion,
-             (SELECT uc.id_coordinador FROM tkr_usuarios_cohorte uc WHERE uc.id_usuario = u.id AND ROWNUM = 1) id_coordinador,
-             (SELECT uco.nombres || ' ' || uco.apellidos FROM tkr_usuarios uco, tkr_usuarios_cohorte uc WHERE uc.id_usuario = u.id AND uco.id = uc.id_coordinador AND ROWNUM = 1) coordinador_nombre,
-             (SELECT uc.id_estado_seguimiento FROM tkr_usuarios_cohorte uc WHERE uc.id_usuario = u.id AND ROWNUM = 1) id_estado_seguimiento,
-             (SELECT ec.descripcion FROM tkr_estados_cohorte ec, tkr_usuarios_cohorte uc WHERE uc.id_usuario = u.id AND ec.id = uc.id_estado_seguimiento AND ROWNUM = 1) estado_desc,
-             CAST(NULL AS VARCHAR2(100))     cohorte_desc,
-             CAST(NULL AS VARCHAR2(100))     fase_desc,
-             (SELECT uc.id_convenio FROM tkr_usuarios_cohorte uc WHERE uc.id_usuario = u.id AND ROWNUM = 1) id_convenio,
-             (SELECT conv.nombre_convenio FROM tkr_convenios conv, tkr_usuarios_cohorte uc WHERE uc.id_usuario = u.id AND conv.id = uc.id_convenio AND ROWNUM = 1) convenio_nombre,
-             (SELECT uc.id_cargue_cohorte FROM tkr_usuarios_cohorte uc WHERE uc.id_usuario = u.id AND ROWNUM = 1) numero_carga,
-             (SELECT uc.tag_retroalimentacion FROM tkr_usuarios_cohorte uc WHERE uc.id_usuario = u.id AND ROWNUM = 1) tag_retroalimentacion,
-             (  SELECT nivel_riesgo
-                  FROM (SELECT a.nivel_riesgo
-                          FROM tkr_actas_medicas a
-                         WHERE a.id_usuario = u.id
-                      ORDER BY a.fecha_acta_medica DESC, a.id DESC)
-                 WHERE ROWNUM = 1)    id_nivel_riesgo,
-             (  SELECT TO_CHAR(fecha_proxima_revision, 'DD/MM/YYYY')
-                  FROM (SELECT a.fecha_proxima_revision
-                          FROM tkr_actas_medicas a
-                         WHERE a.id_usuario = u.id
-                      ORDER BY a.fecha_acta_medica DESC, a.id DESC)
-                 WHERE ROWNUM = 1)    fecha_proxima_revision
-        FROM tkr_usuarios              u
-       WHERE u.paciente_giris = 'S'
-          OR EXISTS (SELECT 1 FROM tkr_usuarios_cohorte uc WHERE uc.id_usuario = u.id)
-       ORDER BY u.nombres, u.apellidos;
+    CURSOR c_pacientes(p_offset NUMBER, p_limit NUMBER, p_identificacion VARCHAR2, p_nombre VARCHAR2) IS
+      SELECT *
+        FROM (
+          SELECT q.*, ROWNUM rnum
+            FROM (
+              SELECT u.id,
+                     u.nombres,
+                     u.apellidos,
+                     u.id_tipo_identificacion,
+                     (SELECT ti.abreviatura FROM tkr_tipos_identificacion ti WHERE ti.id = u.id_tipo_identificacion) tipo_identificacion_abrev,
+                     (SELECT ti.descripcion FROM tkr_tipos_identificacion ti WHERE ti.id = u.id_tipo_identificacion) tipo_identificacion_desc,
+                     u.identificacion,
+                     u.telefono,
+                     u.correo_electronico,
+                     u.direccion,
+                     (SELECT uc.id_coordinador FROM tkr_usuarios_cohorte uc WHERE uc.id_usuario = u.id AND ROWNUM = 1) id_coordinador,
+                     (SELECT uco.nombres || ' ' || uco.apellidos FROM tkr_usuarios uco, tkr_usuarios_cohorte uc WHERE uc.id_usuario = u.id AND uco.id = uc.id_coordinador AND ROWNUM = 1) coordinador_nombre,
+                     (SELECT uc.id_estado_seguimiento FROM tkr_usuarios_cohorte uc WHERE uc.id_usuario = u.id AND ROWNUM = 1) id_estado_seguimiento,
+                     (SELECT ec.descripcion FROM tkr_estados_cohorte ec, tkr_usuarios_cohorte uc WHERE uc.id_usuario = u.id AND ec.id = uc.id_estado_seguimiento AND ROWNUM = 1) estado_desc,
+                     CAST(NULL AS VARCHAR2(100))     cohorte_desc,
+                     CAST(NULL AS VARCHAR2(100))     fase_desc,
+                     (SELECT uc.id_convenio FROM tkr_usuarios_cohorte uc WHERE uc.id_usuario = u.id AND ROWNUM = 1) id_convenio,
+                     (SELECT conv.nombre_convenio FROM tkr_convenios conv, tkr_usuarios_cohorte uc WHERE uc.id_usuario = u.id AND conv.id = uc.id_convenio AND ROWNUM = 1) convenio_nombre,
+                     (SELECT uc.id_cargue_cohorte FROM tkr_usuarios_cohorte uc WHERE uc.id_usuario = u.id AND ROWNUM = 1) numero_carga,
+                     (SELECT uc.tag_retroalimentacion FROM tkr_usuarios_cohorte uc WHERE uc.id_usuario = u.id AND ROWNUM = 1) tag_retroalimentacion,
+                     (  SELECT nivel_riesgo
+                          FROM (SELECT a.nivel_riesgo
+                                  FROM tkr_actas_medicas a
+                                 WHERE a.id_usuario = u.id
+                              ORDER BY a.fecha_acta_medica DESC, a.id DESC)
+                         WHERE ROWNUM = 1)    id_nivel_riesgo,
+                     (  SELECT TO_CHAR(fecha_proxima_revision, 'DD/MM/YYYY')
+                          FROM (SELECT a.fecha_proxima_revision
+                                  FROM tkr_actas_medicas a
+                                 WHERE a.id_usuario = u.id
+                              ORDER BY a.fecha_acta_medica DESC, a.id DESC)
+                         WHERE ROWNUM = 1)    fecha_proxima_revision
+                FROM tkr_usuarios              u
+               WHERE (u.paciente_giris = 'S'
+                  OR EXISTS (SELECT 1 FROM tkr_usuarios_cohorte uc WHERE uc.id_usuario = u.id))
+                 AND (p_identificacion IS NULL OR u.identificacion LIKE '%' || p_identificacion || '%')
+                 AND (p_nombre IS NULL OR UPPER(u.nombres || ' ' || u.apellidos) LIKE '%' || UPPER(p_nombre) || '%')
+               ORDER BY u.nombres, u.apellidos
+            ) q
+           WHERE ROWNUM <= (p_offset + p_limit)
+        )
+       WHERE rnum > p_offset;
   BEGIN
     IF p_json_entrada IS NOT NULL AND LENGTH(p_json_entrada) > 0 THEN
       BEGIN
-        v_pagina        := NVL(TO_NUMBER(JSON_VALUE(p_json_entrada, '$.pagina')), 1);
-        v_registros_pag := NVL(TO_NUMBER(JSON_VALUE(p_json_entrada, '$.registros_por_pagina')), 10);
+        v_pagina         := NVL(TO_NUMBER(JSON_VALUE(p_json_entrada, '$.pagina')), 1);
+        v_registros_pag  := NVL(TO_NUMBER(JSON_VALUE(p_json_entrada, '$.registros_por_pagina')), 10);
+        v_identificacion := TRIM(JSON_VALUE(p_json_entrada, '$.filtros.identificacion'));
+        v_nombre         := TRIM(JSON_VALUE(p_json_entrada, '$.filtros.nombresApellidos'));
       EXCEPTION
         WHEN OTHERS THEN
-          v_pagina        := 1;
-          v_registros_pag := 10;
+          v_pagina         := 1;
+          v_registros_pag  := 10;
+          v_identificacion := NULL;
+          v_nombre         := NULL;
       END;
     END IF;
 
     SELECT COUNT(*)
       INTO v_total_reg
       FROM tkr_usuarios u
-     WHERE u.paciente_giris = 'S'
-        OR EXISTS (SELECT 1 FROM tkr_usuarios_cohorte uc WHERE uc.id_usuario = u.id);
+     WHERE (u.paciente_giris = 'S'
+        OR EXISTS (SELECT 1 FROM tkr_usuarios_cohorte uc WHERE uc.id_usuario = u.id))
+       AND (v_identificacion IS NULL OR u.identificacion LIKE '%' || v_identificacion || '%')
+       AND (v_nombre IS NULL OR UPPER(u.nombres || ' ' || u.apellidos) LIKE '%' || UPPER(v_nombre) || '%');
 
     IF v_registros_pag > 0 THEN
       v_total_pag := CEIL(v_total_reg / v_registros_pag);
@@ -244,7 +270,7 @@ CREATE OR REPLACE PACKAGE BODY pkgln_pacientes_giris IS
 
     DBMS_LOB.WRITEAPPEND(v_json_data, LENGTH(v_buf), v_buf);
 
-    FOR r IN c_pacientes LOOP
+    FOR r IN c_pacientes((v_pagina - 1) * v_registros_pag, v_registros_pag, v_identificacion, v_nombre) LOOP
       IF NOT v_first THEN
         v_buf := ',';
         DBMS_LOB.WRITEAPPEND(v_json_data, LENGTH(v_buf), v_buf);
