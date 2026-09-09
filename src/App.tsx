@@ -112,10 +112,21 @@ export default function App() {
     return () => clearTimeout(handler);
   }, [filters.nombresApellidos]);
 
+  const [dbCoordinators, setDbCoordinators] = useState<string[]>([]);
+
+  // Load official coordinators list from Oracle on mount
+  useEffect(() => {
+    PatientService.getCoordinadores().then((list) => {
+      if (list && list.length > 0) {
+        setDbCoordinators(list);
+      }
+    });
+  }, []);
+
   // Reset to page 1 when search filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedIdentificacion, debouncedNombre]);
+  }, [debouncedIdentificacion, debouncedNombre, filters.coordinador, filters.convenioNombre]);
 
   // Load paginated patients from Oracle
   useEffect(() => {
@@ -125,6 +136,8 @@ export default function App() {
       registros_por_pagina: itemsPerPage,
       identificacion: debouncedIdentificacion,
       nombresApellidos: debouncedNombre,
+      coordinador: filters.coordinador,
+      convenioNombre: filters.convenioNombre,
     })
       .then((res) => {
         setPatients(res.pacientes);
@@ -139,7 +152,7 @@ export default function App() {
       .finally(() => {
         setIsLoading(false);
       });
-  }, [currentPage, itemsPerPage, debouncedIdentificacion, debouncedNombre]);
+  }, [currentPage, itemsPerPage, debouncedIdentificacion, debouncedNombre, filters.coordinador, filters.convenioNombre]);
 
   // Modal / Drawer States
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
@@ -168,11 +181,14 @@ export default function App() {
     return Object.values(patient.specialists).some((spec) => Boolean(spec?.isOverdue));
   };
 
-  // Extract unique coordinators list
+  // Extract unique coordinators list (only those who have records assigned)
   const coordinatorsList = useMemo(() => {
-    const list = Array.from(new Set([...COORDINADORES_LIST, ...patients.map((p) => p.coordinador)])).filter((item): item is string => Boolean(item));
+    const sourceList = dbCoordinators.length > 0
+      ? dbCoordinators
+      : Array.from(new Set([...COORDINADORES_LIST, ...patients.map((p) => p.coordinador).filter(Boolean)]));
+    const list = Array.from(new Set(sourceList)).filter((item): item is string => Boolean(item));
     return list.sort();
-  }, [patients]);
+  }, [patients, dbCoordinators]);
 
   // Extract unique convenios list
   const conveniosList = useMemo(() => {
@@ -216,19 +232,30 @@ export default function App() {
       }
 
       // Coordinador Filter
-      if (filters.coordinador !== 'Todos' && patient.coordinador !== filters.coordinador) {
-        return false;
+      if (filters.coordinador !== 'Todos') {
+        const pCoord = (patient.coordinador || '').toLowerCase().trim();
+        const fCoord = filters.coordinador.toLowerCase().trim();
+        if (!pCoord || (!pCoord.includes(fCoord) && !fCoord.includes(pCoord))) {
+          return false;
+        }
       }
 
       // Convenio Nombre Filter (supports multi-select array or single string)
       if (filters.convenioNombre !== 'Todos') {
-        const pConvenio = patient.convenioNombre || '';
+        const pConvenio = (patient.convenioNombre || '').toLowerCase().trim();
         if (Array.isArray(filters.convenioNombre)) {
-          if (filters.convenioNombre.length > 0 && !filters.convenioNombre.includes(pConvenio)) {
+          if (filters.convenioNombre.length > 0) {
+            const hasMatch = filters.convenioNombre.some((c) => {
+              const cleanC = c.toLowerCase().trim();
+              return pConvenio.includes(cleanC) || cleanC.includes(pConvenio);
+            });
+            if (!hasMatch) return false;
+          }
+        } else {
+          const cleanF = filters.convenioNombre.toLowerCase().trim();
+          if (!pConvenio.includes(cleanF) && !cleanF.includes(pConvenio)) {
             return false;
           }
-        } else if (pConvenio !== filters.convenioNombre) {
-          return false;
         }
       }
 

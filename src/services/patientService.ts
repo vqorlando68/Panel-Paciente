@@ -30,6 +30,24 @@ const DEFAULT_SPECIALISTS: Record<SpecialistKey, SpecialistInfo> = {
     isOverdue: false,
     attentionsHistory: [],
   },
+  med_dep: {
+    specialistTitle: 'MED. DEPORTE',
+    professionalName: 'Dr. Santiago Gómez',
+    lastAttentionDate: '15/07/2026 10:00 AM',
+    frequency: 'Trimestral',
+    targetDate: '15/10/2026 10:00 AM',
+    isOverdue: false,
+    attentionsHistory: [],
+  },
+  med_int: {
+    specialistTitle: 'MED. INTERNA',
+    professionalName: 'Dra. Patricia Morales',
+    lastAttentionDate: '01/08/2026 09:30 AM',
+    frequency: 'Bimensual',
+    targetDate: '01/10/2026 09:30 AM',
+    isOverdue: false,
+    attentionsHistory: [],
+  },
   esp_1: {
     specialistTitle: 'ESP. 1',
     professionalName: 'Dr. Roberto Silva',
@@ -66,6 +84,33 @@ const DEFAULT_SPECIALISTS: Record<SpecialistKey, SpecialistInfo> = {
     isOverdue: false,
     attentionsHistory: [],
   },
+  psiq: {
+    specialistTitle: 'PSIQUIATRÍA',
+    professionalName: 'Dr. Pendiente',
+    lastAttentionDate: '—',
+    frequency: 'Sin definir',
+    targetDate: '—',
+    isOverdue: false,
+    attentionsHistory: [],
+  },
+  uro: {
+    specialistTitle: 'UROLOGÍA',
+    professionalName: 'Dr. Pendiente',
+    lastAttentionDate: '—',
+    frequency: 'Sin definir',
+    targetDate: '—',
+    isOverdue: false,
+    attentionsHistory: [],
+  },
+  fisiat: {
+    specialistTitle: 'FISIATRÍA',
+    professionalName: 'Dr. Pendiente',
+    lastAttentionDate: '—',
+    frequency: 'Sin definir',
+    targetDate: '—',
+    isOverdue: false,
+    attentionsHistory: [],
+  },
 };
 
 export interface PatientsPagination {
@@ -88,10 +133,15 @@ export class PatientService {
       med_gen: { specialistTitle: 'MEDICO GEN.', professionalName: 'Sin Asignar', lastAttentionDate: '—', frequency: 'Sin definir', targetDate: '—', attentionsHistory: [] },
       nutri:   { specialistTitle: 'NUTRICIONISTA', professionalName: 'Sin Asignar', lastAttentionDate: '—', frequency: 'Sin definir', targetDate: '—', attentionsHistory: [] },
       psicol:  { specialistTitle: 'PSICOLOGIA', professionalName: 'Sin Asignar', lastAttentionDate: '—', frequency: 'Sin definir', targetDate: '—', attentionsHistory: [] },
+      med_dep: { specialistTitle: 'MED. DEPORTE', professionalName: 'Sin Asignar', lastAttentionDate: '—', frequency: 'Sin definir', targetDate: '—', attentionsHistory: [] },
+      med_int: { specialistTitle: 'MED. INTERNA', professionalName: 'Sin Asignar', lastAttentionDate: '—', frequency: 'Sin definir', targetDate: '—', attentionsHistory: [] },
       esp_1:   { specialistTitle: 'CARDIOLOGÍA', professionalName: 'Sin Asignar', lastAttentionDate: '—', frequency: 'Sin definir', targetDate: '—', attentionsHistory: [] },
       esp_2:   { specialistTitle: 'ENDOCRINOLOGÍA', professionalName: 'Sin Asignar', lastAttentionDate: '—', frequency: 'Sin definir', targetDate: '—', attentionsHistory: [] },
       esp_3:   { specialistTitle: 'NEFROLOGÍA', professionalName: 'Sin Asignar', lastAttentionDate: '—', frequency: 'Sin definir', targetDate: '—', attentionsHistory: [] },
       esp_4:   { specialistTitle: 'NEUROLOGÍA', professionalName: 'Sin Asignar', lastAttentionDate: '—', frequency: 'Sin definir', targetDate: '—', attentionsHistory: [] },
+      psiq:    { specialistTitle: 'PSIQUIATRÍA', professionalName: 'Sin Asignar', lastAttentionDate: '—', frequency: 'Sin definir', targetDate: '—', attentionsHistory: [] },
+      uro:     { specialistTitle: 'UROLOGÍA', professionalName: 'Sin Asignar', lastAttentionDate: '—', frequency: 'Sin definir', targetDate: '—', attentionsHistory: [] },
+      fisiat:  { specialistTitle: 'FISIATRÍA', professionalName: 'Sin Asignar', lastAttentionDate: '—', frequency: 'Sin definir', targetDate: '—', attentionsHistory: [] },
     };
 
     if (raw.specialists && typeof raw.specialists === 'object') {
@@ -114,19 +164,32 @@ export class PatientService {
       if (idNum === 17) return 'med_gen';
       if (idNum === 37) return 'nutri';
       if (idNum === 36) return 'psicol';
-      if (idNum === 101) return 'esp_1';
-      if (idNum === 102) return 'esp_2';
-      if (idNum === 103) return 'esp_3';
-      if (idNum === 104) return 'esp_4';
+      if (idNum === 47) return 'med_dep';
+      if (idNum === 18) return 'med_int';
+      if (idNum === 2 || idNum === 101) return 'esp_1';
+      if (idNum === 9 || idNum === 102) return 'esp_2';
+      if (idNum === 20 || idNum === 103) return 'esp_3';
+      if (idNum === 23 || idNum === 104) return 'esp_4';
+      if (idNum === 31) return 'psiq';
+      if (idNum === 35) return 'uro';
+      if (idNum === 38) return 'fisiat';
 
       const s = (specName || '').toLowerCase().trim();
-      if (s.includes('medicin') || s.includes('médic') || s.includes('gen') || s === 'med_gen') return 'med_gen';
+      if (s.includes('deporte') || s.includes('deport') || s === 'med_dep') return 'med_dep';
+      if (s.includes('interna') || s === 'med_int') return 'med_int';
+      if (s.includes('general') || s === 'med_gen') return 'med_gen';
       if (s.includes('nutri') || s === 'nutri') return 'nutri';
       if (s.includes('psico') || s === 'psicol') return 'psicol';
       if (s.includes('cardio') || s === 'esp_1') return 'esp_1';
       if (s.includes('endocrino') || s === 'esp_2') return 'esp_2';
       if (s.includes('nefro') || s === 'esp_3') return 'esp_3';
       if (s.includes('neuro') || s === 'esp_4') return 'esp_4';
+      if (s.includes('psiquiat') || s === 'psiq') return 'psiq';
+      if (s.includes('urolo') || s === 'uro') return 'uro';
+      if (s.includes('fisiatr') || s.includes('rehabilitaci') || s === 'fisiat') return 'fisiat';
+
+      // Fallback para mención genérica médica
+      if (s.includes('medicin') || s.includes('médic') || s.includes('gen')) return 'med_gen';
 
       return null;
     };
@@ -344,6 +407,8 @@ export class PatientService {
     registros_por_pagina?: number;
     identificacion?: string;
     nombresApellidos?: string;
+    coordinador?: string;
+    convenioNombre?: string | string[];
   }): Promise<GetPatientsResult> {
     try {
       const query = new URLSearchParams();
@@ -354,6 +419,17 @@ export class PatientService {
       }
       if (filters?.nombresApellidos && filters.nombresApellidos.trim()) {
         query.set('nombresApellidos', filters.nombresApellidos.trim());
+      }
+      if (filters?.coordinador && filters.coordinador !== 'Todos' && filters.coordinador.trim()) {
+        query.set('coordinador', filters.coordinador.trim());
+      }
+      if (filters?.convenioNombre && filters.convenioNombre !== 'Todos') {
+        const val = Array.isArray(filters.convenioNombre)
+          ? filters.convenioNombre.filter((c) => c && c !== 'Todos').join(',')
+          : String(filters.convenioNombre).trim();
+        if (val && val !== 'Todos') {
+          query.set('convenioNombre', val);
+        }
       }
 
       const url = `/api/patients${query.toString() ? '?' + query.toString() : ''}`;
@@ -397,9 +473,34 @@ export class PatientService {
     registros_por_pagina?: number;
     identificacion?: string;
     nombresApellidos?: string;
+    coordinador?: string;
+    convenioNombre?: string | string[];
   }): Promise<Patient[]> {
     const res = await this.getPatientsPaged(filters);
     return res.pacientes;
+  }
+
+  /**
+   * Fetch real coordinators list from Oracle endpoint /api/patients?action=coordinadores
+   */
+  static async getCoordinadores(): Promise<string[]> {
+    try {
+      const response = await fetch('/api/patients?action=coordinadores');
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.codigo_respuesta === 0 && Array.isArray(data.coordinadores)) {
+          const names = data.coordinadores
+            .map((c: any) => `${c.nombres || ''} ${c.apellidos || ''}`.trim())
+            .filter(Boolean);
+          if (names.length > 0) {
+            return Array.from(new Set<string>(names)).sort();
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[PatientService] Error loading coordinadores:', err);
+    }
+    return [];
   }
 
   /**

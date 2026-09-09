@@ -14,9 +14,9 @@ interface FilterBarProps {
 
 const SPECIFIC_CONVENIOS = [
   'EPS Suramericana Cuidate360',
-  'CMP Caribe',
-  'CMP Salud Mental Cali',
   'CMP Vive al 100 Caribe',
+  'CMP Vive al 100 Cali',
+  'CMP Vive al 100 Cali SM',
 ];
 
 export const FilterBar: React.FC<FilterBarProps> = ({
@@ -125,7 +125,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   };
 
   return (
-    <div className="bg-white dark:bg-[#1e293b] border border-[#e2e8eb] dark:border-[#334155] p-4 shrink-0 max-w-[1550px] w-full mx-auto font-sans rounded-xl shadow-2xs my-2 transition-colors duration-200">
+    <div className="relative z-50 bg-white dark:bg-[#1e293b] border border-[#e2e8eb] dark:border-[#334155] p-4 shrink-0 max-w-[1550px] w-full mx-auto font-sans rounded-xl shadow-2xs my-2 transition-colors duration-200">
       {/* Header bar */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
@@ -247,7 +247,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             </button>
 
             {isConvenioMenuOpen && (
-              <div className="absolute z-30 mt-1 w-64 bg-white dark:bg-[#1e293b] border border-[#e2e8eb] dark:border-[#334155] rounded-lg shadow-xl p-2 text-xs">
+              <div className="absolute z-50 mt-1 w-72 bg-white dark:bg-[#1e293b] border border-[#e2e8eb] dark:border-[#334155] rounded-lg shadow-2xl p-2 text-xs">
                 <button
                   type="button"
                   onClick={handleSelectAllConvenios}

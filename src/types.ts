@@ -6,7 +6,19 @@ export type NivelRiesgo = 'Critical' | 'High' | 'Medium' | 'Low';
 
 export type FasePaciente = 'E' | 'D' | 'I' | 'M/E';
 
-export type SpecialistKey = 'med_gen' | 'nutri' | 'psicol' | 'esp_1' | 'esp_2' | 'esp_3' | 'esp_4';
+export type SpecialistKey =
+  | 'med_gen'
+  | 'nutri'
+  | 'psicol'
+  | 'med_dep'
+  | 'med_int'
+  | 'esp_1'
+  | 'esp_2'
+  | 'esp_3'
+  | 'esp_4'
+  | 'psiq'
+  | 'uro'
+  | 'fisiat';
 
 export interface SpecialistAttentionItem {
   id: string;
@@ -181,9 +193,11 @@ export const COHORTE_OPTIONS = [
 ];
 
 export const COORDINADORES_LIST = [
-  'Anyeli Ledezma',
-  'Katherine Mora',
-  'Angela Valencia',
+  'Angela Valencia Alvares',
+  'Angie Paola Ceballos Osorio',
+  'Anyeli Ledezma Guapacha',
+  'Karina Ceron',
+  'Valentina Ocampo Rodriguez',
 ];
 
 export interface CostAnalysisArtifacts {

@@ -56,14 +56,63 @@ export type SortField =
   | 'med_gen'
   | 'nutri'
   | 'psicol'
+  | 'med_dep'
+  | 'med_int'
   | 'esp_1'
   | 'esp_2'
   | 'esp_3'
-  | 'esp_4';
+  | 'esp_4'
+  | 'psiq'
+  | 'uro'
+  | 'fisiat';
 
 export type SortDirection = 'asc' | 'desc';
 
-export const DEFAULT_COLUMN_WIDTHS: Record<string, number> = {
+export interface SpecialtyColumnDef {
+  key: SpecialistKey;
+  label: string;
+}
+
+const ALL_SPECIALTY_COLUMNS: SpecialtyColumnDef[] = [
+  { key: 'med_gen', label: 'MEDICO GEN.' },
+  { key: 'nutri',   label: 'NUTRICIONISTA' },
+  { key: 'psicol',  label: 'PSICOLOGIA' },
+  { key: 'med_dep', label: 'MED. DEPORTE' },
+  { key: 'med_int', label: 'MED. INTERNA' },
+  { key: 'esp_1',   label: 'CARDIOLOGÍA' },
+  { key: 'esp_2',   label: 'ENDOCRINOLOGÍA' },
+  { key: 'esp_3',   label: 'NEFROLOGÍA' },
+  { key: 'esp_4',   label: 'NEUROLOGÍA' },
+  { key: 'psiq',    label: 'PSIQUIATRÍA' },
+  { key: 'uro',     label: 'UROLOGÍA' },
+  { key: 'fisiat',  label: 'FISIATRÍA' },
+];
+
+/**
+ * Determina si una especialidad tiene información clínica/citas asignadas
+ * para un paciente dado. Si no tiene citas ni profesional asignado ni fechas,
+ * se considera vacía/sin asignar.
+ */
+const specialistHasInfo = (spec?: SpecialistInfo | null): boolean => {
+  if (!spec) return false;
+  if (spec.attentionsHistory && spec.attentionsHistory.length > 0) return true;
+  if (typeof spec.attentionsCount === 'number' && spec.attentionsCount > 0) return true;
+  if (spec.lastAttentionCode && spec.lastAttentionCode.trim() !== '') return true;
+  if (spec.lastAttentionDate && spec.lastAttentionDate.trim() !== '' && spec.lastAttentionDate.trim() !== '—') return true;
+  if (spec.targetDate && spec.targetDate.trim() !== '' && spec.targetDate.trim() !== '—') return true;
+  if (
+    spec.professionalName &&
+    spec.professionalName.trim() !== '' &&
+    spec.professionalName.trim() !== '—' &&
+    spec.professionalName.toLowerCase() !== 'sin asignar' &&
+    spec.professionalName.toLowerCase() !== 'sin rellenar'
+  ) {
+    return true;
+  }
+  return false;
+};
+
+const DEFAULT_COLUMN_WIDTHS: Record<string, number> = {
   acciones: 100,
   nombre: 240,
   convenioNombre: 170,
@@ -77,10 +126,15 @@ export const DEFAULT_COLUMN_WIDTHS: Record<string, number> = {
   med_gen: 155,
   nutri: 155,
   psicol: 155,
+  med_dep: 155,
+  med_int: 155,
   esp_1: 155,
   esp_2: 155,
   esp_3: 155,
   esp_4: 155,
+  psiq: 155,
+  uro: 155,
+  fisiat: 155,
   nota_op: 56,
   nota_cli: 56,
 };
@@ -282,10 +336,15 @@ export const PatientTable: React.FC<PatientTableProps> = ({
         case 'med_gen':
         case 'nutri':
         case 'psicol':
+        case 'med_dep':
+        case 'med_int':
         case 'esp_1':
         case 'esp_2':
         case 'esp_3':
         case 'esp_4':
+        case 'psiq':
+        case 'uro':
+        case 'fisiat':
           const specA = a.specialists?.[sortField];
           const specB = b.specialists?.[sortField];
           valA = (specA?.isOverdue ? '1_' : '0_') + (specA?.targetDate || '9999-99-99');
@@ -314,6 +373,20 @@ export const PatientTable: React.FC<PatientTableProps> = ({
   const startIndex = activeTotalRecords === 0 ? 0 : (activeCurrentPage - 1) * activeItemsPerPage;
   const endIndex = Math.min(activeTotalRecords, activeCurrentPage * activeItemsPerPage);
   const paginatedPatients = isServerPaged ? sortedPatients : sortedPatients.slice(startIndex, endIndex);
+
+  // Evaluar las especialidades que tienen información en los registros que se están visualizando en la página actual
+  const visibleSpecialtyColumns = useMemo(() => {
+    if (!paginatedPatients || paginatedPatients.length === 0) {
+      return ALL_SPECIALTY_COLUMNS.slice(0, 3);
+    }
+    const colsWithData = ALL_SPECIALTY_COLUMNS.filter((col) =>
+      paginatedPatients.some((patient) => specialistHasInfo(patient.specialists?.[col.key]))
+    );
+    // Si ninguna especialidad tiene datos en la página actual, mostramos al menos las 3 base
+    return colsWithData.length > 0 ? colsWithData : ALL_SPECIALTY_COLUMNS.slice(0, 3);
+  }, [paginatedPatients]);
+
+  const totalColSpan = 12 + visibleSpecialtyColumns.length;
 
   // Reset to page 1 if current page becomes out of bounds or filters change
   useEffect(() => {
@@ -601,7 +674,7 @@ export const PatientTable: React.FC<PatientTableProps> = ({
       <th
         onClick={() => handleSort(field)}
         style={{ width: `${w}px`, minWidth: `${w}px`, maxWidth: `${w}px` }}
-        className={`px-3 h-10 cursor-pointer transition-colors hover:bg-[#effaff] dark:hover:bg-[#334155] select-none relative group/th ${className}`}
+        className={`sticky top-0 z-30 bg-[#f9fafb] dark:bg-[#0f172a] border-b border-[#e2e8eb] dark:border-[#334155] px-3 h-10 cursor-pointer transition-colors hover:bg-[#effaff] dark:hover:bg-[#334155] select-none relative group/th bg-clip-padding ${className}`}
         title={`Clic para ordenar por ${label}. Arrastre el borde derecho para ajustar el ancho.`}
       >
         <div className="flex items-center gap-1.5 justify-between pr-1">
@@ -633,8 +706,30 @@ export const PatientTable: React.FC<PatientTableProps> = ({
   };
 
   const totalTableWidth = useMemo(() => {
-    return Object.values(columnWidths).reduce((acc: number, curr: number) => acc + Number(curr), 0);
-  }, [columnWidths]);
+    const fixedCols = [
+      'acciones',
+      'nombre',
+      'convenioNombre',
+      'cohorte',
+      'riesgo',
+      'etiqueta',
+      'fase',
+      'coordinador',
+      'numeroCarga',
+      'fechaProximaRevision',
+      'nota_op',
+      'nota_cli',
+    ];
+    const fixedSum = fixedCols.reduce(
+      (sum, k) => sum + (columnWidths[k] || DEFAULT_COLUMN_WIDTHS[k] || 120),
+      0
+    );
+    const specSum = visibleSpecialtyColumns.reduce(
+      (sum, col) => sum + (columnWidths[col.key] || DEFAULT_COLUMN_WIDTHS[col.key] || 155),
+      0
+    );
+    return fixedSum + specSum;
+  }, [columnWidths, visibleSpecialtyColumns]);
 
   return (
     <div className="flex-1 overflow-x-auto overflow-y-auto touch-pan-x relative w-full bg-white dark:bg-[#1e293b] font-sans max-w-[1550px] mx-auto rounded-xl shadow-2xs border border-[#e2e8eb] dark:border-[#334155] my-2 transition-colors duration-200" style={{ WebkitOverflowScrolling: 'touch' }}>
@@ -651,17 +746,17 @@ export const PatientTable: React.FC<PatientTableProps> = ({
         style={{ width: `${totalTableWidth}px`, minWidth: '100%', tableLayout: 'fixed' }}
         className="text-left border-collapse"
       >
-        {/* Table Header */}
-        <thead>
+        {/* Table Header (Sticky vertically on top-0) */}
+        <thead className="sticky top-0 z-40 bg-[#f9fafb] dark:bg-[#0f172a] shadow-xs">
           <tr className="bg-[#f9fafb] dark:bg-[#0f172a] border-b border-[#e2e8eb] dark:border-[#334155] text-[10px] font-bold text-[#035476] dark:text-[#94a3b8] uppercase tracking-wider select-none h-10">
-            {/* Col 1: ACCIONES (Sticky on sm+) */}
+            {/* Col 1: ACCIONES (Sticky on sm+ horizontally & top-0 vertically) */}
             <th
               style={{
                 width: `${columnWidths.acciones}px`,
                 minWidth: `${columnWidths.acciones}px`,
                 maxWidth: `${columnWidths.acciones}px`,
               }}
-              className="sm:sticky sm:left-0 z-30 bg-[#f9fafb] dark:bg-[#0f172a] px-2 text-center border-r border-[#e2e8eb] dark:border-[#334155] relative group/th select-none"
+              className="sticky top-0 sm:left-0 z-50 bg-[#f9fafb] dark:bg-[#0f172a] px-2 text-center border-r border-b border-[#e2e8eb] dark:border-[#334155] relative group/th select-none bg-clip-padding"
             >
               <span className="hidden sm:inline">ACCIONES</span>
               <span className="inline sm:hidden">ACC.</span>
@@ -675,7 +770,7 @@ export const PatientTable: React.FC<PatientTableProps> = ({
               </div>
             </th>
 
-            {/* Col 2: PACIENTE (Sticky on sm+) */}
+            {/* Col 2: PACIENTE (Sticky on sm+ horizontally & top-0 vertically) */}
             <th
               onClick={() => handleSort('nombre')}
               style={{
@@ -684,7 +779,7 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                 maxWidth: `${columnWidths.nombre}px`,
                 left: `${columnWidths.acciones}px`,
               }}
-              className="sm:sticky z-30 bg-[#f9fafb] dark:bg-[#0f172a] px-3 border-r border-[#e2e8eb] dark:border-[#334155] cursor-pointer hover:bg-[#effaff] dark:hover:bg-[#334155] transition-colors relative group/th select-none"
+              className="sticky top-0 sm:sticky z-50 bg-[#f9fafb] dark:bg-[#0f172a] px-3 border-r border-b border-[#e2e8eb] dark:border-[#334155] cursor-pointer hover:bg-[#effaff] dark:hover:bg-[#334155] transition-colors relative group/th select-none bg-clip-padding"
               title="Clic para ordenar por PACIENTE. Arrastre el borde derecho para cambiar ancho."
             >
               <div className="flex items-center gap-1.5 justify-between pr-1">
@@ -731,16 +826,25 @@ export const PatientTable: React.FC<PatientTableProps> = ({
             {/* Col 10: FECHA PROX. REVISIÓN */}
             {renderHeader('FECHA PROX. REVISIÓN', 'fechaProximaRevision', 'fechaProximaRevision', 'text-center')}
 
-            {/* Col 11..17: ESPECIALISTAS (7 Subcolumns) */}
-            {renderHeader('MEDICO GEN.', 'med_gen', 'med_gen', 'border-l border-[#e2e8eb] dark:border-[#334155]')}
-            {renderHeader('NUTRICIONISTA', 'nutri', 'nutri')}
-            {renderHeader('PSICOLOGIA', 'psicol', 'psicol')}
-            {renderHeader('CARDIOLOGÍA', 'esp_1', 'esp_1')}
-            {renderHeader('ENDOCRINOLOGÍA', 'esp_2', 'esp_2')}
-            {renderHeader('NEFROLOGÍA', 'esp_3', 'esp_3')}
-            {renderHeader('NEUROLOGÍA', 'esp_4', 'esp_4', 'border-r border-[#e2e8eb] dark:border-[#334155]')}
+            {/* Columnas Dinámicas de Especialidades (solo las que tienen información en la página actual) */}
+            {visibleSpecialtyColumns.map((col, idx) => {
+              const isFirst = idx === 0;
+              const isLast = idx === visibleSpecialtyColumns.length - 1;
+              const borderClasses = [
+                isFirst ? 'border-l border-[#e2e8eb] dark:border-[#334155]' : '',
+                isLast ? 'border-r border-[#e2e8eb] dark:border-[#334155]' : '',
+              ]
+                .filter(Boolean)
+                .join(' ');
 
-            {/* Col 18: NOTA OP (Sticky on sm+) */}
+              return (
+                <React.Fragment key={col.key}>
+                  {renderHeader(col.label, col.key as SortField, col.key, borderClasses)}
+                </React.Fragment>
+              );
+            })}
+
+            {/* Col NOTA OP (Sticky on sm+ horizontally & top-0 vertically) */}
             <th
               style={{
                 width: `${columnWidths.nota_op}px`,
@@ -748,7 +852,7 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                 maxWidth: `${columnWidths.nota_op}px`,
                 right: `${columnWidths.nota_cli}px`,
               }}
-              className="sm:sticky z-20 bg-[#f9fafb] dark:bg-[#0f172a] px-2 text-center border-l border-[#e2e8eb] dark:border-[#334155] relative group/th select-none"
+              className="sticky top-0 sm:sticky z-50 bg-[#f9fafb] dark:bg-[#0f172a] px-2 text-center border-l border-b border-[#e2e8eb] dark:border-[#334155] relative group/th select-none bg-clip-padding"
             >
               <span>NOTA OP</span>
               <div
@@ -761,14 +865,14 @@ export const PatientTable: React.FC<PatientTableProps> = ({
               </div>
             </th>
 
-            {/* Col 19: NOTA CLI (Sticky on sm+) */}
+            {/* Col NOTA CLI (Sticky on sm+ horizontally & top-0 vertically) */}
             <th
               style={{
                 width: `${columnWidths.nota_cli}px`,
                 minWidth: `${columnWidths.nota_cli}px`,
                 maxWidth: `${columnWidths.nota_cli}px`,
               }}
-              className="sm:sticky sm:right-0 z-20 bg-[#f9fafb] dark:bg-[#0f172a] px-2 text-center border-l border-[#e2e8eb] dark:border-[#334155] relative group/th select-none"
+              className="sticky top-0 sm:sticky right-0 z-50 bg-[#f9fafb] dark:bg-[#0f172a] px-2 text-center border-l border-b border-[#e2e8eb] dark:border-[#334155] relative group/th select-none bg-clip-padding"
             >
               <span>NOTA CLI</span>
               <div
@@ -787,7 +891,7 @@ export const PatientTable: React.FC<PatientTableProps> = ({
         <tbody className="divide-y divide-[#e2e8eb] dark:divide-[#334155] text-xs bg-white dark:bg-[#1e293b]">
           {isLoading ? (
             <tr>
-              <td colSpan={19} className="py-16 text-center text-[#00aae1] dark:text-[#38bdf8] font-medium">
+              <td colSpan={totalColSpan} className="py-16 text-center text-[#00aae1] dark:text-[#38bdf8] font-medium">
                 <div className="flex flex-col items-center justify-center gap-3">
                   <div className="w-8 h-8 border-3 border-[#00aae1] border-t-transparent rounded-full animate-spin" />
                   <span className="text-xs text-[#035476] dark:text-[#94a3b8]">Cargando pacientes desde Oracle Database...</span>
@@ -796,7 +900,7 @@ export const PatientTable: React.FC<PatientTableProps> = ({
             </tr>
           ) : sortedPatients.length === 0 ? (
             <tr>
-              <td colSpan={19} className="py-12 text-center text-[#035476] dark:text-[#94a3b8] font-medium">
+              <td colSpan={totalColSpan} className="py-12 text-center text-[#035476] dark:text-[#94a3b8] font-medium">
                 No se encontraron pacientes que coincidan con los criterios de búsqueda.
               </td>
             </tr>
@@ -821,7 +925,7 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                       maxWidth: `${columnWidths.acciones}px`,
                     }}
                     className={`bg-white dark:bg-[#1e293b] sm:sticky sm:left-0 group-hover:bg-[#f9fafb] dark:group-hover:bg-[#0f172a] px-2 py-1 border-r border-[#e2e8eb] dark:border-[#334155] relative ${
-                      isMenuOpen || isAlarmOpen || isAdherenciaOpen ? 'z-40' : 'z-30'
+                      isMenuOpen || isAlarmOpen || isAdherenciaOpen ? 'z-30' : 'z-20'
                     }`}
                   >
                     <div className="flex flex-col items-center justify-center gap-1">
@@ -902,7 +1006,7 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                       maxWidth: `${columnWidths.nombre}px`,
                       left: `${columnWidths.acciones}px`,
                     }}
-                    className="bg-white dark:bg-[#1e293b] sm:sticky z-30 group-hover:bg-[#f9fafb] dark:group-hover:bg-[#0f172a] px-2 py-1.5 border-r border-[#e2e8eb] dark:border-[#334155] relative overflow-hidden"
+                    className="bg-white dark:bg-[#1e293b] sm:sticky z-20 group-hover:bg-[#f9fafb] dark:group-hover:bg-[#0f172a] px-2 py-1.5 border-r border-[#e2e8eb] dark:border-[#334155] relative overflow-hidden"
                   >
                     <PatientCard
                       patient={patient}
@@ -1050,77 +1154,20 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                     {patient.fechaProximaRevision || '—'}
                   </td>
 
-                  {/* Cols 11..17: ESPECIALISTAS (7 Columns) */}
-                  <td
-                    style={{
-                      width: `${columnWidths.med_gen}px`,
-                      minWidth: `${columnWidths.med_gen}px`,
-                      maxWidth: `${columnWidths.med_gen}px`,
-                    }}
-                    className="px-1.5 py-1"
-                  >
-                    {renderSpecialistCell(patient, 'med_gen')}
-                  </td>
-                  <td
-                    style={{
-                      width: `${columnWidths.nutri}px`,
-                      minWidth: `${columnWidths.nutri}px`,
-                      maxWidth: `${columnWidths.nutri}px`,
-                    }}
-                    className="px-1.5 py-1"
-                  >
-                    {renderSpecialistCell(patient, 'nutri')}
-                  </td>
-                  <td
-                    style={{
-                      width: `${columnWidths.psicol}px`,
-                      minWidth: `${columnWidths.psicol}px`,
-                      maxWidth: `${columnWidths.psicol}px`,
-                    }}
-                    className="px-1.5 py-1"
-                  >
-                    {renderSpecialistCell(patient, 'psicol')}
-                  </td>
-                  <td
-                    style={{
-                      width: `${columnWidths.esp_1}px`,
-                      minWidth: `${columnWidths.esp_1}px`,
-                      maxWidth: `${columnWidths.esp_1}px`,
-                    }}
-                    className="px-1.5 py-1"
-                  >
-                    {renderSpecialistCell(patient, 'esp_1')}
-                  </td>
-                  <td
-                    style={{
-                      width: `${columnWidths.esp_2}px`,
-                      minWidth: `${columnWidths.esp_2}px`,
-                      maxWidth: `${columnWidths.esp_2}px`,
-                    }}
-                    className="px-1.5 py-1"
-                  >
-                    {renderSpecialistCell(patient, 'esp_2')}
-                  </td>
-                  <td
-                    style={{
-                      width: `${columnWidths.esp_3}px`,
-                      minWidth: `${columnWidths.esp_3}px`,
-                      maxWidth: `${columnWidths.esp_3}px`,
-                    }}
-                    className="px-1.5 py-1"
-                  >
-                    {renderSpecialistCell(patient, 'esp_3')}
-                  </td>
-                  <td
-                    style={{
-                      width: `${columnWidths.esp_4}px`,
-                      minWidth: `${columnWidths.esp_4}px`,
-                      maxWidth: `${columnWidths.esp_4}px`,
-                    }}
-                    className="px-1.5 py-1"
-                  >
-                    {renderSpecialistCell(patient, 'esp_4')}
-                  </td>
+                  {/* Columnas Dinámicas de Especialistas (evaluadas según la página actual) */}
+                  {visibleSpecialtyColumns.map((col) => (
+                    <td
+                      key={col.key}
+                      style={{
+                        width: `${columnWidths[col.key] || DEFAULT_COLUMN_WIDTHS[col.key] || 155}px`,
+                        minWidth: `${columnWidths[col.key] || DEFAULT_COLUMN_WIDTHS[col.key] || 155}px`,
+                        maxWidth: `${columnWidths[col.key] || DEFAULT_COLUMN_WIDTHS[col.key] || 155}px`,
+                      }}
+                      className="px-1.5 py-1"
+                    >
+                      {renderSpecialistCell(patient, col.key)}
+                    </td>
+                  ))}
 
                   {/* Col 18: NOTA OP (Sticky on sm+) */}
                   <td

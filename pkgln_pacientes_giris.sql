@@ -117,17 +117,29 @@ CREATE OR REPLACE PACKAGE BODY pkgln_pacientes_giris IS
     v_total_pag      NUMBER := 1;
     v_identificacion VARCHAR2(100);
     v_nombre         VARCHAR2(200);
+    v_coordinador    VARCHAR2(200);
+    v_convenio       VARCHAR2(500);
   BEGIN
     IF p_json_entrada IS NOT NULL AND LENGTH(p_json_entrada) > 0 THEN
       BEGIN
         v_registros_pag  := NVL(TO_NUMBER(JSON_VALUE(p_json_entrada, '$.registros_por_pagina')), 10);
         v_identificacion := TRIM(JSON_VALUE(p_json_entrada, '$.filtros.identificacion'));
         v_nombre         := TRIM(JSON_VALUE(p_json_entrada, '$.filtros.nombresApellidos'));
+        v_coordinador    := TRIM(JSON_VALUE(p_json_entrada, '$.filtros.coordinador'));
+        IF v_coordinador = 'Todos' OR LENGTH(v_coordinador) = 0 THEN
+          v_coordinador := NULL;
+        END IF;
+        v_convenio       := TRIM(JSON_VALUE(p_json_entrada, '$.filtros.convenioNombre'));
+        IF v_convenio = 'Todos' OR LENGTH(v_convenio) = 0 THEN
+          v_convenio := NULL;
+        END IF;
       EXCEPTION
         WHEN OTHERS THEN
           v_registros_pag  := 10;
           v_identificacion := NULL;
           v_nombre         := NULL;
+          v_coordinador    := NULL;
+          v_convenio       := NULL;
       END;
     END IF;
 
@@ -137,7 +149,28 @@ CREATE OR REPLACE PACKAGE BODY pkgln_pacientes_giris IS
      WHERE (u.paciente_giris = 'S'
         OR EXISTS (SELECT 1 FROM tkr_usuarios_cohorte uc WHERE uc.id_usuario = u.id))
        AND (v_identificacion IS NULL OR u.identificacion LIKE '%' || v_identificacion || '%')
-       AND (v_nombre IS NULL OR UPPER(u.nombres || ' ' || u.apellidos) LIKE '%' || UPPER(v_nombre) || '%');
+       AND (v_nombre IS NULL OR UPPER(u.nombres || ' ' || u.apellidos) LIKE '%' || UPPER(v_nombre) || '%')
+       AND (v_coordinador IS NULL OR EXISTS (
+              SELECT 1 
+                FROM tkr_usuarios_cohorte uc2, tkr_usuarios uco2
+               WHERE uc2.id_usuario = u.id
+                 AND uco2.id = uc2.id_coordinador
+                 AND (
+                   UPPER(uco2.nombres || ' ' || uco2.apellidos) LIKE '%' || UPPER(v_coordinador) || '%'
+                   OR UPPER(v_coordinador) LIKE '%' || UPPER(uco2.nombres || ' ' || uco2.apellidos) || '%'
+                 )
+           ))
+       AND (v_convenio IS NULL OR EXISTS (
+              SELECT 1
+                FROM tkr_usuarios_cohorte uc_c, tkr_convenios conv_c
+               WHERE uc_c.id_usuario = u.id
+                 AND conv_c.id = uc_c.id_convenio
+                 AND (
+                   INSTR(',' || v_convenio || ',', ',' || conv_c.nombre_convenio || ',') > 0
+                   OR UPPER(conv_c.nombre_convenio) LIKE '%' || UPPER(v_convenio) || '%'
+                   OR UPPER(v_convenio) LIKE '%' || UPPER(conv_c.nombre_convenio) || '%'
+                 )
+           ));
 
     IF v_registros_pag > 0 THEN
       v_total_pag := CEIL(v_total_reg / v_registros_pag);
@@ -165,6 +198,8 @@ CREATE OR REPLACE PACKAGE BODY pkgln_pacientes_giris IS
     v_total_pag      NUMBER := 1;
     v_identificacion VARCHAR2(100);
     v_nombre         VARCHAR2(200);
+    v_coordinador    VARCHAR2(200);
+    v_convenio       VARCHAR2(500);
 
     v_hdr            CLOB;
     v_json_data      CLOB;
@@ -177,7 +212,7 @@ CREATE OR REPLACE PACKAGE BODY pkgln_pacientes_giris IS
     v_agenda         CLOB;
     v_epicrisis      CLOB;
 
-    CURSOR c_pacientes(p_offset NUMBER, p_limit NUMBER, p_identificacion VARCHAR2, p_nombre VARCHAR2) IS
+    CURSOR c_pacientes(p_offset NUMBER, p_limit NUMBER, p_identificacion VARCHAR2, p_nombre VARCHAR2, p_coordinador VARCHAR2, p_convenio VARCHAR2) IS
       SELECT *
         FROM (
           SELECT q.*, ROWNUM rnum
@@ -219,6 +254,27 @@ CREATE OR REPLACE PACKAGE BODY pkgln_pacientes_giris IS
                   OR EXISTS (SELECT 1 FROM tkr_usuarios_cohorte uc WHERE uc.id_usuario = u.id))
                  AND (p_identificacion IS NULL OR u.identificacion LIKE '%' || p_identificacion || '%')
                  AND (p_nombre IS NULL OR UPPER(u.nombres || ' ' || u.apellidos) LIKE '%' || UPPER(p_nombre) || '%')
+                 AND (p_coordinador IS NULL OR EXISTS (
+                        SELECT 1 
+                          FROM tkr_usuarios_cohorte uc2, tkr_usuarios uco2
+                         WHERE uc2.id_usuario = u.id
+                           AND uco2.id = uc2.id_coordinador
+                           AND (
+                             UPPER(uco2.nombres || ' ' || uco2.apellidos) LIKE '%' || UPPER(p_coordinador) || '%'
+                             OR UPPER(p_coordinador) LIKE '%' || UPPER(uco2.nombres || ' ' || uco2.apellidos) || '%'
+                           )
+                     ))
+                 AND (p_convenio IS NULL OR EXISTS (
+                        SELECT 1
+                          FROM tkr_usuarios_cohorte uc_c, tkr_convenios conv_c
+                         WHERE uc_c.id_usuario = u.id
+                           AND conv_c.id = uc_c.id_convenio
+                           AND (
+                             INSTR(',' || p_convenio || ',', ',' || conv_c.nombre_convenio || ',') > 0
+                             OR UPPER(conv_c.nombre_convenio) LIKE '%' || UPPER(p_convenio) || '%'
+                             OR UPPER(p_convenio) LIKE '%' || UPPER(conv_c.nombre_convenio) || '%'
+                           )
+                     ))
                ORDER BY u.nombres, u.apellidos
             ) q
            WHERE ROWNUM <= (p_offset + p_limit)
@@ -231,12 +287,22 @@ CREATE OR REPLACE PACKAGE BODY pkgln_pacientes_giris IS
         v_registros_pag  := NVL(TO_NUMBER(JSON_VALUE(p_json_entrada, '$.registros_por_pagina')), 10);
         v_identificacion := TRIM(JSON_VALUE(p_json_entrada, '$.filtros.identificacion'));
         v_nombre         := TRIM(JSON_VALUE(p_json_entrada, '$.filtros.nombresApellidos'));
+        v_coordinador    := TRIM(JSON_VALUE(p_json_entrada, '$.filtros.coordinador'));
+        IF v_coordinador = 'Todos' OR LENGTH(v_coordinador) = 0 THEN
+          v_coordinador := NULL;
+        END IF;
+        v_convenio       := TRIM(JSON_VALUE(p_json_entrada, '$.filtros.convenioNombre'));
+        IF v_convenio = 'Todos' OR LENGTH(v_convenio) = 0 THEN
+          v_convenio := NULL;
+        END IF;
       EXCEPTION
         WHEN OTHERS THEN
           v_pagina         := 1;
           v_registros_pag  := 10;
           v_identificacion := NULL;
           v_nombre         := NULL;
+          v_coordinador    := NULL;
+          v_convenio       := NULL;
       END;
     END IF;
 
@@ -246,7 +312,28 @@ CREATE OR REPLACE PACKAGE BODY pkgln_pacientes_giris IS
      WHERE (u.paciente_giris = 'S'
         OR EXISTS (SELECT 1 FROM tkr_usuarios_cohorte uc WHERE uc.id_usuario = u.id))
        AND (v_identificacion IS NULL OR u.identificacion LIKE '%' || v_identificacion || '%')
-       AND (v_nombre IS NULL OR UPPER(u.nombres || ' ' || u.apellidos) LIKE '%' || UPPER(v_nombre) || '%');
+       AND (v_nombre IS NULL OR UPPER(u.nombres || ' ' || u.apellidos) LIKE '%' || UPPER(v_nombre) || '%')
+       AND (v_coordinador IS NULL OR EXISTS (
+              SELECT 1 
+                FROM tkr_usuarios_cohorte uc2, tkr_usuarios uco2
+               WHERE uc2.id_usuario = u.id
+                 AND uco2.id = uc2.id_coordinador
+                 AND (
+                   UPPER(uco2.nombres || ' ' || uco2.apellidos) LIKE '%' || UPPER(v_coordinador) || '%'
+                   OR UPPER(v_coordinador) LIKE '%' || UPPER(uco2.nombres || ' ' || uco2.apellidos) || '%'
+                 )
+           ))
+       AND (v_convenio IS NULL OR EXISTS (
+              SELECT 1
+                FROM tkr_usuarios_cohorte uc_c, tkr_convenios conv_c
+               WHERE uc_c.id_usuario = u.id
+                 AND conv_c.id = uc_c.id_convenio
+                 AND (
+                   INSTR(',' || v_convenio || ',', ',' || conv_c.nombre_convenio || ',') > 0
+                   OR UPPER(conv_c.nombre_convenio) LIKE '%' || UPPER(v_convenio) || '%'
+                   OR UPPER(v_convenio) LIKE '%' || UPPER(conv_c.nombre_convenio) || '%'
+                 )
+           ));
 
     IF v_registros_pag > 0 THEN
       v_total_pag := CEIL(v_total_reg / v_registros_pag);
@@ -260,17 +347,19 @@ CREATE OR REPLACE PACKAGE BODY pkgln_pacientes_giris IS
              || v_pagina || ', "registros_por_pagina": ' || v_registros_pag || ', "total_registros": ' || v_total_reg 
              || ', "total_paginas": ' || v_total_pag || '}, "especialidades_orden": ['
              || '{"id_especialidad": 17, "nombre": "Medicina General", "key": "med_gen"},'
-             || '{"id_especialidad": 36, "nombre": "Psicología", "key": "psicol"},'
              || '{"id_especialidad": 37, "nombre": "Nutrición", "key": "nutri"},'
-             || '{"id_especialidad": 101, "nombre": "Cardiología", "key": "esp_1"},'
-             || '{"id_especialidad": 102, "nombre": "Endocrinología", "key": "esp_2"},'
-             || '{"id_especialidad": 103, "nombre": "Nefrología", "key": "esp_3"},'
-             || '{"id_especialidad": 104, "nombre": "Neurología", "key": "esp_4"}'
+             || '{"id_especialidad": 36, "nombre": "Psicología", "key": "psicol"},'
+             || '{"id_especialidad": 47, "nombre": "Medicina del Deporte", "key": "med_dep"},'
+             || '{"id_especialidad": 18, "nombre": "Medicina Interna", "key": "med_int"},'
+             || '{"id_especialidad": 2, "nombre": "Cardiología", "key": "esp_1"},'
+             || '{"id_especialidad": 9, "nombre": "Endocrinología", "key": "esp_2"},'
+             || '{"id_especialidad": 20, "nombre": "Nefrología", "key": "esp_3"},'
+             || '{"id_especialidad": 23, "nombre": "Neurología", "key": "esp_4"}'
              || '], "pacientes": [';
 
     DBMS_LOB.WRITEAPPEND(v_json_data, LENGTH(v_buf), v_buf);
 
-    FOR r IN c_pacientes((v_pagina - 1) * v_registros_pag, v_registros_pag, v_identificacion, v_nombre) LOOP
+    FOR r IN c_pacientes((v_pagina - 1) * v_registros_pag, v_registros_pag, v_identificacion, v_nombre, v_coordinador, v_convenio) LOOP
       IF NOT v_first THEN
         v_buf := ',';
         DBMS_LOB.WRITEAPPEND(v_json_data, LENGTH(v_buf), v_buf);
@@ -554,6 +643,10 @@ CREATE OR REPLACE PACKAGE BODY pkgln_pacientes_giris IS
                 WHERE a.id_usuario = u.id
                   AND ra.id_acceso = a.id
                   AND ra.id_rol = 11)
+          AND EXISTS
+              (SELECT 1
+                 FROM tkr_usuarios_cohorte uc
+                WHERE uc.id_coordinador = u.id)
         ORDER BY u.nombres,
                  u.apellidos;
   BEGIN
