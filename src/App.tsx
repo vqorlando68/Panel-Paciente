@@ -216,8 +216,8 @@ export default function App() {
         const ff = filters.fastFilter;
         if (ff === 'Activos' && patient.estado !== 'Activo') return false;
         if (ff === 'Vencidos' && !patientHasOverdueSpecialist(patient)) return false;
-        if (ff === 'Inconforme' && patient.etiqueta !== 'Inconforme' && patient.retroalimentacion !== 'Inconforme') return false;
-        if (ff === 'Críticos' && patient.riesgo !== 'Critical' && patient.riesgo !== 'High') return false;
+        if (ff === 'Inconforme' && patient.etiqueta !== 'Inconforme' && patient.retroalimentacion !== 'Inconforme' && patient.tag_retroalimentacion !== 'I') return false;
+        if (ff === 'Críticos' && patient.riesgo !== 'Critical' && patient.riesgo !== 'High' && patient.etiqueta !== 'Crítico' && patient.tag_retroalimentacion !== 'C') return false;
         if (ff === '>90 días') {
           const hasMoreThan90Days = patient.specialists ? Object.values(patient.specialists).some((s) => Boolean((s as SpecialistInfo)?.isOverdue)) : false;
           if (!hasMoreThan90Days) return false;
@@ -239,7 +239,7 @@ export default function App() {
   const overdueCount = patients.filter(patientHasOverdueSpecialist).length;
   const activeCount = patients.filter((p) => p.estado === 'Activo').length;
   const inconformeCount = patients.filter(
-    (p) => p.etiqueta === 'Inconforme' || p.retroalimentacion === 'Inconforme'
+    (p) => p.etiqueta === 'Inconforme' || p.retroalimentacion === 'Inconforme' || p.tag_retroalimentacion === 'I'
   ).length;
   const alarmCount = patients.filter((p) => p.hasAlarm).length;
 

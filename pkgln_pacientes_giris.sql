@@ -187,6 +187,7 @@ CREATE OR REPLACE PACKAGE BODY pkgln_pacientes_giris IS
              (SELECT uc.id_convenio FROM tkr_usuarios_cohorte uc WHERE uc.id_usuario = u.id AND ROWNUM = 1) id_convenio,
              (SELECT conv.nombre_convenio FROM tkr_convenios conv, tkr_usuarios_cohorte uc WHERE uc.id_usuario = u.id AND conv.id = uc.id_convenio AND ROWNUM = 1) convenio_nombre,
              (SELECT uc.id_cargue_cohorte FROM tkr_usuarios_cohorte uc WHERE uc.id_usuario = u.id AND ROWNUM = 1) numero_carga,
+             (SELECT uc.tag_retroalimentacion FROM tkr_usuarios_cohorte uc WHERE uc.id_usuario = u.id AND ROWNUM = 1) tag_retroalimentacion,
              (  SELECT nivel_riesgo
                   FROM (SELECT a.nivel_riesgo
                           FROM tkr_actas_medicas a
@@ -343,6 +344,13 @@ CREATE OR REPLACE PACKAGE BODY pkgln_pacientes_giris IS
                ', "idConvenio": ' || NVL(TO_CHAR(r.id_convenio), 'null') ||
                ', "convenioNombre": ' || CASE WHEN r.convenio_nombre IS NOT NULL THEN '"' || REPLACE(REPLACE(r.convenio_nombre, '\', '\\'), '"', '\"') || '"' ELSE 'null' END ||
                ', "numeroCarga": ' || CASE WHEN r.numero_carga IS NOT NULL THEN '"' || REPLACE(TO_CHAR(r.numero_carga), '"', '\"') || '"' ELSE 'null' END ||
+               ', "tag_retroalimentacion": ' || CASE WHEN r.tag_retroalimentacion IS NOT NULL THEN '"' || REPLACE(REPLACE(r.tag_retroalimentacion, '\', '\\'), '"', '\"') || '"' ELSE 'null' END ||
+               ', "etiqueta": ' || CASE 
+                                     WHEN r.tag_retroalimentacion = 'C' THEN '"Crítico"' 
+                                     WHEN r.tag_retroalimentacion = 'I' THEN '"Inconforme"' 
+                                     WHEN r.tag_retroalimentacion IS NOT NULL THEN '"' || REPLACE(REPLACE(r.tag_retroalimentacion, '\', '\\'), '"', '\"') || '"' 
+                                     ELSE 'null' 
+                                   END ||
                ', "hasAlarm": false, "alarmReasons": [], "acta": null, "actasHistory": [], "tasas": null, "cuadroMedico": [], "specialists": null';
 
       DBMS_LOB.WRITEAPPEND(v_json_data, LENGTH(v_buf), v_buf);

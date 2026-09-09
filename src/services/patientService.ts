@@ -1,4 +1,4 @@
-import { Patient, SpecialistKey, SpecialistInfo, ActaInfo, CostAnalysisResponse } from '../types';
+import { Patient, SpecialistKey, SpecialistInfo, ActaInfo, ActaUsuarioDB, CostAnalysisResponse } from '../types';
 import { INITIAL_PATIENTS } from '../mockData';
 import { DEFAULT_COST_ANALYSIS_DATA } from '../mockCostData';
 
@@ -257,6 +257,16 @@ export class PatientService {
     const apellidos = raw.apellidos ?? null;
     const nombre = raw.nombre || [nombres, apellidos].filter(Boolean).join(' ') || 'Sin Nombre';
 
+    const rawTag = raw.tag_retroalimentacion || raw.etiqueta || raw.retroalimentacion;
+    let etiquetaVal: string | null = null;
+    if (rawTag === 'C' || rawTag === 'Critico' || rawTag === 'Crítico') {
+      etiquetaVal = 'Crítico';
+    } else if (rawTag === 'I' || rawTag === 'Inconforme') {
+      etiquetaVal = 'Inconforme';
+    } else if (rawTag) {
+      etiquetaVal = String(rawTag);
+    }
+
     return {
       id: raw.id ? String(raw.id) : '',
       nombres,
@@ -273,8 +283,9 @@ export class PatientService {
       cohorte: raw.cohorte ?? null,
       estado: raw.estado ?? null,
       riesgo: (rawRiesgo && ['Critical', 'High', 'Medium', 'Low'].includes(rawRiesgo) ? rawRiesgo : null) as any,
-      etiqueta: raw.etiqueta ?? null,
-      retroalimentacion: raw.retroalimentacion ?? null,
+      etiqueta: etiquetaVal,
+      tag_retroalimentacion: raw.tag_retroalimentacion ?? (rawTag === 'C' || rawTag === 'I' ? rawTag : null),
+      retroalimentacion: raw.retroalimentacion ?? etiquetaVal,
       fase: raw.fase ?? null,
       acta: this.buildCurrentActa(raw),
       actasHistory: this.buildActasHistory(raw),
@@ -394,6 +405,52 @@ export class PatientService {
       console.warn('[PatientService] Error calling /api/patients?action=costos:', error);
     }
     return DEFAULT_COST_ANALYSIS_DATA;
+  }
+
+  /**
+   * Fetch registered committee actas for a specific patient
+   * Invokes pkgcn_cohortes.p_actas_x_usuario through /api/patients?action=actas_x_usuario
+   */
+  static async getActasPorUsuario(idUsuario: string | number): Promise<ActaUsuarioDB[]> {
+    try {
+      const cleanId = String(idUsuario).replace(/\D/g, '') || String(idUsuario);
+      const resp = await fetch(`/api/patients?action=actas_x_usuario&id_usuario=${encodeURIComponent(cleanId)}`);
+      if (resp.ok) {
+        const data = await resp.json();
+        if (Array.isArray(data)) {
+          return data;
+        }
+        if (data && Array.isArray(data.actas)) {
+          return data.actas;
+        }
+      }
+    } catch (error) {
+      console.warn('[PatientService] Error calling /api/patients?action=actas_x_usuario:', error);
+    }
+    return [];
+  }
+
+  /**
+   * Fetch complete clinical details for an acta
+   * Invokes pkgcn_cohortes.f_ver_acta through /api/patients?action=ver_acta
+   */
+  static async getDetalleActa(idActa: string | number): Promise<any> {
+    try {
+      const cleanId = String(idActa).replace(/\D/g, '') || String(idActa);
+      const resp = await fetch(`/api/patients?action=ver_acta&id_acta=${encodeURIComponent(cleanId)}`);
+      if (resp.ok) {
+        const json = await resp.json();
+        if (json.success && json.data) {
+          return json.data;
+        }
+        if (json.data) {
+          return json.data;
+        }
+      }
+    } catch (error) {
+      console.warn('[PatientService] Error calling /api/patients?action=ver_acta:', error);
+    }
+    return null;
   }
 }
 

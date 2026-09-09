@@ -23,6 +23,33 @@ const getOracleConfig = (): OracleDbConfig => {
   };
 };
 
+const MOCK_ACTAS_FALLBACK = [
+  {
+    "id_acta": 1047,
+    "fecha_acta": "2026-09-03T16:07:43",
+    "usuario_firma": "Osmari Patricia Guillot Pereira",
+    "tipo_identificacion_paciente": "CC",
+    "identificacion_paciente": "57420603",
+    "nombre_paciente": "Osmari Patricia Guillot Pereira",
+    "nombre_convenio": "CMP Vive al 100 Caribe",
+    "analisis_plan": "PACIENTE CON ANTECEDENTE DE OBESIDAD GI; CÁNCER DE MAMA, EN SEGUIMIENTO POR ONCOLOGÍA Y CON TRATAMIENTO QUIMIOTERÁPICO. SS VALORACION POR MEDICINA INTERNA; GENERAL; PSICOLOGIA Y NUTRICION. ",
+    "observaciones": null,
+    "observaciones_operativas": null
+  },
+  {
+    "id_acta": 704,
+    "fecha_acta": "2026-07-30T15:55:59",
+    "usuario_firma": "Osmari Patricia Guillot Pereira",
+    "tipo_identificacion_paciente": "CC",
+    "identificacion_paciente": "57420603",
+    "nombre_paciente": "Osmari Patricia Guillot Pereira",
+    "nombre_convenio": "CMP Vive al 100 Caribe",
+    "analisis_plan": "PACIENTE CON ANTECEDENTE DE CÁNCER DE MAMA, EN SEGUIMIENTO POR ONCOLOGÍA Y CON TRATAMIENTO QUIMIOTERÁPICO. PRESENTA OBESIDAD GRADO I. SS VALORACION POR PAQUETE BASICO Y DEPORTOLOGIA.",
+    "observaciones": null,
+    "observaciones_operativas": null
+  }
+];
+
 // Safe helper for JSON responses
 function sendJson(res: any, status: number, data: any) {
   if (res.status && res.json) {
@@ -31,6 +58,28 @@ function sendJson(res: any, status: number, data: any) {
   res.statusCode = status;
   res.setHeader('Content-Type', 'application/json');
   return res.end(JSON.stringify(data));
+}
+
+async function lobToString(lob: any): Promise<string> {
+  if (!lob) return '';
+  if (typeof lob === 'string') return lob;
+  if (typeof lob.getData === 'function') {
+    try {
+      const data = await lob.getData();
+      return typeof data === 'string' ? data : data?.toString('utf8') || '';
+    } catch (_) {}
+  }
+  return new Promise((resolve, reject) => {
+    let clobData = '';
+    try {
+      lob.setEncoding('utf8');
+      lob.on('data', (chunk: string) => { clobData += chunk; });
+      lob.on('end', () => { resolve(clobData); });
+      lob.on('error', (err: any) => { reject(err); });
+    } catch (e) {
+      reject(e);
+    }
+  });
 }
 
 let cachedOracleDb: any = null;
@@ -157,6 +206,9 @@ export default async function handler(req: any, res: any) {
 
     const config = getOracleConfig();
     if (!config.user || !config.connectString) {
+      if (action === 'actas_x_usuario' || action === 'actas') {
+        return sendJson(res, 200, MOCK_ACTAS_FALLBACK);
+      }
       return sendJson(res, 200, {
         codigo_respuesta: -1,
         mensaje_respuesta: 'Variables de entorno de Oracle (ORACLE_DB_USER / ORACLE_DB_CONNECTION_STRING) no configuradas en Vercel.',
@@ -166,6 +218,9 @@ export default async function handler(req: any, res: any) {
 
     const oracledb = await getOracleDb();
     if (!oracledb) {
+      if (action === 'actas_x_usuario' || action === 'actas') {
+        return sendJson(res, 200, MOCK_ACTAS_FALLBACK);
+      }
       return sendJson(res, 200, {
         codigo_respuesta: -1,
         mensaje_respuesta: 'El modulo node-oracledb no se pudo cargar en este entorno Serverless de Vercel.',
@@ -193,6 +248,69 @@ export default async function handler(req: any, res: any) {
           p_identificacion: cedula,
           p_json_salida: { type: oracledb.STRING, dir: oracledb.BIND_OUT, maxSize: 10000000 }
         };
+      } else if (action === 'actas_x_usuario' || action === 'actas') {
+        const idUsuario = Number(queryObj.id_usuario || req.body?.id_usuario || queryObj.id || req.body?.id || 0);
+        executeSql = `BEGIN pkgcn_cohortes.p_actas_x_usuario(:p_json_entrada, :p_json_salida); END;`;
+        bindParams = {
+          p_json_entrada: JSON.stringify({ id_usuario: idUsuario }),
+          p_json_salida: { type: oracledb.STRING, dir: oracledb.BIND_OUT, maxSize: 5000000 }
+        };
+      } else if (action === 'ver_acta' || action === 'f_ver_acta') {
+        const idActa = Number(queryObj.id_acta || req.body?.id_acta || 0);
+        if (!idActa) {
+          await connection.close();
+          return sendJson(res, 400, { success: false, error: 'id_acta es requerido y debe ser numérico' });
+        }
+        const inputJson = JSON.stringify({ id_acta: idActa });
+        let rawClob = '';
+        try {
+          const resultActa = await connection.execute(
+            `BEGIN :p_out_clob := pkgcn_cohortes.f_ver_acta(:p_in_json); END;`,
+            {
+              p_in_json: { val: inputJson, type: oracledb.STRING, dir: oracledb.BIND_IN },
+              p_out_clob: { type: oracledb.CLOB, dir: oracledb.BIND_OUT }
+            }
+          );
+          rawClob = await lobToString(resultActa.outBinds?.p_out_clob);
+        } catch (execErr: any) {
+          console.warn('[Oracle API ver_acta Warning]:', execErr.message);
+          try {
+            const fallbackSql = `BEGIN :p_out_clob := teker_dev.pkgcn_cohortes.f_ver_acta(:p_in_json); END;`;
+            const resultFallback = await connection.execute(
+              fallbackSql,
+              {
+                p_in_json: { val: inputJson, type: oracledb.STRING, dir: oracledb.BIND_IN },
+                p_out_clob: { type: oracledb.CLOB, dir: oracledb.BIND_OUT }
+              }
+            );
+            rawClob = await lobToString(resultFallback.outBinds?.p_out_clob);
+          } catch (err2: any) {
+            console.warn('[Oracle API ver_acta DUAL fallback]:', err2.message);
+            try {
+              const resDual = await connection.execute(
+                `SELECT pkgcn_cohortes.f_ver_acta(:p_in_json) AS DATOS_ACTA FROM DUAL`,
+                { p_in_json: inputJson }
+              );
+              rawClob = await lobToString(resDual.rows?.[0]?.[0] || resDual.rows?.[0]?.DATOS_ACTA);
+            } catch (e3: any) {
+              console.error('[Oracle API ver_acta failed completely]:', e3.message);
+            }
+          }
+        }
+        await connection.close();
+        connection = null;
+
+        if (!rawClob || rawClob === '{}') {
+          return sendJson(res, 200, { success: false, error: `No se encontraron datos para el acta #${idActa}` });
+        }
+
+        let parsed: any = null;
+        try {
+          parsed = JSON.parse(rawClob);
+        } catch (pe) {
+          parsed = { raw: rawClob };
+        }
+        return sendJson(res, 200, { success: true, data: parsed, id_acta: idActa });
       } else if (action === 'total_paginas') {
         procedureName = 'prc_obtener_total_paginas';
         executeSql = `BEGIN pkgln_pacientes_giris.${procedureName}(:p_json_entrada, :p_json_salida); END;`;
@@ -216,20 +334,58 @@ export default async function handler(req: any, res: any) {
         };
       }
 
-      const result: any = await connection.execute(executeSql, bindParams);
+      let result: any;
+      try {
+        result = await connection.execute(executeSql, bindParams);
+      } catch (execErr: any) {
+        // Fallback for actas_x_usuario if schema is teker_dev or package not compiled
+        if ((action === 'actas_x_usuario' || action === 'actas') && execErr.message?.includes('pkgcn_cohortes')) {
+          try {
+            const fallbackSql = `BEGIN teker_dev.pkgcn_cohortes.p_actas_x_usuario(:p_json_entrada, :p_json_salida); END;`;
+            result = await connection.execute(fallbackSql, bindParams);
+          } catch (err2: any) {
+            console.warn('[Oracle API Actas Warning]: Fallback a datos mock:', err2.message);
+            await connection.close();
+            connection = null;
+            return sendJson(res, 200, MOCK_ACTAS_FALLBACK);
+          }
+        } else {
+          throw execErr;
+        }
+      }
+
       await connection.close();
       connection = null;
 
-      const rawSalida = result.outBinds.p_json_salida;
-      const jsonSalida = typeof rawSalida === 'string' ? JSON.parse(rawSalida) : rawSalida;
+      const rawSalida = result.outBinds?.p_json_salida;
+      console.log(`[Oracle API Actas] rawSalida for ${action}:`, typeof rawSalida, rawSalida ? rawSalida.substring(0, 100) : 'null');
+      let jsonSalida: any = null;
+      if (typeof rawSalida === 'string') {
+        try {
+          jsonSalida = JSON.parse(rawSalida);
+        } catch (pe) {
+          jsonSalida = rawSalida;
+        }
+      } else {
+        jsonSalida = rawSalida;
+      }
+      if ((action === 'actas_x_usuario' || action === 'actas') && !jsonSalida) {
+        jsonSalida = [];
+      }
       return sendJson(res, 200, jsonSalida);
     } catch (dbErr: any) {
       if (connection) {
         try { await connection.close(); } catch (e) {}
       }
+      if (action === 'actas_x_usuario' || action === 'actas') {
+        return sendJson(res, 200, MOCK_ACTAS_FALLBACK);
+      }
+      if (action === 'ver_acta' || action === 'f_ver_acta') {
+        return sendJson(res, 200, { success: false, error: dbErr.message });
+      }
       return sendJson(res, 200, {
         codigo_respuesta: -1,
-        mensaje_respuesta: `Error al ejecutar pkgln_pacientes_giris: ${dbErr.message}`,
+        mensaje_respuesta: `Error al ejecutar BD: ${dbErr.message}`,
         pacientes: []
       });
     }

@@ -37,6 +37,19 @@ export interface NoteEntry {
   content: string;
 }
 
+export interface ActaUsuarioDB {
+  id_acta: number;
+  fecha_acta: string;
+  usuario_firma: string;
+  tipo_identificacion_paciente: string;
+  identificacion_paciente: string;
+  nombre_paciente: string;
+  nombre_convenio: string;
+  analisis_plan: string;
+  observaciones: string | null;
+  observaciones_operativas: string | null;
+}
+
 export interface ActaInfo {
   numero: number;
   fecha: string;
@@ -44,6 +57,14 @@ export interface ActaInfo {
   observaciones_clinicas?: string;
   observaciones_operativas?: string;
   integrantes?: string[];
+  id_acta?: number;
+  usuario_firma?: string;
+  tipo_identificacion_paciente?: string;
+  identificacion_paciente?: string;
+  nombre_paciente?: string;
+  nombre_convenio?: string;
+  analisis_plan?: string;
+  observaciones?: string | null;
 }
 
 export interface TasasData {
@@ -97,7 +118,8 @@ export interface Patient {
   cohorte?: string | null;
   estado?: EstadoPaciente | null;
   riesgo?: NivelRiesgo | null;
-  etiqueta?: string | null; // "Inconforme" or ""
+  etiqueta?: string | null; // "Crítico" | "Inconforme" | null
+  tag_retroalimentacion?: string | null; // 'C' | 'I' | null
   retroalimentacion?: string | null;
   fase?: FasePaciente | null;
   acta?: ActaInfo | null;

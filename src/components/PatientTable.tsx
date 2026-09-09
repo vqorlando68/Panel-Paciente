@@ -63,6 +63,28 @@ export type SortField =
 
 export type SortDirection = 'asc' | 'desc';
 
+export const DEFAULT_COLUMN_WIDTHS: Record<string, number> = {
+  acciones: 100,
+  nombre: 240,
+  convenioNombre: 170,
+  cohorte: 140,
+  riesgo: 95,
+  etiqueta: 115,
+  fase: 85,
+  coordinador: 145,
+  numeroCarga: 110,
+  fechaProximaRevision: 135,
+  med_gen: 155,
+  nutri: 155,
+  psicol: 155,
+  esp_1: 155,
+  esp_2: 155,
+  esp_3: 155,
+  esp_4: 155,
+  nota_op: 56,
+  nota_cli: 56,
+};
+
 interface PatientTableProps {
   patients: Patient[];
   activeRole: UserRole;
@@ -100,6 +122,68 @@ export const PatientTable: React.FC<PatientTableProps> = ({
   onOpenAgenda,
   onOpenTasas,
 }) => {
+  // Column Widths State (with localStorage persistence)
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => {
+    try {
+      const saved = localStorage.getItem('panel_pacientes_col_widths');
+      if (saved) {
+        return { ...DEFAULT_COLUMN_WIDTHS, ...JSON.parse(saved) };
+      }
+    } catch (e) {}
+    return DEFAULT_COLUMN_WIDTHS;
+  });
+
+  const resizingRef = React.useRef<{
+    columnKey: string;
+    startX: number;
+    startWidth: number;
+  } | null>(null);
+
+  const handleResizeStart = (e: React.MouseEvent, columnKey: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    resizingRef.current = {
+      columnKey,
+      startX: e.clientX,
+      startWidth: columnWidths[columnKey] || DEFAULT_COLUMN_WIDTHS[columnKey] || 100,
+    };
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      if (!resizingRef.current) return;
+      const deltaX = moveEvent.clientX - resizingRef.current.startX;
+      const minW = resizingRef.current.columnKey.startsWith('nota') ? 45 : 60;
+      const newWidth = Math.max(minW, Math.round(resizingRef.current.startWidth + deltaX));
+
+      setColumnWidths((prev) => {
+        const next = { ...prev, [resizingRef.current!.columnKey]: newWidth };
+        try {
+          localStorage.setItem('panel_pacientes_col_widths', JSON.stringify(next));
+        } catch (err) {}
+        return next;
+      });
+    };
+
+    const handleMouseUp = () => {
+      resizingRef.current = null;
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
+
+  const handleResetColumnWidths = () => {
+    setColumnWidths(DEFAULT_COLUMN_WIDTHS);
+    try {
+      localStorage.removeItem('panel_pacientes_col_widths');
+    } catch (e) {}
+  };
+
   // Sort State
   const [sortField, setSortField] = useState<SortField | null>('prioridadInicial');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
@@ -491,17 +575,19 @@ export const PatientTable: React.FC<PatientTableProps> = ({
     );
   };
 
-  const renderHeader = (label: string, field: SortField, className: string = '') => {
+  const renderHeader = (label: string, field: SortField, colKey: string, className: string = '') => {
     const isActive = sortField === field;
+    const w = columnWidths[colKey] || DEFAULT_COLUMN_WIDTHS[colKey] || 120;
     return (
       <th
         onClick={() => handleSort(field)}
-        className={`px-3 h-10 cursor-pointer transition-colors hover:bg-[#effaff] dark:hover:bg-[#334155] select-none ${className}`}
-        title={`Clic para ordenar por ${label}`}
+        style={{ width: `${w}px`, minWidth: `${w}px`, maxWidth: `${w}px` }}
+        className={`px-3 h-10 cursor-pointer transition-colors hover:bg-[#effaff] dark:hover:bg-[#334155] select-none relative group/th ${className}`}
+        title={`Clic para ordenar por ${label}. Arrastre el borde derecho para ajustar el ancho.`}
       >
-        <div className="flex items-center gap-1.5 justify-between">
-          <span>{label}</span>
-          <span className="text-[#00aae1] dark:text-[#38bdf8]">
+        <div className="flex items-center gap-1.5 justify-between pr-1">
+          <span className="truncate">{label}</span>
+          <span className="text-[#00aae1] dark:text-[#38bdf8] shrink-0">
             {isActive ? (
               sortDirection === 'asc' ? (
                 <ArrowUp className="w-3.5 h-3.5" />
@@ -513,9 +599,23 @@ export const PatientTable: React.FC<PatientTableProps> = ({
             )}
           </span>
         </div>
+
+        {/* Column Resize Handle */}
+        <div
+          onMouseDown={(e) => handleResizeStart(e, colKey)}
+          onClick={(e) => e.stopPropagation()}
+          className="absolute right-0 top-0 bottom-0 w-2.5 cursor-col-resize hover:bg-[#00aae1] active:bg-[#00aae1] z-30 opacity-0 group-hover/th:opacity-100 transition-opacity flex items-center justify-center"
+          title="Arrastrar para cambiar ancho de columna"
+        >
+          <div className="w-[1.5px] h-4 bg-gray-300 dark:bg-gray-600 rounded-full" />
+        </div>
       </th>
     );
   };
+
+  const totalTableWidth = useMemo(() => {
+    return Object.values(columnWidths).reduce((acc: number, curr: number) => acc + Number(curr), 0);
+  }, [columnWidths]);
 
   return (
     <div className="flex-1 overflow-x-auto overflow-y-auto touch-pan-x relative w-full bg-white dark:bg-[#1e293b] font-sans max-w-[1550px] mx-auto rounded-xl shadow-2xs border border-[#e2e8eb] dark:border-[#334155] my-2 transition-colors duration-200" style={{ WebkitOverflowScrolling: 'touch' }}>
@@ -527,25 +627,50 @@ export const PatientTable: React.FC<PatientTableProps> = ({
         </div>
       )}
 
-      {/* Main Table Structure (14 Main Columns) */}
-      <table className="w-full text-left border-collapse min-w-[2100px]">
+      {/* Main Table Structure (Resizable Columns) */}
+      <table
+        style={{ width: `${totalTableWidth}px`, minWidth: '100%', tableLayout: 'fixed' }}
+        className="text-left border-collapse"
+      >
         {/* Table Header */}
         <thead>
           <tr className="bg-[#f9fafb] dark:bg-[#0f172a] border-b border-[#e2e8eb] dark:border-[#334155] text-[10px] font-bold text-[#035476] dark:text-[#94a3b8] uppercase tracking-wider select-none h-10">
             {/* Col 1: ACCIONES (Sticky on sm+) */}
-            <th className="sm:sticky sm:left-0 z-30 bg-[#f9fafb] dark:bg-[#0f172a] px-2 text-center border-r border-[#e2e8eb] dark:border-[#334155] min-w-[80px] sm:min-w-[100px] max-w-[80px] sm:max-w-[100px]">
+            <th
+              style={{
+                width: `${columnWidths.acciones}px`,
+                minWidth: `${columnWidths.acciones}px`,
+                maxWidth: `${columnWidths.acciones}px`,
+              }}
+              className="sm:sticky sm:left-0 z-30 bg-[#f9fafb] dark:bg-[#0f172a] px-2 text-center border-r border-[#e2e8eb] dark:border-[#334155] relative group/th select-none"
+            >
               <span className="hidden sm:inline">ACCIONES</span>
               <span className="inline sm:hidden">ACC.</span>
+              <div
+                onMouseDown={(e) => handleResizeStart(e, 'acciones')}
+                onClick={(e) => e.stopPropagation()}
+                className="absolute right-0 top-0 bottom-0 w-2.5 cursor-col-resize hover:bg-[#00aae1] active:bg-[#00aae1] z-30 opacity-0 group-hover/th:opacity-100 transition-opacity flex items-center justify-center"
+                title="Arrastrar para cambiar ancho de columna"
+              >
+                <div className="w-[1.5px] h-4 bg-gray-300 dark:bg-gray-600 rounded-full" />
+              </div>
             </th>
 
             {/* Col 2: PACIENTE (Sticky on sm+) */}
             <th
               onClick={() => handleSort('nombre')}
-              className="sm:sticky sm:left-[100px] z-30 bg-[#f9fafb] dark:bg-[#0f172a] px-3 border-r border-[#e2e8eb] dark:border-[#334155] min-w-[240px] max-w-[240px] cursor-pointer hover:bg-[#effaff] dark:hover:bg-[#334155] transition-colors"
+              style={{
+                width: `${columnWidths.nombre}px`,
+                minWidth: `${columnWidths.nombre}px`,
+                maxWidth: `${columnWidths.nombre}px`,
+                left: `${columnWidths.acciones}px`,
+              }}
+              className="sm:sticky z-30 bg-[#f9fafb] dark:bg-[#0f172a] px-3 border-r border-[#e2e8eb] dark:border-[#334155] cursor-pointer hover:bg-[#effaff] dark:hover:bg-[#334155] transition-colors relative group/th select-none"
+              title="Clic para ordenar por PACIENTE. Arrastre el borde derecho para cambiar ancho."
             >
-              <div className="flex items-center gap-1.5 justify-between">
+              <div className="flex items-center gap-1.5 justify-between pr-1">
                 <span>PACIENTE</span>
-                <span className="text-[#00aae1] dark:text-[#38bdf8]">
+                <span className="text-[#00aae1] dark:text-[#38bdf8] shrink-0">
                   {sortField === 'nombre' ? (
                     sortDirection === 'asc' ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />
                   ) : (
@@ -553,49 +678,88 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                   )}
                 </span>
               </div>
+              <div
+                onMouseDown={(e) => handleResizeStart(e, 'nombre')}
+                onClick={(e) => e.stopPropagation()}
+                className="absolute right-0 top-0 bottom-0 w-2.5 cursor-col-resize hover:bg-[#00aae1] active:bg-[#00aae1] z-30 opacity-0 group-hover/th:opacity-100 transition-opacity flex items-center justify-center"
+                title="Arrastrar para cambiar ancho de columna"
+              >
+                <div className="w-[1.5px] h-4 bg-gray-300 dark:bg-gray-600 rounded-full" />
+              </div>
             </th>
 
-            {/* Col 4: CONVENIO */}
-            {renderHeader('CONV.', 'convenioNombre', 'min-w-[120px] sm:min-w-[170px]')}
+            {/* Col 3: CONVENIO */}
+            {renderHeader('CONV.', 'convenioNombre', 'convenioNombre')}
 
-            {/* Col 5: ESTADO / COHORTE */}
-            {renderHeader('ESTADO', 'cohorte', 'min-w-[100px] sm:min-w-[140px]')}
+            {/* Col 4: ESTADO / COHORTE */}
+            {renderHeader('ESTADO', 'cohorte', 'cohorte')}
 
-            {/* Col 6: RIESGO */}
-            {renderHeader('RIESGO', 'riesgo', 'min-w-[90px] text-center')}
+            {/* Col 5: RIESGO */}
+            {renderHeader('RIESGO', 'riesgo', 'riesgo', 'text-center')}
 
-            {/* Col 7: ETIQUETA */}
-            {renderHeader('ETIQUETA', 'etiqueta', 'min-w-[110px] text-center')}
+            {/* Col 6: ETIQUETA */}
+            {renderHeader('ETIQUETA', 'etiqueta', 'etiqueta', 'text-center')}
 
-            {/* Col 8: FASE */}
-            {renderHeader('FASE', 'fase', 'min-w-[80px] text-center')}
+            {/* Col 7: FASE */}
+            {renderHeader('FASE', 'fase', 'fase', 'text-center')}
 
-            {/* Col 9: COORDINADOR */}
-            {renderHeader('COORDINADOR', 'coordinador', 'min-w-[140px]')}
+            {/* Col 8: COORDINADOR */}
+            {renderHeader('COORDINADOR', 'coordinador', 'coordinador')}
 
-            {/* Col 10: N° CARGA */}
-            {renderHeader('N° CARGA', 'numeroCarga', 'min-w-[110px] text-center')}
+            {/* Col 9: N° CARGA */}
+            {renderHeader('N° CARGA', 'numeroCarga', 'numeroCarga', 'text-center')}
 
-            {/* Col 11: FECHA PROX. REVISIÓN */}
-            {renderHeader('FECHA PROX. REVISIÓN', 'fechaProximaRevision', 'min-w-[130px] text-center')}
+            {/* Col 10: FECHA PROX. REVISIÓN */}
+            {renderHeader('FECHA PROX. REVISIÓN', 'fechaProximaRevision', 'fechaProximaRevision', 'text-center')}
 
-            {/* Col 12: ESPECIALISTAS (7 Subcolumns) */}
-            {renderHeader('MEDICO GEN.', 'med_gen', 'min-w-[155px] bg-[#f9fafb] dark:bg-[#0f172a] border-l border-[#e2e8eb] dark:border-[#334155] text-[#033d59] dark:text-[#f8fafc]')}
-            {renderHeader('NUTRICIONISTA', 'nutri', 'min-w-[155px] bg-[#f9fafb] dark:bg-[#0f172a] text-[#033d59] dark:text-[#f8fafc]')}
-            {renderHeader('PSICOLOGIA', 'psicol', 'min-w-[155px] bg-[#f9fafb] dark:bg-[#0f172a] text-[#033d59] dark:text-[#f8fafc]')}
-            {renderHeader('CARDIOLOGÍA', 'esp_1', 'min-w-[155px] bg-[#f9fafb] dark:bg-[#0f172a] text-[#033d59] dark:text-[#f8fafc]')}
-            {renderHeader('ENDOCRINOLOGÍA', 'esp_2', 'min-w-[155px] bg-[#f9fafb] dark:bg-[#0f172a] text-[#033d59] dark:text-[#f8fafc]')}
-            {renderHeader('NEFROLOGÍA', 'esp_3', 'min-w-[155px] bg-[#f9fafb] dark:bg-[#0f172a] text-[#033d59] dark:text-[#f8fafc]')}
-            {renderHeader('NEUROLOGÍA', 'esp_4', 'min-w-[155px] bg-[#f9fafb] dark:bg-[#0f172a] border-r border-[#e2e8eb] dark:border-[#334155] text-[#033d59] dark:text-[#f8fafc]')}
+            {/* Col 11..17: ESPECIALISTAS (7 Subcolumns) */}
+            {renderHeader('MEDICO GEN.', 'med_gen', 'med_gen', 'border-l border-[#e2e8eb] dark:border-[#334155]')}
+            {renderHeader('NUTRICIONISTA', 'nutri', 'nutri')}
+            {renderHeader('PSICOLOGIA', 'psicol', 'psicol')}
+            {renderHeader('CARDIOLOGÍA', 'esp_1', 'esp_1')}
+            {renderHeader('ENDOCRINOLOGÍA', 'esp_2', 'esp_2')}
+            {renderHeader('NEFROLOGÍA', 'esp_3', 'esp_3')}
+            {renderHeader('NEUROLOGÍA', 'esp_4', 'esp_4', 'border-r border-[#e2e8eb] dark:border-[#334155]')}
 
-            {/* Col 13: NOTA OP (Sticky on sm+) */}
-            <th className="sm:sticky sm:right-[56px] z-20 bg-[#f9fafb] dark:bg-[#0f172a] px-2 text-center border-l border-[#e2e8eb] dark:border-[#334155] min-w-[56px] max-w-[56px]">
-              NOTA OP
+            {/* Col 18: NOTA OP (Sticky on sm+) */}
+            <th
+              style={{
+                width: `${columnWidths.nota_op}px`,
+                minWidth: `${columnWidths.nota_op}px`,
+                maxWidth: `${columnWidths.nota_op}px`,
+                right: `${columnWidths.nota_cli}px`,
+              }}
+              className="sm:sticky z-20 bg-[#f9fafb] dark:bg-[#0f172a] px-2 text-center border-l border-[#e2e8eb] dark:border-[#334155] relative group/th select-none"
+            >
+              <span>NOTA OP</span>
+              <div
+                onMouseDown={(e) => handleResizeStart(e, 'nota_op')}
+                onClick={(e) => e.stopPropagation()}
+                className="absolute right-0 top-0 bottom-0 w-2.5 cursor-col-resize hover:bg-[#00aae1] active:bg-[#00aae1] z-30 opacity-0 group-hover/th:opacity-100 transition-opacity flex items-center justify-center"
+                title="Arrastrar para cambiar ancho de columna"
+              >
+                <div className="w-[1.5px] h-4 bg-gray-300 dark:bg-gray-600 rounded-full" />
+              </div>
             </th>
 
-            {/* Col 14: NOTA CLI (Sticky on sm+) */}
-            <th className="sm:sticky sm:right-0 z-20 bg-[#f9fafb] dark:bg-[#0f172a] px-2 text-center border-l border-[#e2e8eb] dark:border-[#334155] min-w-[56px] max-w-[56px]">
-              NOTA CLI
+            {/* Col 19: NOTA CLI (Sticky on sm+) */}
+            <th
+              style={{
+                width: `${columnWidths.nota_cli}px`,
+                minWidth: `${columnWidths.nota_cli}px`,
+                maxWidth: `${columnWidths.nota_cli}px`,
+              }}
+              className="sm:sticky sm:right-0 z-20 bg-[#f9fafb] dark:bg-[#0f172a] px-2 text-center border-l border-[#e2e8eb] dark:border-[#334155] relative group/th select-none"
+            >
+              <span>NOTA CLI</span>
+              <div
+                onMouseDown={(e) => handleResizeStart(e, 'nota_cli')}
+                onClick={(e) => e.stopPropagation()}
+                className="absolute right-0 top-0 bottom-0 w-2.5 cursor-col-resize hover:bg-[#00aae1] active:bg-[#00aae1] z-30 opacity-0 group-hover/th:opacity-100 transition-opacity flex items-center justify-center"
+                title="Arrastrar para cambiar ancho de columna"
+              >
+                <div className="w-[1.5px] h-4 bg-gray-300 dark:bg-gray-600 rounded-full" />
+              </div>
             </th>
           </tr>
         </thead>
@@ -613,7 +777,8 @@ export const PatientTable: React.FC<PatientTableProps> = ({
               const isMenuOpen = activeMenuPatientId === patient.id;
               const isAlarmOpen = activeAlarmTooltipPatientId === patient.id;
               const isAdherenciaOpen = adherenciaPatientId === patient.id;
-              const isInconforme = patient.etiqueta === 'Inconforme' || patient.retroalimentacion === 'Inconforme';
+              const isCriticoTag = patient.tag_retroalimentacion === 'C' || patient.etiqueta === 'Crítico' || patient.etiqueta === 'Critico';
+              const isInconformeTag = patient.tag_retroalimentacion === 'I' || patient.etiqueta === 'Inconforme' || patient.retroalimentacion === 'Inconforme';
 
               return (
                   <tr
@@ -621,9 +786,16 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                     className="hover:bg-[#f9fafb] dark:hover:bg-[#0f172a]/60 transition-colors group h-[72px]"
                   >
                   {/* Col 1: ACCIONES (Sticky on sm+) */}
-                  <td className={`bg-white dark:bg-[#1e293b] sm:sticky sm:left-0 group-hover:bg-[#f9fafb] dark:group-hover:bg-[#0f172a] px-2 py-1 border-r border-[#e2e8eb] dark:border-[#334155] min-w-[80px] sm:min-w-[100px] max-w-[80px] sm:max-w-[100px] relative ${
-                    isMenuOpen || isAlarmOpen || isAdherenciaOpen ? 'z-40' : 'z-30'
-                  }`}>
+                  <td
+                    style={{
+                      width: `${columnWidths.acciones}px`,
+                      minWidth: `${columnWidths.acciones}px`,
+                      maxWidth: `${columnWidths.acciones}px`,
+                    }}
+                    className={`bg-white dark:bg-[#1e293b] sm:sticky sm:left-0 group-hover:bg-[#f9fafb] dark:group-hover:bg-[#0f172a] px-2 py-1 border-r border-[#e2e8eb] dark:border-[#334155] relative ${
+                      isMenuOpen || isAlarmOpen || isAdherenciaOpen ? 'z-40' : 'z-30'
+                    }`}
+                  >
                     <div className="flex flex-col items-center justify-center gap-1">
                       {/* Mini-Chart Adherencia Toggle Button */}
                       <button
@@ -695,25 +867,55 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                   </td>
 
                   {/* Col 2: PACIENTE (Sticky on sm+) */}
-                  <td className="bg-white dark:bg-[#1e293b] sm:sticky sm:left-[100px] z-30 group-hover:bg-[#f9fafb] dark:group-hover:bg-[#0f172a] px-2 py-1.5 border-r border-[#e2e8eb] dark:border-[#334155] min-w-[240px] max-w-[240px] relative">
+                  <td
+                    style={{
+                      width: `${columnWidths.nombre}px`,
+                      minWidth: `${columnWidths.nombre}px`,
+                      maxWidth: `${columnWidths.nombre}px`,
+                      left: `${columnWidths.acciones}px`,
+                    }}
+                    className="bg-white dark:bg-[#1e293b] sm:sticky z-30 group-hover:bg-[#f9fafb] dark:group-hover:bg-[#0f172a] px-2 py-1.5 border-r border-[#e2e8eb] dark:border-[#334155] relative overflow-hidden"
+                  >
                     <PatientCard
                       patient={patient}
                       onClick={() => onEditPatient(patient)}
                     />
                   </td>
 
-                  {/* Col 4: CONVENIO */}
-                  <td className="px-3 py-2 text-[#033d59] dark:text-[#f8fafc] font-medium text-[11px] truncate min-w-[120px] max-w-[120px] sm:min-w-[170px] sm:max-w-[170px]">
+                  {/* Col 3: CONVENIO */}
+                  <td
+                    style={{
+                      width: `${columnWidths.convenioNombre}px`,
+                      minWidth: `${columnWidths.convenioNombre}px`,
+                      maxWidth: `${columnWidths.convenioNombre}px`,
+                    }}
+                    className="px-3 py-2 text-[#033d59] dark:text-[#f8fafc] font-medium text-[11px] truncate"
+                    title={patient.convenioNombre || ''}
+                  >
                     {patient.convenioNombre}
                   </td>
 
-                  {/* Col 5: ESTADO / COHORTE */}
-                  <td className="px-3 py-2 min-w-[100px] sm:min-w-[140px]">
+                  {/* Col 4: ESTADO / COHORTE */}
+                  <td
+                    style={{
+                      width: `${columnWidths.cohorte}px`,
+                      minWidth: `${columnWidths.cohorte}px`,
+                      maxWidth: `${columnWidths.cohorte}px`,
+                    }}
+                    className="px-3 py-2"
+                  >
                     {renderCohorteBadge(patient)}
                   </td>
 
-                  {/* Col 6: RIESGO */}
-                  <td className="px-3 py-2 text-center relative">
+                  {/* Col 5: RIESGO */}
+                  <td
+                    style={{
+                      width: `${columnWidths.riesgo}px`,
+                      minWidth: `${columnWidths.riesgo}px`,
+                      maxWidth: `${columnWidths.riesgo}px`,
+                    }}
+                    className="px-3 py-2 text-center relative"
+                  >
                     <button
                       onClick={() => handleRiskClick(patient)}
                       className="p-1 rounded-md hover:bg-[#effaff] dark:hover:bg-[#334155] transition-colors inline-flex items-center justify-center cursor-pointer"
@@ -744,10 +946,27 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                     )}
                   </td>
 
-                  {/* Col 7: ETIQUETA (Badge Inconforme) */}
-                  <td className="px-3 py-2 text-center">
-                    {isInconforme ? (
-                      <span className="px-2 py-0.5 rounded bg-[#fff1f2] dark:bg-[#be123c]/20 text-[#e11d48] dark:text-[#fb7185] font-bold text-[10px] border border-[#fecdd3] dark:border-[#be123c]/40 inline-block shadow-2xs">
+                  {/* Col 6: ETIQUETA (Crítico 'C' o Inconforme 'I') */}
+                  <td
+                    style={{
+                      width: `${columnWidths.etiqueta}px`,
+                      minWidth: `${columnWidths.etiqueta}px`,
+                      maxWidth: `${columnWidths.etiqueta}px`,
+                    }}
+                    className="px-2 py-2 text-center"
+                  >
+                    {isCriticoTag ? (
+                      <span
+                        className="px-2 py-0.5 rounded bg-[#fff1f2] dark:bg-rose-950/50 text-[#e11d48] dark:text-rose-300 font-bold text-[10px] border border-[#fecdd3] dark:border-rose-800/60 inline-block shadow-2xs"
+                        title="Tag de Retroalimentación: Crítico"
+                      >
+                        Crítico
+                      </span>
+                    ) : isInconformeTag ? (
+                      <span
+                        className="px-2 py-0.5 rounded bg-[#fffbeb] dark:bg-amber-950/50 text-[#b45309] dark:text-amber-300 font-bold text-[10px] border border-[#fde68a] dark:border-amber-700/60 inline-block shadow-2xs"
+                        title="Tag de Retroalimentación: Inconforme"
+                      >
                         Inconforme
                       </span>
                     ) : (
@@ -755,51 +974,136 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                     )}
                   </td>
 
-                  {/* Col 8: FASE */}
-                  <td className="px-3 py-2 text-center">
+                  {/* Col 7: FASE */}
+                  <td
+                    style={{
+                      width: `${columnWidths.fase}px`,
+                      minWidth: `${columnWidths.fase}px`,
+                      maxWidth: `${columnWidths.fase}px`,
+                    }}
+                    className="px-2 py-2 text-center"
+                  >
                     {renderFaseCell(patient)}
                   </td>
 
-                  {/* Col 9: COORDINADOR */}
-                  <td className="px-3 py-2">
+                  {/* Col 8: COORDINADOR */}
+                  <td
+                    style={{
+                      width: `${columnWidths.coordinador}px`,
+                      minWidth: `${columnWidths.coordinador}px`,
+                      maxWidth: `${columnWidths.coordinador}px`,
+                    }}
+                    className="px-3 py-2"
+                  >
                     {renderCoordinadorBadge(patient)}
                   </td>
 
-                  {/* Col 10: N° CARGA */}
-                  <td className="px-3 py-2 text-center font-mono text-[11px] text-[#033d59] dark:text-[#f8fafc] font-medium">
+                  {/* Col 9: N° CARGA */}
+                  <td
+                    style={{
+                      width: `${columnWidths.numeroCarga}px`,
+                      minWidth: `${columnWidths.numeroCarga}px`,
+                      maxWidth: `${columnWidths.numeroCarga}px`,
+                    }}
+                    className="px-2 py-2 text-center font-mono text-[11px] text-[#033d59] dark:text-[#f8fafc] font-medium truncate"
+                  >
                     {patient.numeroCarga || '—'}
                   </td>
 
-                  {/* Col 11: FECHA PROX. REVISIÓN */}
-                  <td className="px-3 py-2 text-center font-mono text-[11px] text-[#033d59] dark:text-[#f8fafc]">
+                  {/* Col 10: FECHA PROX. REVISIÓN */}
+                  <td
+                    style={{
+                      width: `${columnWidths.fechaProximaRevision}px`,
+                      minWidth: `${columnWidths.fechaProximaRevision}px`,
+                      maxWidth: `${columnWidths.fechaProximaRevision}px`,
+                    }}
+                    className="px-2 py-2 text-center font-mono text-[11px] text-[#033d59] dark:text-[#f8fafc] truncate"
+                  >
                     {patient.fechaProximaRevision || '—'}
                   </td>
 
-                  {/* Cols 12: ESPECIALISTAS (7 Columns) */}
-                  <td className="px-1.5 py-1 min-w-[155px]">
+                  {/* Cols 11..17: ESPECIALISTAS (7 Columns) */}
+                  <td
+                    style={{
+                      width: `${columnWidths.med_gen}px`,
+                      minWidth: `${columnWidths.med_gen}px`,
+                      maxWidth: `${columnWidths.med_gen}px`,
+                    }}
+                    className="px-1.5 py-1"
+                  >
                     {renderSpecialistCell(patient, 'med_gen')}
                   </td>
-                  <td className="px-1.5 py-1 min-w-[155px]">
+                  <td
+                    style={{
+                      width: `${columnWidths.nutri}px`,
+                      minWidth: `${columnWidths.nutri}px`,
+                      maxWidth: `${columnWidths.nutri}px`,
+                    }}
+                    className="px-1.5 py-1"
+                  >
                     {renderSpecialistCell(patient, 'nutri')}
                   </td>
-                  <td className="px-1.5 py-1 min-w-[155px]">
+                  <td
+                    style={{
+                      width: `${columnWidths.psicol}px`,
+                      minWidth: `${columnWidths.psicol}px`,
+                      maxWidth: `${columnWidths.psicol}px`,
+                    }}
+                    className="px-1.5 py-1"
+                  >
                     {renderSpecialistCell(patient, 'psicol')}
                   </td>
-                  <td className="px-1.5 py-1 min-w-[155px]">
+                  <td
+                    style={{
+                      width: `${columnWidths.esp_1}px`,
+                      minWidth: `${columnWidths.esp_1}px`,
+                      maxWidth: `${columnWidths.esp_1}px`,
+                    }}
+                    className="px-1.5 py-1"
+                  >
                     {renderSpecialistCell(patient, 'esp_1')}
                   </td>
-                  <td className="px-1.5 py-1 min-w-[155px]">
+                  <td
+                    style={{
+                      width: `${columnWidths.esp_2}px`,
+                      minWidth: `${columnWidths.esp_2}px`,
+                      maxWidth: `${columnWidths.esp_2}px`,
+                    }}
+                    className="px-1.5 py-1"
+                  >
                     {renderSpecialistCell(patient, 'esp_2')}
                   </td>
-                  <td className="px-1.5 py-1 min-w-[155px]">
+                  <td
+                    style={{
+                      width: `${columnWidths.esp_3}px`,
+                      minWidth: `${columnWidths.esp_3}px`,
+                      maxWidth: `${columnWidths.esp_3}px`,
+                    }}
+                    className="px-1.5 py-1"
+                  >
                     {renderSpecialistCell(patient, 'esp_3')}
                   </td>
-                  <td className="px-1.5 py-1 min-w-[155px]">
+                  <td
+                    style={{
+                      width: `${columnWidths.esp_4}px`,
+                      minWidth: `${columnWidths.esp_4}px`,
+                      maxWidth: `${columnWidths.esp_4}px`,
+                    }}
+                    className="px-1.5 py-1"
+                  >
                     {renderSpecialistCell(patient, 'esp_4')}
                   </td>
 
-                  {/* Col 13: NOTA OP (Sticky on sm+) */}
-                  <td className="bg-white dark:bg-[#1e293b] sm:sticky sm:right-[56px] z-20 group-hover:bg-[#f9fafb] dark:group-hover:bg-[#0f172a] px-2 py-2 text-center border-l border-[#e2e8eb] dark:border-[#334155] min-w-[56px] max-w-[56px]">
+                  {/* Col 18: NOTA OP (Sticky on sm+) */}
+                  <td
+                    style={{
+                      width: `${columnWidths.nota_op}px`,
+                      minWidth: `${columnWidths.nota_op}px`,
+                      maxWidth: `${columnWidths.nota_op}px`,
+                      right: `${columnWidths.nota_cli}px`,
+                    }}
+                    className="bg-white dark:bg-[#1e293b] sm:sticky z-20 group-hover:bg-[#f9fafb] dark:group-hover:bg-[#0f172a] px-2 py-2 text-center border-l border-[#e2e8eb] dark:border-[#334155]"
+                  >
                     <button
                       onClick={() => onOpenNotesDrawer(patient, 'op')}
                       className="relative p-1.5 rounded-lg bg-[#f9fafb] dark:bg-[#0f172a] hover:bg-[#033d59] dark:hover:bg-[#00aae1] text-[#033d59] dark:text-[#f8fafc] hover:text-white transition-all border border-[#e2e8eb] dark:border-[#334155] cursor-pointer"
@@ -814,8 +1118,15 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                     </button>
                   </td>
 
-                  {/* Col 14: NOTA CLI (Sticky on sm+) */}
-                  <td className="bg-white dark:bg-[#1e293b] sm:sticky sm:right-0 z-20 group-hover:bg-[#f9fafb] dark:group-hover:bg-[#0f172a] px-2 py-2 text-center border-l border-[#e2e8eb] dark:border-[#334155] min-w-[56px] max-w-[56px]">
+                  {/* Col 19: NOTA CLI (Sticky on sm+) */}
+                  <td
+                    style={{
+                      width: `${columnWidths.nota_cli}px`,
+                      minWidth: `${columnWidths.nota_cli}px`,
+                      maxWidth: `${columnWidths.nota_cli}px`,
+                    }}
+                    className="bg-white dark:bg-[#1e293b] sm:sticky sm:right-0 z-20 group-hover:bg-[#f9fafb] dark:group-hover:bg-[#0f172a] px-2 py-2 text-center border-l border-[#e2e8eb] dark:border-[#334155]"
+                  >
                     <button
                       onClick={() => onOpenNotesDrawer(patient, 'cli')}
                       className="relative p-1.5 rounded-lg bg-[#effaff] dark:bg-[#00aae1]/10 hover:bg-[#00aae1] text-[#00aae1] dark:text-[#38bdf8] hover:text-white transition-all border border-[#00aae1]/30 cursor-pointer"
@@ -864,6 +1175,17 @@ export const PatientTable: React.FC<PatientTableProps> = ({
             <strong className="text-[#033d59] dark:text-[#f8fafc]">{endIndex}</strong> de{' '}
             <strong className="text-[#033d59] dark:text-[#f8fafc]">{sortedPatients.length}</strong> pacientes
           </span>
+
+          <div className="h-4 w-px bg-gray-200 dark:bg-gray-700 hidden sm:block" />
+
+          <button
+            type="button"
+            onClick={handleResetColumnWidths}
+            className="text-[11px] text-gray-500 dark:text-gray-400 hover:text-[#00aae1] dark:hover:text-[#38bdf8] transition-colors cursor-pointer border border-transparent hover:border-[#e2e8eb] dark:hover:border-[#334155] px-2 py-1 rounded-md flex items-center gap-1"
+            title="Restablecer el ancho predeterminado de todas las columnas"
+          >
+            <span>Restablecer anchos de columnas</span>
+          </button>
         </div>
 
         {/* Right Side: Page navigation controls */}
