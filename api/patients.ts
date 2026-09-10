@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+import { renderPrintableActaHtml } from './actaTemplate';
 dotenv.config({ path: '.env.local' });
 dotenv.config();
 
@@ -255,11 +256,28 @@ export default async function handler(req: any, res: any) {
           p_json_entrada: JSON.stringify({ id_usuario: idUsuario }),
           p_json_salida: { type: oracledb.STRING, dir: oracledb.BIND_OUT, maxSize: 5000000 }
         };
-      } else if (action === 'ver_acta' || action === 'f_ver_acta') {
-        const idActa = Number(queryObj.id_acta || req.body?.id_acta || 0);
+      } else if (action === 'ver_acta' || action === 'f_ver_acta' || action === 'imprimir_acta') {
+        let idActa = Number(queryObj.id_acta || req.body?.id_acta || 0);
+        const codigoCita = String(queryObj.codigo_cita || queryObj.codigo || req.body?.codigo_cita || '').trim();
+
+        if (!idActa && codigoCita) {
+          try {
+            const resCita = await connection.execute(
+              `SELECT id_acta_medica FROM tkr_citas WHERE UPPER(id_hexadecimal) = UPPER(:cod) OR UPPER(codigo_zoom) = UPPER(:cod) OR TO_CHAR(id) = :cod`,
+              { cod: codigoCita }
+            );
+            if (resCita.rows && resCita.rows.length > 0 && resCita.rows[0][0]) {
+              idActa = Number(resCita.rows[0][0]);
+            }
+          } catch (errFind: any) {
+            console.warn('[Oracle API ver_acta find cita warning]:', errFind.message);
+          }
+        }
+
         if (!idActa) {
           await connection.close();
-          return sendJson(res, 400, { success: false, error: 'id_acta es requerido y debe ser numérico' });
+          connection = null;
+          return sendJson(res, 400, { success: false, error: 'No se encontró un id_acta_medica válido para la consulta.' });
         }
         const inputJson = JSON.stringify({ id_acta: idActa });
         let rawClob = '';
@@ -310,7 +328,15 @@ export default async function handler(req: any, res: any) {
         } catch (pe) {
           parsed = { raw: rawClob };
         }
-        return sendJson(res, 200, { success: true, data: parsed, id_acta: idActa });
+
+        if (action === 'imprimir_acta' || queryObj.formato === 'html') {
+          const htmlContent = renderPrintableActaHtml(parsed, codigoCita, idActa);
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'text/html; charset=utf-8');
+          return res.end(htmlContent);
+        }
+
+        return sendJson(res, 200, { success: true, data: parsed, id_acta: idActa, codigo_cita: codigoCita });
       } else if (action === 'total_paginas') {
         procedureName = 'prc_obtener_total_paginas';
         executeSql = `BEGIN pkgln_pacientes_giris.${procedureName}(:p_json_entrada, :p_json_salida); END;`;

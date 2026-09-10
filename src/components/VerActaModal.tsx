@@ -195,7 +195,7 @@ export const VerActaModal: React.FC<VerActaModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'resumen' | 'antecedentes' | 'metricas' | 'citas_archivos' | 'epicrisis'>('resumen');
+  const [activeTab, setActiveTab] = useState<'resumen' | 'antecedentes' | 'metricas' | 'atenciones' | 'atenciones_realizadas' | 'archivos' | 'epicrisis'>('resumen');
   const [epicrisisSubTab, setEpicrisisSubTab] = useState<'evolucion' | 'antecedentes' | 'linea_tiempo' | 'diagnosticos' | 'medicamentos' | 'actas' | 'json_epicrisis'>('evolucion');
   const [copiedActaJson, setCopiedActaJson] = useState(false);
   const [copiedEpicrisisJson, setCopiedEpicrisisJson] = useState(false);
@@ -234,6 +234,21 @@ export const VerActaModal: React.FC<VerActaModalProps> = ({
     } else {
       setAtencionSortField(field);
       setAtencionSortDir('asc');
+    }
+  };
+
+  // Selector de vista y orden para Atenciones Realizadas (historias_anteriores)
+  const [realizadasViewMode, setRealizadasViewMode] = useState<'timeline' | 'tabla'>('timeline');
+  type RealizadaSortField = 'fecha' | 'especialidad' | 'aliado';
+  const [realizadaSortField, setRealizadaSortField] = useState<RealizadaSortField>('fecha');
+  const [realizadaSortDir, setRealizadaSortDir] = useState<'asc' | 'desc'>('desc');
+
+  const handleSortRealizadas = (field: RealizadaSortField) => {
+    if (realizadaSortField === field) {
+      setRealizadaSortDir(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setRealizadaSortField(field);
+      setRealizadaSortDir(field === 'fecha' ? 'desc' : 'asc');
     }
   };
 
@@ -369,6 +384,35 @@ export const VerActaModal: React.FC<VerActaModalProps> = ({
     });
   }, [data?.atenciones_programadas, atencionesViewMode, atencionSortField, atencionSortDir]);
 
+  // Atenciones Realizadas ordenadas (por defecto la más reciente primero en modo timeline)
+  const sortedAtencionesRealizadas = useMemo(() => {
+    const list: any[] = Array.isArray(data?.historias_anteriores) ? data.historias_anteriores : [];
+    if (!list.length) return [];
+    return [...list].sort((a: any, b: any) => {
+      const timeA = parseAtencionDate(a.fecha_atencion || a.fecha)?.getTime() || 0;
+      const timeB = parseAtencionDate(b.fecha_atencion || b.fecha)?.getTime() || 0;
+
+      if (realizadasViewMode === 'timeline') {
+        // En la línea de tiempo mostrar primero la última realizada (descendente)
+        return timeB - timeA;
+      }
+
+      let cmp = 0;
+      if (realizadaSortField === 'fecha') {
+        cmp = timeA - timeB;
+      } else if (realizadaSortField === 'especialidad') {
+        const espA = String(a.nombre_especialidad || a.especialidad || '').toLowerCase();
+        const espB = String(b.nombre_especialidad || b.especialidad || '').toLowerCase();
+        cmp = espA.localeCompare(espB);
+      } else if (realizadaSortField === 'aliado') {
+        const aliA = String(a.nombre_aliado || '').toLowerCase();
+        const aliB = String(b.nombre_aliado || '').toLowerCase();
+        cmp = aliA.localeCompare(aliB);
+      }
+      return realizadaSortDir === 'asc' ? cmp : -cmp;
+    });
+  }, [data?.historias_anteriores, realizadasViewMode, realizadaSortField, realizadaSortDir]);
+
   if (!isOpen) return null;
 
   // Badge de riesgo adaptado
@@ -410,6 +454,7 @@ export const VerActaModal: React.FC<VerActaModalProps> = ({
   const historiasAnteriores: any[] = Array.isArray(data?.historias_anteriores) ? data.historias_anteriores : [];
   const atencionesProgramadas: any[] = Array.isArray(data?.atenciones_programadas) ? data.atenciones_programadas : [];
   const progEspecialidades: any[] = Array.isArray(data?.prog_especialidad_acta) ? data.prog_especialidad_acta : [];
+  const archivosPaciente: any[] = Array.isArray(data?.archivos_paciente) ? data.archivos_paciente : (Array.isArray(data?.archivos) ? data.archivos : []);
 
   return (
     <div
@@ -608,7 +653,9 @@ export const VerActaModal: React.FC<VerActaModalProps> = ({
                   { id: 'resumen', label: 'Resumen Clínico', icon: <FileText className="w-4 h-4" /> },
                   { id: 'antecedentes', label: 'Antecedentes', icon: <Stethoscope className="w-4 h-4" /> },
                   { id: 'metricas', label: `Métricas (${historicoMetricas.length})`, icon: <Activity className="w-4 h-4" /> },
-                  { id: 'citas_archivos', label: `Citas y Archivos (${historiasAnteriores.length + atencionesProgramadas.length})`, icon: <FolderOpen className="w-4 h-4" /> },
+                  { id: 'atenciones', label: `Atenciones (${atencionesProgramadas.length})`, icon: <Calendar className="w-4 h-4" /> },
+                  { id: 'atenciones_realizadas', label: `Atenciones Realizadas (${historiasAnteriores.length})`, icon: <History className="w-4 h-4" /> },
+                  { id: 'archivos', label: `Archivos (${archivosPaciente.length})`, icon: <FolderOpen className="w-4 h-4" /> },
                   ...(epicrisisData ? [{ id: 'epicrisis', label: 'Última Epicrisis', icon: <ClipboardList className="w-4 h-4" />, highlight: true }] : []),
                 ].map((tab: any) => {
                   const isActive = activeTab === tab.id;
@@ -796,51 +843,11 @@ export const VerActaModal: React.FC<VerActaModalProps> = ({
                   </div>
                 )}
 
-                {/* TAB 4: CITAS Y ARCHIVOS */}
-                {activeTab === 'citas_archivos' && (
+                {/* TAB 4: ATENCIONES */}
+                {activeTab === 'atenciones' && (
                   <div className="flex flex-col gap-3.5">
-                    {/* Sección 1: Historias Anteriores / Archivos */}
-                    <div className="border border-[#e2e8eb] dark:border-[#334155] rounded-xl overflow-hidden bg-white dark:bg-slate-900">
-                      <button
-                        type="button"
-                        onClick={() => toggleCitasSection('historias')}
-                        className={`w-full px-4 py-3 flex items-center justify-between transition-colors cursor-pointer ${
-                          citasExpanded.historias ? 'bg-[#effaff]/60 dark:bg-[#00aae1]/10' : 'bg-slate-50 dark:bg-slate-800/40'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 text-xs font-bold text-[#033d59] dark:text-[#f8fafc]">
-                          <FolderOpen className="w-4 h-4 text-[#00aae1]" />
-                          <span>Historias Clínicas Anteriores / Archivos ({historiasAnteriores.length})</span>
-                        </div>
-                        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${citasExpanded.historias ? 'rotate-180' : ''}`} />
-                      </button>
-                      {citasExpanded.historias && (
-                        <div className="p-4">
-                          {historiasAnteriores.length === 0 ? (
-                            <div className="text-center py-6 text-slate-400 text-xs">No hay historias anteriores registradas.</div>
-                          ) : (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-[220px] overflow-y-auto pr-1.5">
-                              {historiasAnteriores.map((h: any, i: number) => (
-                                <div key={i} className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2">
-                                  <div className="truncate">
-                                    <div className="text-xs font-bold text-[#033d59] dark:text-[#f8fafc] truncate">{h.nombre_archivo || h.titulo || `Documento #${i + 1}`}</div>
-                                    <div className="text-[11px] text-slate-500 font-mono mt-0.5">{h.fecha || 'Sin fecha'}</div>
-                                  </div>
-                                  {h.url_archivo && (
-                                    <a href={h.url_archivo} target="_blank" rel="noreferrer" className="p-1.5 rounded bg-white dark:bg-slate-700 text-[#00aae1] hover:bg-[#00aae1] hover:text-white transition-colors">
-                                      <ExternalLink className="w-3.5 h-3.5" />
-                                    </a>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Sección 2: Atenciones Programadas */}
-                    <div className="border border-[#e2e8eb] dark:border-[#334155] rounded-xl overflow-hidden bg-white dark:bg-slate-900">
+                    {/* Sección 1: Atenciones Programadas */}
+                    <div className="border border-[#e2e8eb] dark:border-[#334155] rounded-xl overflow-hidden bg-white dark:bg-slate-900 shadow-xs">
                       <button
                         type="button"
                         onClick={() => toggleCitasSection('atenciones')}
@@ -913,6 +920,8 @@ export const VerActaModal: React.FC<VerActaModalProps> = ({
                                       const IconComponent = palette.Icon;
                                       const dateInfo = parseDateDisplay(ap.fecha_cita || ap.fecha);
                                       const isLeft = idx % 2 === 0;
+                                      const hexCode = ap.id_hexadecimal || ap.codigo_cita || ap.codigo || ap.id;
+                                      const citaLabel = hexCode ? `Código: ${hexCode}` : `Cita ${String(idx + 1).padStart(2, '0')}`;
 
                                       return (
                                         <div
@@ -928,7 +937,7 @@ export const VerActaModal: React.FC<VerActaModalProps> = ({
                                                 style={{ borderColor: palette.border, borderRightWidth: '4px', borderRightColor: palette.color }}
                                               >
                                                 <div className="text-[10px] font-extrabold tracking-wider uppercase mb-1" style={{ color: palette.color }}>
-                                                  CITA {String(idx + 1).padStart(2, '0')}
+                                                  {citaLabel}
                                                 </div>
                                                 <div className="text-xs text-slate-400 font-mono mb-1.5 flex items-center justify-end gap-1">
                                                   <Calendar className="w-3 h-3" style={{ color: palette.color }} />
@@ -976,7 +985,7 @@ export const VerActaModal: React.FC<VerActaModalProps> = ({
                                                 style={{ borderColor: palette.border, borderLeftWidth: '4px', borderLeftColor: palette.color }}
                                               >
                                                 <div className="text-[10px] font-extrabold tracking-wider uppercase mb-1" style={{ color: palette.color }}>
-                                                  CITA {String(idx + 1).padStart(2, '0')}
+                                                  {citaLabel}
                                                 </div>
                                                 <div className="text-xs text-slate-400 font-mono mb-1.5 flex items-center gap-1">
                                                   <Calendar className="w-3 h-3" style={{ color: palette.color }} />
@@ -1069,6 +1078,7 @@ export const VerActaModal: React.FC<VerActaModalProps> = ({
                                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                                       {sortedAtenciones.map((ap: any, idx: number) => {
                                         const dateInfo = parseDateDisplay(ap.fecha_cita || ap.fecha);
+                                        const hexCode = ap.id_hexadecimal || ap.codigo_cita || ap.codigo || ap.id;
                                         return (
                                           <tr key={idx} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
                                             <td className="p-3 text-slate-600 dark:text-slate-300 font-mono">
@@ -1078,9 +1088,16 @@ export const VerActaModal: React.FC<VerActaModalProps> = ({
                                               </div>
                                             </td>
                                             <td className="p-3">
-                                              <span className="font-bold text-[#033d59] dark:text-[#f8fafc]">
-                                                {ap.nombre_especialidad || ap.especialidad || 'Cita médica'}
-                                              </span>
+                                              <div className="flex items-center gap-2 flex-wrap">
+                                                <span className="font-bold text-[#033d59] dark:text-[#f8fafc]">
+                                                  {ap.nombre_especialidad || ap.especialidad || 'Cita médica'}
+                                                </span>
+                                                {hexCode && (
+                                                  <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-sky-50 dark:bg-sky-950/50 text-[#00aae1] dark:text-[#38bdf8] border border-sky-200 dark:border-sky-900/60">
+                                                    Código: {hexCode}
+                                                  </span>
+                                                )}
+                                              </div>
                                               {ap.nombre_profesional && (
                                                 <div className="text-[11px] text-slate-500 mt-0.5">
                                                   Dr(a). {ap.nombre_profesional}
@@ -1105,8 +1122,8 @@ export const VerActaModal: React.FC<VerActaModalProps> = ({
                       )}
                     </div>
 
-                    {/* Sección 3: Programación de Especialidades */}
-                    <div ref={especialidadesRef} className="border border-[#e2e8eb] dark:border-[#334155] rounded-xl overflow-hidden bg-white dark:bg-slate-900 scroll-mt-3">
+                    {/* Sección 2: Programación de Especialidades */}
+                    <div ref={especialidadesRef} className="border border-[#e2e8eb] dark:border-[#334155] rounded-xl overflow-hidden bg-white dark:bg-slate-900 scroll-mt-3 shadow-xs">
                       <button
                         type="button"
                         onClick={() => toggleCitasSection('especialidades')}
@@ -1136,6 +1153,374 @@ export const VerActaModal: React.FC<VerActaModalProps> = ({
                               ))}
                             </div>
                           )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 5: ATENCIONES REALIZADAS (historias_anteriores) */}
+                {activeTab === 'atenciones_realizadas' && (
+                  <div className="border border-[#e2e8eb] dark:border-[#334155] rounded-xl overflow-hidden bg-white dark:bg-slate-900 shadow-xs">
+                    <div className="px-4 py-3 bg-[#effaff]/60 dark:bg-[#00aae1]/10 flex items-center justify-between border-b border-slate-200 dark:border-slate-800">
+                      <div className="flex items-center gap-2 text-xs font-bold text-[#033d59] dark:text-[#f8fafc]">
+                        <History className="w-4 h-4 text-[#00aae1]" />
+                        <span>Historias Clínicas Anteriores ({historiasAnteriores.length})</span>
+                      </div>
+                    </div>
+                    <div className="p-4">
+                      {historiasAnteriores.length === 0 ? (
+                        <div className="text-center py-8 text-slate-400 text-xs">No hay historias clínicas anteriores registradas.</div>
+                      ) : (
+                        <div>
+                          {/* Barra superior: Selector de vista */}
+                          <div className="flex flex-wrap items-center justify-between gap-3 mb-4 pb-3 border-b border-slate-200 dark:border-slate-800">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                                {realizadasViewMode === 'timeline'
+                                  ? 'Orden cronológico (de primero la última realizada)'
+                                  : 'Haz clic en los encabezados de columna para ordenar'}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
+                              <button
+                                type="button"
+                                onClick={() => setRealizadasViewMode('timeline')}
+                                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                                  realizadasViewMode === 'timeline'
+                                    ? 'bg-white dark:bg-[#00aae1] text-[#00aae1] dark:text-white shadow-xs'
+                                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                                }`}
+                                title="Ver como Línea de Tiempo cronológica"
+                              >
+                                <TrendingUp className="w-3.5 h-3.5" />
+                                <span>Línea de Tiempo</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => setRealizadasViewMode('tabla')}
+                                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                                  realizadasViewMode === 'tabla'
+                                    ? 'bg-white dark:bg-[#00aae1] text-[#00aae1] dark:text-white shadow-xs'
+                                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                                }`}
+                                title="Ver como Tabla ordenable"
+                              >
+                                <Table className="w-3.5 h-3.5" />
+                                <span>Tabla</span>
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* VISTA 1: LÍNEA DE TIEMPO (De primero la última realizada) */}
+                          {realizadasViewMode === 'timeline' && (
+                            <div className="max-h-[460px] overflow-y-auto px-2 py-4">
+                              <div className="relative max-w-4xl mx-auto">
+                                {/* Eje central vertical (Spine) */}
+                                <div className="absolute top-4 bottom-6 left-1/2 -translate-x-1/2 w-1 bg-gradient-to-b from-slate-600 via-slate-400 to-slate-200 dark:from-slate-500 dark:to-slate-800 rounded-full z-0" />
+
+                                {sortedAtencionesRealizadas.map((ar: any, idx: number) => {
+                                  const palette = TIMELINE_PALETTES[idx % TIMELINE_PALETTES.length];
+                                  const IconComponent = palette.Icon;
+                                  const dateInfo = parseDateDisplay(ar.fecha_atencion || ar.fecha);
+                                  const isLeft = idx % 2 === 0;
+                                  const hexCode = ar.codigo_cita || ar.id_hexadecimal || ar.id_archivo;
+                                  const citaLabel = hexCode ? `Código: ${hexCode}` : `Atención ${String(idx + 1).padStart(2, '0')}`;
+
+                                  const isEquipoMulti = String(ar.nombre_especialidad || '').toLowerCase().includes('equipo multidisciplinario');
+                                  const docUrl = isEquipoMulti && (ar.codigo_cita || ar.id_hexadecimal || ar.id_acta_medica)
+                                    ? `/api/patients?action=imprimir_acta&codigo_cita=${encodeURIComponent(ar.codigo_cita || ar.id_hexadecimal || '')}${ar.id_acta_medica ? `&id_acta=${encodeURIComponent(ar.id_acta_medica)}` : ''}`
+                                    : ar.url_archivo;
+
+                                  return (
+                                    <div
+                                      key={idx}
+                                      className="relative z-10 flex items-center mb-8 last:mb-2 w-full"
+                                    >
+                                      {/* Lado Izquierdo */}
+                                      <div className="flex-1 flex items-center justify-end pr-6 sm:pr-8">
+                                        {isLeft ? (
+                                          /* Tarjeta a la Izquierda */
+                                          <div
+                                            className="bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border max-w-sm w-full text-right"
+                                            style={{ borderColor: palette.border, borderRightWidth: '4px', borderRightColor: palette.color }}
+                                          >
+                                            <div className="text-[10px] font-extrabold tracking-wider uppercase mb-1" style={{ color: palette.color }}>
+                                              {citaLabel}
+                                            </div>
+                                            <div className="text-xs text-slate-400 font-mono mb-1.5 flex items-center justify-end gap-1">
+                                              <Calendar className="w-3 h-3" style={{ color: palette.color }} />
+                                              <span>{dateInfo.fullDate}</span>
+                                            </div>
+                                            <div className="text-xs font-bold text-[#033d59] dark:text-[#f8fafc] mb-1">
+                                              {ar.nombre_especialidad || 'Atención Médica'}
+                                            </div>
+                                            {ar.nombre_aliado && (
+                                              <div className="text-[11px] text-slate-500 mb-2.5">
+                                                {ar.nombre_aliado}
+                                              </div>
+                                            )}
+                                            {docUrl && (
+                                              <div className="flex justify-end pt-1">
+                                                <a
+                                                  href={docUrl}
+                                                  target="_blank"
+                                                  rel="noreferrer"
+                                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-[#effaff] text-[#00aae1] dark:bg-[#00aae1]/20 dark:text-[#38bdf8] border border-[#00aae1]/30 hover:bg-[#00aae1] hover:text-white dark:hover:bg-[#00aae1] dark:hover:text-white transition-all cursor-pointer shadow-xs"
+                                                  title={isEquipoMulti ? "Abrir Acta de Equipo Multidisciplinario en formato de impresión" : "Abrir historia clínica en nueva pestaña"}
+                                                >
+                                                  <ExternalLink className="w-3.5 h-3.5" />
+                                                  <span>Abrir Documento</span>
+                                                </a>
+                                              </div>
+                                            )}
+                                          </div>
+                                        ) : (
+                                          /* Fecha a la Izquierda */
+                                          <div className="flex flex-col items-end">
+                                            <span className="text-2xl sm:text-3xl font-black text-[#033d59] dark:text-[#f8fafc] leading-none">
+                                              {dateInfo.year}
+                                            </span>
+                                            <span className="text-xs font-bold tracking-wider uppercase mt-1" style={{ color: palette.color }}>
+                                              {dateInfo.dayMonth}
+                                            </span>
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      {/* Nodo Central */}
+                                      <div
+                                        className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 border-2 bg-white dark:bg-slate-900 z-20 shadow-md"
+                                        style={{ borderColor: palette.color, boxShadow: `0 0 12px ${palette.glow}` }}
+                                      >
+                                        <IconComponent className="w-4 h-4" style={{ color: palette.color }} />
+                                      </div>
+
+                                      {/* Lado Derecho */}
+                                      <div className="flex-1 flex items-center justify-start pl-6 sm:pl-8">
+                                        {!isLeft ? (
+                                          /* Tarjeta a la Derecha */
+                                          <div
+                                            className="bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border max-w-sm w-full text-left"
+                                            style={{ borderColor: palette.border, borderLeftWidth: '4px', borderLeftColor: palette.color }}
+                                          >
+                                            <div className="text-[10px] font-extrabold tracking-wider uppercase mb-1" style={{ color: palette.color }}>
+                                              {citaLabel}
+                                            </div>
+                                            <div className="text-xs text-slate-400 font-mono mb-1.5 flex items-center gap-1">
+                                              <Calendar className="w-3 h-3" style={{ color: palette.color }} />
+                                              <span>{dateInfo.fullDate}</span>
+                                            </div>
+                                            <div className="text-xs font-bold text-[#033d59] dark:text-[#f8fafc] mb-1">
+                                              {ar.nombre_especialidad || 'Atención Médica'}
+                                            </div>
+                                            {ar.nombre_aliado && (
+                                              <div className="text-[11px] text-slate-500 mb-2.5">
+                                                {ar.nombre_aliado}
+                                              </div>
+                                            )}
+                                            {docUrl && (
+                                              <div className="flex justify-start pt-1">
+                                                <a
+                                                  href={docUrl}
+                                                  target="_blank"
+                                                  rel="noreferrer"
+                                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-[#effaff] text-[#00aae1] dark:bg-[#00aae1]/20 dark:text-[#38bdf8] border border-[#00aae1]/30 hover:bg-[#00aae1] hover:text-white dark:hover:bg-[#00aae1] dark:hover:text-white transition-all cursor-pointer shadow-xs"
+                                                  title={isEquipoMulti ? "Abrir Acta de Equipo Multidisciplinario en formato de impresión" : "Abrir historia clínica en nueva pestaña"}
+                                                >
+                                                  <ExternalLink className="w-3.5 h-3.5" />
+                                                  <span>Abrir Documento</span>
+                                                </a>
+                                              </div>
+                                            )}
+                                          </div>
+                                        ) : (
+                                          /* Fecha a la Derecha */
+                                          <div className="flex flex-col items-start">
+                                            <span className="text-2xl sm:text-3xl font-black text-[#033d59] dark:text-[#f8fafc] leading-none">
+                                              {dateInfo.year}
+                                            </span>
+                                            <span className="text-xs font-bold tracking-wider uppercase mt-1" style={{ color: palette.color }}>
+                                              {dateInfo.dayMonth}
+                                            </span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* VISTA 2: TABLA ORDENABLE */}
+                          {realizadasViewMode === 'tabla' && (
+                            <div className="max-h-[380px] overflow-y-auto border border-slate-200 dark:border-slate-800 rounded-xl">
+                              <table className="w-full text-xs text-left border-collapse">
+                                <thead className="sticky top-0 z-10 bg-slate-100 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 text-[#033d59] dark:text-[#f8fafc]">
+                                  <tr>
+                                    <th
+                                      onClick={() => handleSortRealizadas('fecha')}
+                                      className="p-3 font-bold cursor-pointer hover:bg-slate-200/70 dark:hover:bg-slate-800 transition-colors select-none"
+                                      title="Clic para ordenar por Fecha"
+                                    >
+                                      <div className="flex items-center gap-1.5">
+                                        <Calendar className="w-3.5 h-3.5 text-[#00aae1]" />
+                                        <span>Fecha de Atención</span>
+                                        {realizadaSortField === 'fecha' ? (
+                                          realizadaSortDir === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-[#00aae1]" /> : <ArrowDown className="w-3.5 h-3.5 text-[#00aae1]" />
+                                        ) : (
+                                          <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
+                                        )}
+                                      </div>
+                                    </th>
+                                    <th
+                                      onClick={() => handleSortRealizadas('especialidad')}
+                                      className="p-3 font-bold cursor-pointer hover:bg-slate-200/70 dark:hover:bg-slate-800 transition-colors select-none"
+                                      title="Clic para ordenar por Especialidad"
+                                    >
+                                      <div className="flex items-center gap-1.5">
+                                        <Stethoscope className="w-3.5 h-3.5 text-[#00aae1]" />
+                                        <span>Especialidad / Cita</span>
+                                        {realizadaSortField === 'especialidad' ? (
+                                          realizadaSortDir === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-[#00aae1]" /> : <ArrowDown className="w-3.5 h-3.5 text-[#00aae1]" />
+                                        ) : (
+                                          <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
+                                        )}
+                                      </div>
+                                    </th>
+                                    <th
+                                      onClick={() => handleSortRealizadas('aliado')}
+                                      className="p-3 font-bold cursor-pointer hover:bg-slate-200/70 dark:hover:bg-slate-800 transition-colors select-none"
+                                      title="Clic para ordenar por Entidad Aliada"
+                                    >
+                                      <div className="flex items-center gap-1.5">
+                                        <User className="w-3.5 h-3.5 text-[#00aae1]" />
+                                        <span>Entidad Aliada</span>
+                                        {realizadaSortField === 'aliado' ? (
+                                          realizadaSortDir === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-[#00aae1]" /> : <ArrowDown className="w-3.5 h-3.5 text-[#00aae1]" />
+                                        ) : (
+                                          <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
+                                        )}
+                                      </div>
+                                    </th>
+                                    <th className="p-3 font-bold text-right">
+                                      <span>Documento</span>
+                                    </th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                  {sortedAtencionesRealizadas.map((ar: any, idx: number) => {
+                                    const dateInfo = parseDateDisplay(ar.fecha_atencion || ar.fecha);
+                                    const hexCode = ar.codigo_cita || ar.id_hexadecimal || ar.id_archivo;
+                                    const isEquipoMulti = String(ar.nombre_especialidad || '').toLowerCase().includes('equipo multidisciplinario');
+                                    const docUrl = isEquipoMulti && (ar.codigo_cita || ar.id_hexadecimal || ar.id_acta_medica)
+                                      ? `/api/patients?action=imprimir_acta&codigo_cita=${encodeURIComponent(ar.codigo_cita || ar.id_hexadecimal || '')}${ar.id_acta_medica ? `&id_acta=${encodeURIComponent(ar.id_acta_medica)}` : ''}`
+                                      : ar.url_archivo;
+
+                                    return (
+                                      <tr key={idx} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
+                                        <td className="p-3 text-slate-600 dark:text-slate-300 font-mono">
+                                          <div className="flex items-center gap-2">
+                                            <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                            <span>{ar.fecha_atencion || ar.fecha || dateInfo.fullDate}</span>
+                                          </div>
+                                        </td>
+                                        <td className="p-3">
+                                          <div className="flex items-center gap-2 flex-wrap">
+                                            <span className="font-bold text-[#033d59] dark:text-[#f8fafc]">
+                                              {ar.nombre_especialidad || 'Atención Médica'}
+                                            </span>
+                                            {hexCode && (
+                                              <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-sky-50 dark:bg-sky-950/50 text-[#00aae1] dark:text-[#38bdf8] border border-sky-200 dark:border-sky-900/60">
+                                                Código: {hexCode}
+                                              </span>
+                                            )}
+                                          </div>
+                                        </td>
+                                        <td className="p-3 text-slate-500">
+                                          {ar.nombre_aliado || '—'}
+                                        </td>
+                                        <td className="p-3 text-right">
+                                          {docUrl ? (
+                                            <a
+                                              href={docUrl}
+                                              target="_blank"
+                                              rel="noreferrer"
+                                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-[#effaff] text-[#00aae1] dark:bg-[#00aae1]/20 dark:text-[#38bdf8] border border-[#00aae1]/30 hover:bg-[#00aae1] hover:text-white dark:hover:bg-[#00aae1] dark:hover:text-white transition-all cursor-pointer shadow-xs"
+                                              title={isEquipoMulti ? "Abrir Acta de Equipo Multidisciplinario en formato de impresión" : "Abrir historia clínica en nueva pestaña"}
+                                            >
+                                              <ExternalLink className="w-3.5 h-3.5" />
+                                              <span>Abrir Documento</span>
+                                            </a>
+                                          ) : (
+                                            <span className="text-slate-400 font-mono text-xs">—</span>
+                                          )}
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 6: ARCHIVOS (archivos_paciente) */}
+                {activeTab === 'archivos' && (
+                  <div className="border border-[#e2e8eb] dark:border-[#334155] rounded-xl overflow-hidden bg-white dark:bg-slate-900 shadow-xs">
+                    <div className="px-4 py-3 bg-[#effaff]/60 dark:bg-[#00aae1]/10 flex items-center justify-between border-b border-slate-200 dark:border-slate-800">
+                      <div className="flex items-center gap-2 text-xs font-bold text-[#033d59] dark:text-[#f8fafc]">
+                        <FolderOpen className="w-4 h-4 text-[#00aae1]" />
+                        <span>Archivos del Paciente ({archivosPaciente.length})</span>
+                      </div>
+                    </div>
+                    <div className="p-4">
+                      {archivosPaciente.length === 0 ? (
+                        <div className="text-center py-8 text-slate-400 text-xs">No hay archivos adicionales adjuntos al paciente.</div>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[460px] overflow-y-auto pr-1.5">
+                          {archivosPaciente.map((a: any, i: number) => {
+                            const docTitle = a.nombre_archivo || a.titulo || `Archivo #${i + 1}`;
+                            const docCita = a.codigo_cita || a.id_hexadecimal;
+
+                            return (
+                              <div key={i} className="p-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3 hover:border-[#00aae1]/40 transition-all">
+                                <div className="truncate flex-1">
+                                  <div className="text-xs font-bold text-[#033d59] dark:text-[#f8fafc] truncate" title={docTitle}>
+                                    {docTitle}
+                                  </div>
+                                  <div className="flex items-center gap-2 text-[11px] text-slate-500 font-mono mt-1">
+                                    {docCita && (
+                                      <span className="px-1.5 py-0.2 rounded bg-sky-50 dark:bg-sky-950/50 text-[#00aae1] dark:text-[#38bdf8] border border-sky-200 dark:border-sky-900/60 font-bold">
+                                        Cita: {docCita}
+                                      </span>
+                                    )}
+                                    {a.id_archivo && (
+                                      <span className="text-slate-400">ID: {a.id_archivo}</span>
+                                    )}
+                                  </div>
+                                </div>
+                                {a.url_archivo && (
+                                  <a
+                                    href={a.url_archivo}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="p-2 rounded-lg bg-white dark:bg-slate-700 text-[#00aae1] hover:bg-[#00aae1] hover:text-white transition-colors shrink-0 shadow-xs border border-slate-200 dark:border-slate-600"
+                                    title="Abrir archivo"
+                                  >
+                                    <ExternalLink className="w-4 h-4" />
+                                  </a>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
                     </div>
