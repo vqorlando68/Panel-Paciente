@@ -128,6 +128,7 @@ export interface Patient {
   prioridadInicial?: number | null; // 1 to 10
   fechaProximaRevision?: string | null; // e.g. "18/08/2026"
   cohorte?: string | null;
+  id_estado_cohorte?: number | null;
   estado?: EstadoPaciente | null;
   riesgo?: NivelRiesgo | null;
   etiqueta?: string | null; // "Crítico" | "Inconforme" | null

@@ -545,24 +545,27 @@ export const PatientTable: React.FC<PatientTableProps> = ({
   };
 
   const renderCohorteBadge = (patient: Patient) => {
+    const rawVal = patient.cohorte || patient.estado || (patient.id_estado_cohorte === 7 ? 'ACTIVO' : '') || '';
+    const estadoUpper = String(rawVal).toUpperCase().trim();
+
     let style = 'bg-[#effaff] dark:bg-[#00aae1]/20 text-[#00aae1] dark:text-[#38bdf8] border-[#00aae1]/30 hover:bg-[#dff4ff]';
-    if (['ACTIVO', 'ACEPTADO', 'ESTRATIFICADO'].includes(patient.cohorte)) {
+    if (['ACTIVO', 'ACEPTADO', 'ESTRATIFICADO'].some((s) => estadoUpper.includes(s))) {
       style = 'bg-[#ebfef4] dark:bg-emerald-950/40 text-[#01ae6c] dark:text-emerald-300 border-[#01ae6c]/30 hover:bg-[#d0fbe2]';
-    } else if (['RECHAZADO', 'ERRORES', 'DESERTADO', 'FALLECIDO I', 'FALLECIDO II', 'FALLECIDOS III', 'RECHAZA EL SERVICIO'].includes(patient.cohorte)) {
+    } else if (['RECHAZADO', 'ERRORES', 'DESERTADO', 'FALLECIDO I', 'FALLECIDO II', 'FALLECIDOS III', 'RECHAZA EL SERVICIO'].some((s) => estadoUpper.includes(s))) {
       style = 'bg-[#fff1f2] dark:bg-rose-950/40 text-[#e11d48] dark:text-rose-300 border-[#e11d48]/30 hover:bg-[#ffe4e6]';
-    } else if (['PROSPECTO', 'INTERESADO', 'PENDIENTE DE CONTACTO', 'NO RESPUESTA'].includes(patient.cohorte)) {
+    } else if (['PROSPECTO', 'INTERESADO', 'PENDIENTE DE CONTACTO', 'NO RESPUESTA'].some((s) => estadoUpper.includes(s))) {
       style = 'bg-[#fffbeb] dark:bg-amber-950/40 text-[#b45309] dark:text-amber-300 border-[#fbbf24]/40 hover:bg-[#fef3c7]';
     }
 
-    const currentOption = COHORTE_OPTIONS.find((c) => c.code === patient.cohorte || c.label === patient.cohorte);
-    const displayCode = currentOption ? currentOption.code : patient.cohorte;
+    const currentOption = COHORTE_OPTIONS.find((c) => c.code.toUpperCase() === estadoUpper || c.label.toUpperCase() === estadoUpper);
+    const displayCode = currentOption ? currentOption.code : (rawVal || 'Sin asignar');
 
     return (
       <div className="relative font-sans inline-block">
         <button
           onClick={() => setCohorteMenuPatientId(cohorteMenuPatientId === patient.id ? null : patient.id)}
           className={`px-2 py-0.5 rounded-full text-[10px] font-bold border transition-all flex items-center gap-1 cursor-pointer ${style}`}
-          title={`Estado Cohorte: ${currentOption?.label || patient.cohorte}. Clic para cambiar.`}
+          title={`Estado Cohorte: ${currentOption?.label || rawVal || 'Sin asignar'}. Clic para cambiar.`}
         >
           <span className="truncate max-w-[110px]">{displayCode}</span>
           <ChevronDown className="w-3 h-3 opacity-60 shrink-0" />
@@ -580,12 +583,12 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                   if (onUpdateCohorte) {
                     onUpdateCohorte(patient.id, coh.code);
                   } else {
-                    onEditPatient({ ...patient, cohorte: coh.code });
+                    onEditPatient({ ...patient, cohorte: coh.code, estado: coh.code as any });
                   }
                   setCohorteMenuPatientId(null);
                 }}
                 className={`w-full text-left px-2 py-1.5 rounded-md text-[11px] hover:bg-[#effaff] dark:hover:bg-[#0f172a] cursor-pointer transition-colors flex flex-col ${
-                  patient.cohorte === coh.code ? 'bg-[#effaff] dark:bg-[#00aae1]/20 text-[#00aae1] dark:text-[#38bdf8] font-bold' : 'text-[#033d59] dark:text-[#f8fafc]'
+                  estadoUpper === coh.code.toUpperCase() ? 'bg-[#effaff] dark:bg-[#00aae1]/20 text-[#00aae1] dark:text-[#38bdf8] font-bold' : 'text-[#033d59] dark:text-[#f8fafc]'
                 }`}
                 title={coh.label}
               >

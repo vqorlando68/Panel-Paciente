@@ -112,13 +112,15 @@ CREATE OR REPLACE PACKAGE BODY pkgln_pacientes_giris IS
     p_json_entrada IN  CLOB,
     p_json_salida  OUT CLOB
   ) IS
-    v_registros_pag  NUMBER := 10;
-    v_total_reg      NUMBER := 0;
-    v_total_pag      NUMBER := 1;
-    v_identificacion VARCHAR2(100);
-    v_nombre         VARCHAR2(200);
-    v_coordinador    VARCHAR2(200);
-    v_convenio       VARCHAR2(500);
+    v_registros_pag    NUMBER := 10;
+    v_total_reg        NUMBER := 0;
+    v_total_pag        NUMBER := 1;
+    v_total_activos    NUMBER := 0;
+    v_total_inconforme NUMBER := 0;
+    v_identificacion   VARCHAR2(100);
+    v_nombre           VARCHAR2(200);
+    v_coordinador      VARCHAR2(200);
+    v_convenio         VARCHAR2(500);
   BEGIN
     IF p_json_entrada IS NOT NULL AND LENGTH(p_json_entrada) > 0 THEN
       BEGIN
@@ -143,8 +145,12 @@ CREATE OR REPLACE PACKAGE BODY pkgln_pacientes_giris IS
       END;
     END IF;
 
-    SELECT COUNT(*)
-      INTO v_total_reg
+    SELECT COUNT(*),
+           NVL(SUM(CASE WHEN pkgcn_cohortes.f_devolver_id_estado_usuario(u.id) = 7 THEN 1 ELSE 0 END), 0),
+           NVL(SUM(CASE WHEN EXISTS (SELECT 1 FROM tkr_usuarios_cohorte uc WHERE uc.id_usuario = u.id AND uc.tag_retroalimentacion = 'I') THEN 1 ELSE 0 END), 0)
+      INTO v_total_reg,
+           v_total_activos,
+           v_total_inconforme
       FROM tkr_usuarios u
      WHERE (u.paciente_giris = 'S'
         OR EXISTS (SELECT 1 FROM tkr_usuarios_cohorte uc WHERE uc.id_usuario = u.id))
@@ -179,7 +185,8 @@ CREATE OR REPLACE PACKAGE BODY pkgln_pacientes_giris IS
     END IF;
 
     p_json_salida := '{"codigo_respuesta": 0, "mensaje_respuesta": "Cálculo de paginación realizado exitosamente", "paginacion": {"registros_por_pagina": ' 
-                     || v_registros_pag || ', "total_registros": ' || v_total_reg || ', "total_paginas": ' || v_total_pag || '}}';
+                     || v_registros_pag || ', "total_registros": ' || v_total_reg || ', "total_paginas": ' || v_total_pag 
+                     || ', "total_activos": ' || v_total_activos || ', "total_inconforme": ' || v_total_inconforme || '}}';
   EXCEPTION
     WHEN OTHERS THEN
       p_json_salida := '{"codigo_respuesta": -1, "mensaje_respuesta": "Error en prc_obtener_total_paginas: ' || REPLACE(SQLERRM, '"', '\"') || '"}';
@@ -192,14 +199,16 @@ CREATE OR REPLACE PACKAGE BODY pkgln_pacientes_giris IS
     p_json_entrada IN  CLOB,
     p_json_salida  OUT CLOB
   ) IS
-    v_pagina         NUMBER := 1;
-    v_registros_pag  NUMBER := 10;
-    v_total_reg      NUMBER := 0;
-    v_total_pag      NUMBER := 1;
-    v_identificacion VARCHAR2(100);
-    v_nombre         VARCHAR2(200);
-    v_coordinador    VARCHAR2(200);
-    v_convenio       VARCHAR2(500);
+    v_pagina           NUMBER := 1;
+    v_registros_pag    NUMBER := 10;
+    v_total_reg        NUMBER := 0;
+    v_total_pag        NUMBER := 1;
+    v_total_activos    NUMBER := 0;
+    v_total_inconforme NUMBER := 0;
+    v_identificacion   VARCHAR2(100);
+    v_nombre           VARCHAR2(200);
+    v_coordinador      VARCHAR2(200);
+    v_convenio         VARCHAR2(500);
 
     v_hdr            CLOB;
     v_json_data      CLOB;
@@ -229,9 +238,9 @@ CREATE OR REPLACE PACKAGE BODY pkgln_pacientes_giris IS
                      u.direccion,
                      (SELECT uc.id_coordinador FROM tkr_usuarios_cohorte uc WHERE uc.id_usuario = u.id AND ROWNUM = 1) id_coordinador,
                      (SELECT uco.nombres || ' ' || uco.apellidos FROM tkr_usuarios uco, tkr_usuarios_cohorte uc WHERE uc.id_usuario = u.id AND uco.id = uc.id_coordinador AND ROWNUM = 1) coordinador_nombre,
-                     (SELECT uc.id_estado_seguimiento FROM tkr_usuarios_cohorte uc WHERE uc.id_usuario = u.id AND ROWNUM = 1) id_estado_seguimiento,
-                     (SELECT ec.descripcion FROM tkr_estados_cohorte ec, tkr_usuarios_cohorte uc WHERE uc.id_usuario = u.id AND ec.id = uc.id_estado_seguimiento AND ROWNUM = 1) estado_desc,
-                     CAST(NULL AS VARCHAR2(100))     cohorte_desc,
+                     pkgcn_cohortes.f_devolver_id_estado_usuario(u.id) id_estado_cohorte,
+                     (SELECT ec.descripcion FROM tkr_estados_cohorte ec WHERE ec.id = pkgcn_cohortes.f_devolver_id_estado_usuario(u.id)) estado_desc,
+                     (SELECT ec.descripcion FROM tkr_estados_cohorte ec WHERE ec.id = pkgcn_cohortes.f_devolver_id_estado_usuario(u.id)) cohorte_desc,
                      CAST(NULL AS VARCHAR2(100))     fase_desc,
                      (SELECT uc.id_convenio FROM tkr_usuarios_cohorte uc WHERE uc.id_usuario = u.id AND ROWNUM = 1) id_convenio,
                      (SELECT conv.nombre_convenio FROM tkr_convenios conv, tkr_usuarios_cohorte uc WHERE uc.id_usuario = u.id AND conv.id = uc.id_convenio AND ROWNUM = 1) convenio_nombre,
@@ -306,8 +315,12 @@ CREATE OR REPLACE PACKAGE BODY pkgln_pacientes_giris IS
       END;
     END IF;
 
-    SELECT COUNT(*)
-      INTO v_total_reg
+    SELECT COUNT(*),
+           NVL(SUM(CASE WHEN pkgcn_cohortes.f_devolver_id_estado_usuario(u.id) = 7 THEN 1 ELSE 0 END), 0),
+           NVL(SUM(CASE WHEN EXISTS (SELECT 1 FROM tkr_usuarios_cohorte uc WHERE uc.id_usuario = u.id AND uc.tag_retroalimentacion = 'I') THEN 1 ELSE 0 END), 0)
+      INTO v_total_reg,
+           v_total_activos,
+           v_total_inconforme
       FROM tkr_usuarios u
      WHERE (u.paciente_giris = 'S'
         OR EXISTS (SELECT 1 FROM tkr_usuarios_cohorte uc WHERE uc.id_usuario = u.id))
@@ -345,7 +358,9 @@ CREATE OR REPLACE PACKAGE BODY pkgln_pacientes_giris IS
 
     v_buf := '{"codigo_respuesta": 0, "mensaje_respuesta": "Página de pacientes obtenida exitosamente", "paginacion": {"pagina_actual": ' 
              || v_pagina || ', "registros_por_pagina": ' || v_registros_pag || ', "total_registros": ' || v_total_reg 
-             || ', "total_paginas": ' || v_total_pag || '}, "especialidades_orden": ['
+             || ', "total_paginas": ' || v_total_pag 
+             || ', "total_activos": ' || v_total_activos 
+             || ', "total_inconforme": ' || v_total_inconforme || '}, "especialidades_orden": ['
              || '{"id_especialidad": 17, "nombre": "Medicina General", "key": "med_gen"},'
              || '{"id_especialidad": 37, "nombre": "Nutrición", "key": "nutri"},'
              || '{"id_especialidad": 36, "nombre": "Psicología", "key": "psicol"},'
@@ -453,6 +468,7 @@ CREATE OR REPLACE PACKAGE BODY pkgln_pacientes_giris IS
                ', "riesgo": ' || CASE WHEN v_riesgo_desc IS NOT NULL THEN '"' || v_riesgo_desc || '"' ELSE 'null' END ||
                ', "fechaProximaRevision": ' || CASE WHEN r.fecha_proxima_revision IS NOT NULL THEN '"' || REPLACE(REPLACE(r.fecha_proxima_revision, '\', '\\'), '"', '\"') || '"' ELSE 'null' END ||
                ', "fecha_proxima_revision": ' || CASE WHEN r.fecha_proxima_revision IS NOT NULL THEN '"' || REPLACE(REPLACE(r.fecha_proxima_revision, '\', '\\'), '"', '\"') || '"' ELSE 'null' END ||
+               ', "id_estado_cohorte": ' || NVL(TO_CHAR(r.id_estado_cohorte), 'null') ||
                ', "estado": ' || CASE WHEN r.estado_desc IS NOT NULL THEN '"' || REPLACE(REPLACE(r.estado_desc, '\', '\\'), '"', '\"') || '"' ELSE 'null' END ||
                ', "cohorte": ' || CASE WHEN r.cohorte_desc IS NOT NULL THEN '"' || REPLACE(REPLACE(r.cohorte_desc, '\', '\\'), '"', '\"') || '"' ELSE 'null' END ||
                ', "fase": ' || CASE WHEN r.fase_desc IS NOT NULL THEN '"' || REPLACE(REPLACE(r.fase_desc, '\', '\\'), '"', '\"') || '"' ELSE 'null' END ||

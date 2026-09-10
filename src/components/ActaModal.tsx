@@ -97,6 +97,14 @@ export const ActaModal: React.FC<ActaModalProps> = ({
     ...historyActas.filter(a => !currentActa.some(c => c.numero === a.numero))
   ];
 
+  // Total de actas registradas para el paciente (la última que se muestra arriba + las anteriores)
+  const totalActas = actasDb.length > 0 ? actasDb.length : fallbackActas.length;
+  // Solo se muestra el bloque de Historial de Actas si existe más de una acta
+  const hasMultipleActas = totalActas > 1;
+  // En el Historial de Actas inferior solo se incluyen las actas anteriores (excluyendo la primera/última)
+  const historialActasDb = actasDb.length > 1 ? actasDb.slice(1) : [];
+  const historialFallback = fallbackActas.length > 1 ? fallbackActas.slice(1) : [];
+
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!actaResumen.trim()) return;
@@ -337,34 +345,38 @@ export const ActaModal: React.FC<ActaModalProps> = ({
               </div>
             )}
 
-            {/* Historial de Actas Accordion */}
-            <div className="pt-2 border-t border-[#e2e8eb] dark:border-[#334155]">
-              <div className="flex items-center justify-between mb-2.5">
-                <h4 className="font-bold text-[#033d59] dark:text-[#f8fafc] uppercase tracking-wider text-[11px] flex items-center gap-2">
-                  <span>Historial de Actas</span>
-                  <span className="text-[10px] font-mono text-gray-400 font-normal">
-                    ({actasDb.length > 0 ? actasDb.length : fallbackActas.length} {((actasDb.length || fallbackActas.length) === 1 ? 'acta' : 'actas')})
-                  </span>
-                </h4>
-                <button
-                  type="button"
-                  onClick={fetchActas}
-                  disabled={loadingActas}
-                  className="p-1 text-gray-400 hover:text-[#00aae1] transition-colors rounded cursor-pointer"
-                  title="Actualizar actas desde Oracle BD"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${loadingActas ? 'animate-spin' : ''}`} />
-                </button>
+            {/* Mensaje si no hay actas registradas */}
+            {!loadingActas && totalActas === 0 && (
+              <div className="p-6 text-center text-gray-400 dark:text-gray-500 text-xs bg-gray-50 dark:bg-[#0f172a] rounded-xl border border-dashed border-[#e2e8eb] dark:border-[#334155]">
+                No hay actas registradas para este paciente.
               </div>
+            )}
 
-              {!loadingActas && actasDb.length === 0 && fallbackActas.length === 0 ? (
-                <div className="p-4 text-center text-gray-400 dark:text-gray-500 text-xs bg-gray-50 dark:bg-[#0f172a] rounded-lg border border-dashed border-[#e2e8eb] dark:border-[#334155]">
-                  No hay historial de actas registrado para este paciente.
+            {/* Historial de Actas Accordion (Solo se muestra si existe más de una acta) */}
+            {hasMultipleActas && (
+              <div className="pt-2 border-t border-[#e2e8eb] dark:border-[#334155]">
+                <div className="flex items-center justify-between mb-2.5">
+                  <h4 className="font-bold text-[#033d59] dark:text-[#f8fafc] uppercase tracking-wider text-[11px] flex items-center gap-2">
+                    <span>Historial de Actas</span>
+                    <span className="text-[10px] font-mono text-gray-400 font-normal">
+                      ({totalActas} {totalActas === 1 ? 'acta' : 'actas'})
+                    </span>
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={fetchActas}
+                    disabled={loadingActas}
+                    className="p-1 text-gray-400 hover:text-[#00aae1] transition-colors rounded cursor-pointer"
+                    title="Actualizar actas desde Oracle BD"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${loadingActas ? 'animate-spin' : ''}`} />
+                  </button>
                 </div>
-              ) : actasDb.length > 0 ? (
-                /* Render from Oracle DB actas */
-                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                  {actasDb.map((actaItem, idx) => {
+
+                {actasDb.length > 0 && historialActasDb.length > 0 ? (
+                  /* Render from Oracle DB actas (anteriores) */
+                  <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                    {historialActasDb.map((actaItem, idx) => {
                     const isExpanded = expandedIndex === idx;
                     const previewText = actaItem.analisis_plan || actaItem.observaciones || 'Acta Registrada';
                     const shortDesc =
@@ -488,7 +500,7 @@ export const ActaModal: React.FC<ActaModalProps> = ({
               ) : (
                 /* Fallback render */
                 <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
-                  {fallbackActas.map((actaItem, idx) => {
+                  {historialFallback.map((actaItem, idx) => {
                     const isExpanded = expandedIndex === idx;
                     const shortDesc =
                       actaItem.resumen.length > 40
@@ -590,6 +602,7 @@ export const ActaModal: React.FC<ActaModalProps> = ({
                 </div>
               )}
             </div>
+          )}
 
             <div className="pt-3 border-t border-[#e2e8eb] dark:border-[#334155] flex justify-end">
               <button

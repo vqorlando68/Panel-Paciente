@@ -241,8 +241,13 @@ export default async function handler(req: any, res: any) {
       };
 
       if (action === 'costos') {
-        const mesCorte = String(queryObj.mes_corte || req.body?.mes_corte || 'Marzo_2026');
-        const cedula = String(queryObj.identificacion || req.body?.identificacion || queryObj.cedula || req.body?.cedula || '6070110');
+        const rawMes = queryObj.mes_corte || req.body?.mes_corte;
+        const rawCedula = queryObj.identificacion || req.body?.identificacion || queryObj.cedula || req.body?.cedula;
+
+        const mesCorte = String(rawMes || '').trim().replace(/\s+/g, '_');
+        const rawCedulaStr = String(rawCedula || '').trim();
+        const cedula = rawCedulaStr.replace(/\D/g, '') || rawCedulaStr;
+
         executeSql = `BEGIN :p_json_salida := f_traer_costos(:p_mes_corte, :p_identificacion); END;`;
         bindParams = {
           p_mes_corte: mesCorte,

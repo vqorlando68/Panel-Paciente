@@ -33,8 +33,11 @@ import {
   Table,
   BarChart3,
   Pill,
+  FlaskConical,
+  Search,
 } from 'lucide-react';
 import { PatientService } from '../services/patientService';
+import { AnalisisArchivoModal } from './AnalisisArchivoModal';
 
 // Paleta temática adaptada a los colores corporativos y complementarios de Panel-Paciente
 const TIMELINE_PALETTES = [
@@ -199,6 +202,32 @@ export const VerActaModal: React.FC<VerActaModalProps> = ({
   const [epicrisisSubTab, setEpicrisisSubTab] = useState<'evolucion' | 'antecedentes' | 'linea_tiempo' | 'diagnosticos' | 'medicamentos' | 'actas' | 'json_epicrisis'>('evolucion');
   const [copiedActaJson, setCopiedActaJson] = useState(false);
   const [copiedEpicrisisJson, setCopiedEpicrisisJson] = useState(false);
+  const [selectedAnalisisFile, setSelectedAnalisisFile] = useState<{ file: any; data: any } | null>(null);
+
+  const parseArchivoAnalisis = (analisis: any) => {
+    if (!analisis) return null;
+    if (typeof analisis === 'object') return analisis;
+    if (typeof analisis === 'string') {
+      try {
+        const parsed = JSON.parse(analisis);
+        return typeof parsed === 'object' ? parsed : null;
+      } catch {
+        return null;
+      }
+    }
+  };
+
+  // Estados para búsqueda y acordeón de grupos de archivos por Código de Atención
+  const [archivoSearch, setArchivoSearch] = useState('');
+  const [expandedArchivoGrupos, setExpandedArchivoGrupos] = useState<Record<string, boolean>>({});
+
+  const toggleArchivoGrupo = (codigo: string) => {
+    setExpandedArchivoGrupos(prev => ({
+      ...prev,
+      [codigo]: prev[codigo] === undefined ? false : !prev[codigo]
+    }));
+  };
+
   const [citasExpanded, setCitasExpanded] = useState({
     historias: true,
     atenciones: true,
@@ -413,6 +442,68 @@ export const VerActaModal: React.FC<VerActaModalProps> = ({
     });
   }, [data?.historias_anteriores, realizadasViewMode, realizadaSortField, realizadaSortDir]);
 
+  // Agrupar archivos del paciente por Código de Atención (id_cita / codigo_cita)
+  const archivosPaciente: any[] = Array.isArray(data?.archivos_paciente) ? data.archivos_paciente : (Array.isArray(data?.archivos) ? data.archivos : []);
+
+  const archivosAgrupados = useMemo(() => {
+    if (!archivosPaciente || !archivosPaciente.length) return [];
+
+    const map = new Map<string, any[]>();
+    for (const a of archivosPaciente) {
+      const rawCode = a.id_cita || a.codigo_cita || a.id_hexadecimal || 'Sin Código';
+      const codeKey = String(rawCode).trim();
+      if (!map.has(codeKey)) {
+        map.set(codeKey, []);
+      }
+      map.get(codeKey)!.push(a);
+    }
+
+    const term = archivoSearch.trim().toLowerCase();
+
+    return Array.from(map.entries())
+      .map(([codigo, files]) => {
+        const filteredFiles = term
+          ? files.filter((f: any) =>
+              String(f.nombre_archivo || f.titulo || '').toLowerCase().includes(term) ||
+              String(f.id_archivo || '').includes(term) ||
+              String(codigo).toLowerCase().includes(term)
+            )
+          : files;
+        const tieneAnalisis = filteredFiles.some((f: any) => Boolean(parseArchivoAnalisis(f.analisis)));
+        return {
+          codigo,
+          files: filteredFiles,
+          totalOriginal: files.length,
+          tieneAnalisis,
+        };
+      })
+      .filter(g => g.files.length > 0);
+  }, [archivosPaciente, archivoSearch]);
+
+  // Verificar si todos los grupos visibles están contraídos
+  const allGruposCollapsed = useMemo(() => {
+    if (!archivosAgrupados || archivosAgrupados.length === 0) return false;
+    return archivosAgrupados.every(grp => expandedArchivoGrupos[grp.codigo] === false);
+  }, [archivosAgrupados, expandedArchivoGrupos]);
+
+  const toggleExpandAllArchivoGrupos = () => {
+    if (allGruposCollapsed) {
+      // Expandir todos (poner en true)
+      const nextState: Record<string, boolean> = {};
+      archivosAgrupados.forEach(grp => {
+        nextState[grp.codigo] = true;
+      });
+      setExpandedArchivoGrupos(nextState);
+    } else {
+      // Contraer todos (poner en false)
+      const nextState: Record<string, boolean> = {};
+      archivosAgrupados.forEach(grp => {
+        nextState[grp.codigo] = false;
+      });
+      setExpandedArchivoGrupos(nextState);
+    }
+  };
+
   if (!isOpen) return null;
 
   // Badge de riesgo adaptado
@@ -454,7 +545,6 @@ export const VerActaModal: React.FC<VerActaModalProps> = ({
   const historiasAnteriores: any[] = Array.isArray(data?.historias_anteriores) ? data.historias_anteriores : [];
   const atencionesProgramadas: any[] = Array.isArray(data?.atenciones_programadas) ? data.atenciones_programadas : [];
   const progEspecialidades: any[] = Array.isArray(data?.prog_especialidad_acta) ? data.prog_especialidad_acta : [];
-  const archivosPaciente: any[] = Array.isArray(data?.archivos_paciente) ? data.archivos_paciente : (Array.isArray(data?.archivos) ? data.archivos : []);
 
   return (
     <div
@@ -1475,48 +1565,172 @@ export const VerActaModal: React.FC<VerActaModalProps> = ({
                 {/* TAB 6: ARCHIVOS (archivos_paciente) */}
                 {activeTab === 'archivos' && (
                   <div className="border border-[#e2e8eb] dark:border-[#334155] rounded-xl overflow-hidden bg-white dark:bg-slate-900 shadow-xs">
-                    <div className="px-4 py-3 bg-[#effaff]/60 dark:bg-[#00aae1]/10 flex items-center justify-between border-b border-slate-200 dark:border-slate-800">
+                    <div className="px-4 py-3 bg-[#effaff]/60 dark:bg-[#00aae1]/10 flex items-center justify-between border-b border-slate-200 dark:border-slate-800 flex-wrap gap-2">
                       <div className="flex items-center gap-2 text-xs font-bold text-[#033d59] dark:text-[#f8fafc]">
                         <FolderOpen className="w-4 h-4 text-[#00aae1]" />
                         <span>Archivos del Paciente ({archivosPaciente.length})</span>
+                        {archivosAgrupados.length > 0 && (
+                          <span className="text-[11px] text-slate-400 font-normal">
+                            · {archivosAgrupados.length} {archivosAgrupados.length === 1 ? 'grupo' : 'grupos'} de atención
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Acciones: Expandir/Contraer todos y Buscador */}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {archivosAgrupados.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={toggleExpandAllArchivoGrupos}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-[#035476] dark:text-[#38bdf8] hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors cursor-pointer shadow-2xs shrink-0"
+                            title={allGruposCollapsed ? 'Expandir todos los grupos de archivos' : 'Contraer todos los grupos de archivos'}
+                          >
+                            <ChevronDown className={`w-3.5 h-3.5 text-[#00aae1] transition-transform ${allGruposCollapsed ? '' : 'rotate-180'}`} />
+                            <span>{allGruposCollapsed ? 'Expandir todos' : 'Contraer todos'}</span>
+                          </button>
+                        )}
+
+                        {/* Buscador de archivos */}
+                        {archivosPaciente.length > 3 && (
+                          <div className="relative min-w-[200px] sm:min-w-[240px]">
+                            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                            <input
+                              type="text"
+                              value={archivoSearch}
+                              onChange={(e) => setArchivoSearch(e.target.value)}
+                              placeholder="Buscar archivo o código..."
+                              className="w-full pl-8 pr-3 py-1 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-[#00aae1]"
+                            />
+                          </div>
+                        )}
                       </div>
                     </div>
+
                     <div className="p-4">
                       {archivosPaciente.length === 0 ? (
                         <div className="text-center py-8 text-slate-400 text-xs">No hay archivos adicionales adjuntos al paciente.</div>
+                      ) : archivosAgrupados.length === 0 ? (
+                        <div className="text-center py-8 text-slate-400 text-xs">No se encontraron archivos que coincidan con la búsqueda.</div>
                       ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[460px] overflow-y-auto pr-1.5">
-                          {archivosPaciente.map((a: any, i: number) => {
-                            const docTitle = a.nombre_archivo || a.titulo || `Archivo #${i + 1}`;
-                            const docCita = a.codigo_cita || a.id_hexadecimal;
+                        <div className="space-y-4 max-h-[500px] overflow-y-auto pr-1.5">
+                          {archivosAgrupados.map((grp) => {
+                            const isCollapsed = expandedArchivoGrupos[grp.codigo] === false;
 
                             return (
-                              <div key={i} className="p-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3 hover:border-[#00aae1]/40 transition-all">
-                                <div className="truncate flex-1">
-                                  <div className="text-xs font-bold text-[#033d59] dark:text-[#f8fafc] truncate" title={docTitle}>
-                                    {docTitle}
-                                  </div>
-                                  <div className="flex items-center gap-2 text-[11px] text-slate-500 font-mono mt-1">
-                                    {docCita && (
-                                      <span className="px-1.5 py-0.2 rounded bg-sky-50 dark:bg-sky-950/50 text-[#00aae1] dark:text-[#38bdf8] border border-sky-200 dark:border-sky-900/60 font-bold">
-                                        Cita: {docCita}
+                              <div
+                                key={grp.codigo}
+                                className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-slate-50/50 dark:bg-slate-900/40 shadow-2xs"
+                              >
+                                {/* Encabezado del Grupo por Codigo de Atención */}
+                                <button
+                                  type="button"
+                                  onClick={() => toggleArchivoGrupo(grp.codigo)}
+                                  className="w-full px-3.5 py-2.5 bg-[#effaff]/80 dark:bg-[#00aae1]/10 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 hover:bg-[#effaff] dark:hover:bg-[#00aae1]/20 transition-colors cursor-pointer text-left"
+                                >
+                                  <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                                    <div className="w-6 h-6 rounded-lg bg-[#00aae1] text-white flex items-center justify-center shrink-0">
+                                      <Calendar className="w-3.5 h-3.5" />
+                                    </div>
+                                    <span className="text-xs font-bold text-[#033d59] dark:text-[#f8fafc] truncate">
+                                      {grp.codigo !== 'Sin Código' ? (
+                                        <>
+                                          Codigo de Atención:{' '}
+                                          <span className="font-mono text-[#00aae1] dark:text-[#38bdf8] font-extrabold px-1.5 py-0.5 rounded bg-white dark:bg-slate-800 border border-sky-200 dark:border-sky-900/60 ml-1">
+                                            {grp.codigo}
+                                          </span>
+                                        </>
+                                      ) : (
+                                        'Archivos sin Código de Atención'
+                                      )}
+                                    </span>
+
+                                    {/* Icono/Badge indicador si en este grupo existe al menos un archivo con análisis */}
+                                    {grp.tieneAnalisis && (
+                                      <span
+                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800 shrink-0"
+                                        title="Esta cita contiene archivo(s) con análisis clínico de exámenes"
+                                      >
+                                        <FlaskConical className="w-3 h-3 text-teal-600 dark:text-teal-400" />
+                                        <span>Con Análisis</span>
                                       </span>
                                     )}
-                                    {a.id_archivo && (
-                                      <span className="text-slate-400">ID: {a.id_archivo}</span>
-                                    )}
                                   </div>
-                                </div>
-                                {a.url_archivo && (
-                                  <a
-                                    href={a.url_archivo}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="p-2 rounded-lg bg-white dark:bg-slate-700 text-[#00aae1] hover:bg-[#00aae1] hover:text-white transition-colors shrink-0 shadow-xs border border-slate-200 dark:border-slate-600"
-                                    title="Abrir archivo"
-                                  >
-                                    <ExternalLink className="w-4 h-4" />
-                                  </a>
+
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                                      {grp.files.length} {grp.files.length === 1 ? 'archivo' : 'archivos'}
+                                    </span>
+                                    <ChevronDown
+                                      className={`w-4 h-4 text-slate-400 transition-transform ${
+                                        isCollapsed ? '' : 'rotate-180'
+                                      }`}
+                                    />
+                                  </div>
+                                </button>
+
+                                {/* Lista de Archivos del Grupo */}
+                                {!isCollapsed && (
+                                  <div className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                    {grp.files.map((a: any, i: number) => {
+                                      const docTitle = a.nombre_archivo || a.titulo || `Archivo #${i + 1}`;
+                                      const docCita = a.id_cita || a.codigo_cita || a.id_hexadecimal;
+                                      const analisisObj = parseArchivoAnalisis(a.analisis);
+
+                                      return (
+                                        <div
+                                          key={i}
+                                          className="p-3 bg-white dark:bg-slate-800/90 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-3 hover:border-[#00aae1]/50 transition-all shadow-2xs"
+                                        >
+                                          <div className="truncate flex-1 min-w-0">
+                                            <div
+                                              className="text-xs font-bold text-[#033d59] dark:text-[#f8fafc] truncate"
+                                              title={docTitle}
+                                            >
+                                              {docTitle}
+                                            </div>
+                                            <div className="flex items-center gap-2 text-[11px] text-slate-500 font-mono mt-1 flex-wrap">
+                                              {docCita && (
+                                                <span className="px-1.5 py-0.2 rounded bg-sky-50 dark:bg-sky-950/50 text-[#00aae1] dark:text-[#38bdf8] border border-sky-200 dark:border-sky-900/60 font-bold text-[10px]">
+                                                  Codigo de Atención: {docCita}
+                                                </span>
+                                              )}
+                                              {a.id_archivo && (
+                                                <span className="text-slate-400 text-[10px]">
+                                                  ID: {a.id_archivo}
+                                                </span>
+                                              )}
+                                            </div>
+                                          </div>
+
+                                          <div className="flex items-center gap-1.5 shrink-0">
+                                            {analisisObj && (
+                                              <button
+                                                type="button"
+                                                onClick={() => setSelectedAnalisisFile({ file: a, data: analisisObj })}
+                                                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/60 dark:hover:bg-teal-900/60 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800/60 text-xs font-bold transition-all cursor-pointer shadow-xs"
+                                                title="Ver Análisis Clínico de Exámenes"
+                                              >
+                                                <FlaskConical className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                                                <span className="hidden sm:inline">Análisis</span>
+                                              </button>
+                                            )}
+
+                                            {a.url_archivo && (
+                                              <a
+                                                href={a.url_archivo}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="p-2 rounded-lg bg-slate-50 hover:bg-[#00aae1] hover:text-white dark:bg-slate-700 text-[#00aae1] transition-colors shrink-0 shadow-xs border border-slate-200 dark:border-slate-600 cursor-pointer"
+                                                title="Abrir archivo original"
+                                              >
+                                                <ExternalLink className="w-4 h-4" />
+                                              </a>
+                                            )}
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
                                 )}
                               </div>
                             );
@@ -1980,6 +2194,16 @@ export const VerActaModal: React.FC<VerActaModalProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Modal Secundario de Análisis de Archivo Clínico */}
+      {selectedAnalisisFile && (
+        <AnalisisArchivoModal
+          isOpen={Boolean(selectedAnalisisFile)}
+          onClose={() => setSelectedAnalisisFile(null)}
+          fileInfo={selectedAnalisisFile.file}
+          analisisData={selectedAnalisisFile.data}
+        />
+      )}
     </div>
   );
 };

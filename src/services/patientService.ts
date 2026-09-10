@@ -118,6 +118,8 @@ export interface PatientsPagination {
   registros_por_pagina: number;
   total_registros: number;
   total_paginas: number;
+  total_activos?: number;
+  total_inconforme?: number;
 }
 
 export interface GetPatientsResult {
@@ -337,6 +339,10 @@ export class PatientService {
       etiquetaVal = String(rawTag);
     }
 
+    const rawEstadoId = raw.id_estado_cohorte !== undefined && raw.id_estado_cohorte !== null ? Number(raw.id_estado_cohorte) : null;
+    const estadoNombre = raw.estado || raw.cohorte || (rawEstadoId === 7 ? 'ACTIVO' : null);
+    const cohorteNombre = raw.cohorte || raw.estado || (rawEstadoId === 7 ? 'ACTIVO' : null);
+
     return {
       id: raw.id ? String(raw.id) : '',
       nombres,
@@ -350,8 +356,9 @@ export class PatientService {
       convenioNombre: raw.convenioNombre ?? null,
       prioridadInicial: typeof raw.prioridadInicial === 'number' ? raw.prioridadInicial : null,
       fechaProximaRevision: raw.fechaProximaRevision || raw.fecha_proxima_revision || null,
-      cohorte: raw.cohorte ?? null,
-      estado: raw.estado ?? null,
+      cohorte: cohorteNombre ?? null,
+      id_estado_cohorte: rawEstadoId,
+      estado: estadoNombre as any,
       riesgo: (rawRiesgo && ['Critical', 'High', 'Medium', 'Low'].includes(rawRiesgo) ? rawRiesgo : null) as any,
       etiqueta: etiquetaVal,
       tag_retroalimentacion: raw.tag_retroalimentacion ?? (rawTag === 'C' || rawTag === 'I' ? rawTag : null),
@@ -440,11 +447,13 @@ export class PatientService {
         if (data && data.codigo_respuesta === 0 && Array.isArray(data.pacientes)) {
           const normalized = data.pacientes.map((p: any) => this.normalizePatient(p));
           this.patientsCache = normalized;
-          const paginacion: PatientsPagination = data.paginacion || {
-            pagina_actual: filters?.pagina || 1,
-            registros_por_pagina: filters?.registros_por_pagina || 10,
-            total_registros: normalized.length,
-            total_paginas: Math.max(1, Math.ceil(normalized.length / (filters?.registros_por_pagina || 10))),
+          const paginacion: PatientsPagination = {
+            pagina_actual: data.paginacion?.pagina_actual || filters?.pagina || 1,
+            registros_por_pagina: data.paginacion?.registros_por_pagina || filters?.registros_por_pagina || 10,
+            total_registros: data.paginacion?.total_registros ?? normalized.length,
+            total_paginas: data.paginacion?.total_paginas ?? Math.max(1, Math.ceil(normalized.length / (filters?.registros_por_pagina || 10))),
+            total_activos: data.paginacion?.total_activos !== undefined ? Number(data.paginacion.total_activos) : normalized.filter((p: any) => p.id_estado_cohorte === 7 || p.estado === 'Activo').length,
+            total_inconforme: data.paginacion?.total_inconforme !== undefined ? Number(data.paginacion.total_inconforme) : normalized.filter((p: any) => p.tag_retroalimentacion === 'I' || p.etiqueta === 'Inconforme').length,
           };
           return { pacientes: normalized, paginacion };
         } else if (data && data.mensaje_respuesta) {
@@ -461,6 +470,8 @@ export class PatientService {
         registros_por_pagina: 10,
         total_registros: this.patientsCache.length,
         total_paginas: Math.max(1, Math.ceil(this.patientsCache.length / 10)),
+        total_activos: this.patientsCache.filter((p: any) => p.id_estado_cohorte === 7 || p.estado === 'Activo').length,
+        total_inconforme: this.patientsCache.filter((p: any) => p.tag_retroalimentacion === 'I' || p.etiqueta === 'Inconforme').length,
       },
     };
   }
@@ -532,10 +543,10 @@ export class PatientService {
   /**
    * Fetch Cost Analysis by calling Oracle function f_traer_costos(:mes_corte, :identificacion)
    */
-  static async getCostAnalysis(mesCorte: string = 'Marzo_2026', identificacion: string = '6070110'): Promise<CostAnalysisResponse> {
+  static async getCostAnalysis(mesCorte: string, identificacion: string): Promise<CostAnalysisResponse> {
     try {
-      const cleanIdentificacion = identificacion.replace(/\D/g, '') || identificacion || '6070110';
-      const cleanMes = mesCorte.replace(' ', '_') || 'Marzo_2026';
+      const cleanIdentificacion = String(identificacion || '').replace(/\D/g, '').trim() || String(identificacion || '').trim();
+      const cleanMes = String(mesCorte || '').trim().replace(/\s+/g, '_');
       const params = new URLSearchParams({
         action: 'costos',
         mes_corte: cleanMes,
@@ -545,8 +556,11 @@ export class PatientService {
       const response = await fetch(`/api/patients?${params.toString()}`);
       if (response.ok) {
         const data = await response.json();
-        if (data && (data.job_id || data.user_data || data.global_calculated)) {
-          return data as CostAnalysisResponse;
+        if (data && (data.job_id || data.user_data || data.global_calculated || data.costos_data || data.user_calculated)) {
+          return {
+            ...data,
+            requested_user_id: cleanIdentificacion,
+          } as CostAnalysisResponse;
         }
       }
     } catch (error) {

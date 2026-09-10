@@ -89,9 +89,16 @@ export default function App() {
   // Server-side Pagination & Search State
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage, setItemsPerPage] = useState<number>(10);
-  const [paginationMeta, setPaginationMeta] = useState({
+  const [paginationMeta, setPaginationMeta] = useState<{
+    total_registros: number;
+    total_paginas: number;
+    total_activos?: number;
+    total_inconforme?: number;
+  }>({
     total_registros: 0,
     total_paginas: 1,
+    total_activos: 0,
+    total_inconforme: 0,
   });
 
   // Debounced search queries for Oracle DB
@@ -144,6 +151,8 @@ export default function App() {
         setPaginationMeta({
           total_registros: res.paginacion.total_registros,
           total_paginas: res.paginacion.total_paginas,
+          total_activos: res.paginacion.total_activos,
+          total_inconforme: res.paginacion.total_inconforme,
         });
       })
       .catch((err) => {
@@ -200,8 +209,14 @@ export default function App() {
   const filteredPatients = useMemo(() => {
     return patients.filter((patient) => {
       // Estado Filter
-      if (filters.estado !== 'Todos' && patient.estado !== filters.estado) {
-        return false;
+      if (filters.estado !== 'Todos') {
+        if (filters.estado === 'Activo') {
+          if (patient.id_estado_cohorte !== 7 && patient.estado !== 'Activo') {
+            return false;
+          }
+        } else if (patient.estado !== filters.estado) {
+          return false;
+        }
       }
 
       // Cohorte Filter
@@ -296,9 +311,9 @@ export default function App() {
       // Fast Filter Chips
       if (filters.fastFilter && filters.fastFilter !== 'Todos') {
         const ff = filters.fastFilter;
-        if (ff === 'Activos' && patient.estado !== 'Activo') return false;
+        if (ff === 'Activos' && patient.id_estado_cohorte !== 7 && patient.estado !== 'Activo') return false;
         if (ff === 'Vencidos' && !patientHasOverdueSpecialist(patient)) return false;
-        if (ff === 'Inconforme' && patient.etiqueta !== 'Inconforme' && patient.retroalimentacion !== 'Inconforme' && patient.tag_retroalimentacion !== 'I') return false;
+        if (ff === 'Inconforme' && patient.tag_retroalimentacion !== 'I' && patient.etiqueta !== 'Inconforme' && patient.retroalimentacion !== 'Inconforme') return false;
         if (ff === 'Críticos' && patient.riesgo !== 'Critical' && patient.riesgo !== 'High' && patient.etiqueta !== 'Crítico' && patient.tag_retroalimentacion !== 'C') return false;
         if (ff === '>90 días') {
           const hasMoreThan90Days = patient.specialists ? Object.values(patient.specialists).some((s) => Boolean((s as SpecialistInfo)?.isOverdue)) : false;
@@ -319,10 +334,14 @@ export default function App() {
   // Metrics Counters
   const totalPatients = paginationMeta.total_registros > 0 ? paginationMeta.total_registros : patients.length;
   const overdueCount = patients.filter(patientHasOverdueSpecialist).length;
-  const activeCount = patients.filter((p) => p.estado === 'Activo').length;
-  const inconformeCount = patients.filter(
-    (p) => p.etiqueta === 'Inconforme' || p.retroalimentacion === 'Inconforme' || p.tag_retroalimentacion === 'I'
-  ).length;
+  const activeCount = paginationMeta.total_activos !== undefined && paginationMeta.total_activos > 0
+    ? paginationMeta.total_activos
+    : patients.filter((p) => p.id_estado_cohorte === 7 || p.estado === 'Activo').length;
+  const inconformeCount = paginationMeta.total_inconforme !== undefined && paginationMeta.total_inconforme > 0
+    ? paginationMeta.total_inconforme
+    : patients.filter(
+        (p) => p.tag_retroalimentacion === 'I' || p.etiqueta === 'Inconforme' || p.retroalimentacion === 'Inconforme'
+      ).length;
   const alarmCount = patients.filter((p) => p.hasAlarm).length;
 
   // Handlers for state updates

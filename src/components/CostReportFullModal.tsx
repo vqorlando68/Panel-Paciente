@@ -698,7 +698,8 @@ export const CostReportFullModal: React.FC<CostReportFullModalProps> = ({
                               <span
                                 key={cIdx}
                                 className={`px-1.5 py-0.5 rounded text-[10px] ${
-                                  String(cedula) === String(costData.requested_user_id) || String(cedula) === '6070110'
+                                String(cedula) === String(costData.requested_user_id) ||
+                                String(cedula) === String(patient.identificacion || '').replace(/\D/g, '')
                                     ? 'bg-sky-500 text-white font-bold'
                                     : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
                                 }`}
