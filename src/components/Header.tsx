@@ -145,8 +145,13 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             type="button"
             onClick={() => {
-              onSelectMetricCard?.('activos');
-              onFastFilterChange?.('Activos');
+              if (activeMetricCard === 'activos' || fastFilter === 'Activos') {
+                onSelectMetricCard?.('total');
+                onFastFilterChange?.('Todos');
+              } else {
+                onSelectMetricCard?.('activos');
+                onFastFilterChange?.('Activos');
+              }
             }}
             title="Filtrar pacientes Activos"
             className={`flex items-center gap-1.5 px-3 py-1 rounded-md border text-[#01ae6c] dark:text-[#34d399] cursor-pointer transition-all ${
@@ -162,8 +167,13 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             type="button"
             onClick={() => {
-              onSelectMetricCard?.('vencidos');
-              onFastFilterChange?.('Vencidos');
+              if (activeMetricCard === 'vencidos' || fastFilter === 'Vencidos') {
+                onSelectMetricCard?.('total');
+                onFastFilterChange?.('Todos');
+              } else {
+                onSelectMetricCard?.('vencidos');
+                onFastFilterChange?.('Vencidos');
+              }
             }}
             title="Filtrar pacientes con atenciones Vencidas"
             className={`flex items-center gap-1.5 px-3 py-1 rounded-md border text-[#b45309] dark:text-[#fbbf24] cursor-pointer transition-all ${
@@ -180,9 +190,10 @@ export const Header: React.FC<HeaderProps> = ({
             type="button"
             onClick={() => {
               if (fastFilter === 'Inconforme') {
-                onFastFilterChange?.('Todos');
                 onSelectMetricCard?.('total');
+                onFastFilterChange?.('Todos');
               } else {
+                onSelectMetricCard?.('total');
                 onFastFilterChange?.('Inconforme');
               }
             }}

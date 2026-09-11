@@ -117,6 +117,7 @@ export interface PatientsPagination {
   pagina_actual: number;
   registros_por_pagina: number;
   total_registros: number;
+  total_base?: number;
   total_paginas: number;
   total_activos?: number;
   total_inconforme?: number;
@@ -416,6 +417,8 @@ export class PatientService {
     nombresApellidos?: string;
     coordinador?: string;
     convenioNombre?: string | string[];
+    estado?: string;
+    fastFilter?: string;
   }): Promise<GetPatientsResult> {
     try {
       const query = new URLSearchParams();
@@ -438,6 +441,12 @@ export class PatientService {
           query.set('convenioNombre', val);
         }
       }
+      if (filters?.estado && filters.estado !== 'Todos') {
+        query.set('estado', filters.estado);
+      }
+      if (filters?.fastFilter && filters.fastFilter !== 'Todos') {
+        query.set('fastFilter', filters.fastFilter);
+      }
 
       const url = `/api/patients${query.toString() ? '?' + query.toString() : ''}`;
       const response = await fetch(url);
@@ -451,6 +460,7 @@ export class PatientService {
             pagina_actual: data.paginacion?.pagina_actual || filters?.pagina || 1,
             registros_por_pagina: data.paginacion?.registros_por_pagina || filters?.registros_por_pagina || 10,
             total_registros: data.paginacion?.total_registros ?? normalized.length,
+            total_base: data.paginacion?.total_base ?? data.paginacion?.total_registros ?? normalized.length,
             total_paginas: data.paginacion?.total_paginas ?? Math.max(1, Math.ceil(normalized.length / (filters?.registros_por_pagina || 10))),
             total_activos: data.paginacion?.total_activos !== undefined ? Number(data.paginacion.total_activos) : normalized.filter((p: any) => p.id_estado_cohorte === 7 || p.estado === 'Activo').length,
             total_inconforme: data.paginacion?.total_inconforme !== undefined ? Number(data.paginacion.total_inconforme) : normalized.filter((p: any) => p.tag_retroalimentacion === 'I' || p.etiqueta === 'Inconforme').length,

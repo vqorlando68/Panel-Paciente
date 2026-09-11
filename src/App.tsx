@@ -91,11 +91,13 @@ export default function App() {
   const [itemsPerPage, setItemsPerPage] = useState<number>(10);
   const [paginationMeta, setPaginationMeta] = useState<{
     total_registros: number;
+    total_base?: number;
     total_paginas: number;
     total_activos?: number;
     total_inconforme?: number;
   }>({
     total_registros: 0,
+    total_base: 0,
     total_paginas: 1,
     total_activos: 0,
     total_inconforme: 0,
@@ -130,10 +132,19 @@ export default function App() {
     });
   }, []);
 
-  // Reset to page 1 when search filters change
+  // Reset to page 1 when search filters or fast filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedIdentificacion, debouncedNombre, filters.coordinador, filters.convenioNombre]);
+  }, [
+    debouncedIdentificacion,
+    debouncedNombre,
+    filters.coordinador,
+    filters.convenioNombre,
+    filters.estado,
+    filters.fastFilter,
+    filters.seguimiento,
+    filters.soloVencidas,
+  ]);
 
   // Load paginated patients from Oracle
   useEffect(() => {
@@ -145,11 +156,14 @@ export default function App() {
       nombresApellidos: debouncedNombre,
       coordinador: filters.coordinador,
       convenioNombre: filters.convenioNombre,
+      estado: filters.estado,
+      fastFilter: filters.fastFilter,
     })
       .then((res) => {
         setPatients(res.pacientes);
         setPaginationMeta({
           total_registros: res.paginacion.total_registros,
+          total_base: res.paginacion.total_base,
           total_paginas: res.paginacion.total_paginas,
           total_activos: res.paginacion.total_activos,
           total_inconforme: res.paginacion.total_inconforme,
@@ -161,7 +175,16 @@ export default function App() {
       .finally(() => {
         setIsLoading(false);
       });
-  }, [currentPage, itemsPerPage, debouncedIdentificacion, debouncedNombre, filters.coordinador, filters.convenioNombre]);
+  }, [
+    currentPage,
+    itemsPerPage,
+    debouncedIdentificacion,
+    debouncedNombre,
+    filters.coordinador,
+    filters.convenioNombre,
+    filters.estado,
+    filters.fastFilter,
+  ]);
 
   // Modal / Drawer States
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
@@ -211,7 +234,7 @@ export default function App() {
       // Estado Filter
       if (filters.estado !== 'Todos') {
         if (filters.estado === 'Activo') {
-          if (patient.id_estado_cohorte !== 7 && patient.estado !== 'Activo') {
+          if (patient.id_estado_cohorte !== 7 && (patient.estado || '').toLowerCase() !== 'activo') {
             return false;
           }
         } else if (patient.estado !== filters.estado) {
@@ -311,20 +334,34 @@ export default function App() {
       // Fast Filter Chips
       if (filters.fastFilter && filters.fastFilter !== 'Todos') {
         const ff = filters.fastFilter;
-        if (ff === 'Activos' && patient.id_estado_cohorte !== 7 && patient.estado !== 'Activo') return false;
+        if (ff === 'Activos' && patient.id_estado_cohorte !== 7 && (patient.estado || '').toLowerCase() !== 'activo') return false;
         if (ff === 'Vencidos' && !patientHasOverdueSpecialist(patient)) return false;
         if (ff === 'Inconforme' && patient.tag_retroalimentacion !== 'I' && patient.etiqueta !== 'Inconforme' && patient.retroalimentacion !== 'Inconforme') return false;
-        if (ff === 'Críticos' && patient.riesgo !== 'Critical' && patient.riesgo !== 'High' && patient.etiqueta !== 'Crítico' && patient.tag_retroalimentacion !== 'C') return false;
-        if (ff === '>90 días') {
-          const hasMoreThan90Days = patient.specialists ? Object.values(patient.specialists).some((s) => Boolean((s as SpecialistInfo)?.isOverdue)) : false;
-          if (!hasMoreThan90Days) return false;
+        if ((ff === 'Críticos' || ff === 'Criticos') && patient.tag_retroalimentacion !== 'C') return false;
+        if (ff === '>90 días' || ff === '> 90 días') {
+          const coreKeys: SpecialistKey[] = ['med_gen', 'med_int', 'psicol', 'nutri'];
+          const hasRecentAppointment = coreKeys.some((k) => {
+            const spec = patient.specialists?.[k];
+            if (!spec || !spec.attentionsHistory || spec.attentionsHistory.length === 0) return false;
+            return spec.attentionsHistory.some((att) => {
+              if (!att.dateTime || att.dateTime === '—') return false;
+              const parts = att.dateTime.split(' ')[0].split('/');
+              if (parts.length === 3) {
+                const attDate = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
+                const diffDays = (Date.now() - attDate.getTime()) / (1000 * 60 * 60 * 24);
+                return diffDays >= 0 && diffDays <= 90;
+              }
+              return false;
+            });
+          });
+          if (hasRecentAppointment) return false;
         }
-        if (ff === 'Rehúso') {
+        if (ff === 'Rehúso' || ff === 'Rehuso') {
           const hasRehuso = patient.hasRehuso || (patient.specialists ? Object.values(patient.specialists).some((s) => Boolean((s as SpecialistInfo)?.hasRehuso)) : false);
           if (!hasRehuso) return false;
         }
-        if (ff === 'Aceptados' && patient.cohorte !== 'ACEPTADO' && patient.estado !== 'Aceptado') return false;
-        if (ff === 'Sin Acta' && patient.acta && patient.acta.numero > 0) return false;
+        if (ff === 'Aceptados' && patient.cohorte !== 'ACEPTADO' && (patient.estado || '').toUpperCase() !== 'ACEPTADO' && patient.id_estado_cohorte !== 6) return false;
+        if ((ff === 'Sin Acta' || ff === 'Sin Actas') && ((patient.acta && patient.acta.numero > 0) || (patient.actasHistory && patient.actasHistory.length > 0))) return false;
       }
 
       return true;
@@ -332,11 +369,13 @@ export default function App() {
   }, [patients, filters, debouncedIdentificacion, debouncedNombre]);
 
   // Metrics Counters
-  const totalPatients = paginationMeta.total_registros > 0 ? paginationMeta.total_registros : patients.length;
+  const totalPatients = (paginationMeta.total_base !== undefined && paginationMeta.total_base > 0)
+    ? paginationMeta.total_base
+    : (paginationMeta.total_registros > 0 ? paginationMeta.total_registros : patients.length);
   const overdueCount = patients.filter(patientHasOverdueSpecialist).length;
   const activeCount = paginationMeta.total_activos !== undefined && paginationMeta.total_activos > 0
     ? paginationMeta.total_activos
-    : patients.filter((p) => p.id_estado_cohorte === 7 || p.estado === 'Activo').length;
+    : patients.filter((p) => p.id_estado_cohorte === 7 || (p.estado || '').toLowerCase() === 'activo').length;
   const inconformeCount = paginationMeta.total_inconforme !== undefined && paginationMeta.total_inconforme > 0
     ? paginationMeta.total_inconforme
     : patients.filter(
@@ -531,19 +570,20 @@ export default function App() {
 
   // Active Metric Card derived state
   const activeMetricCard = useMemo(() => {
-    if (filters.seguimiento === 'Vencidos') return 'vencidos';
-    if (filters.estado === 'Activo' && filters.seguimiento === 'Todos') return 'activos';
-    if (filters.estado === 'Todos' && filters.seguimiento === 'Todos') return 'total';
+    if (filters.fastFilter === 'Inconforme') return undefined;
+    if (filters.fastFilter === 'Vencidos' || filters.seguimiento === 'Vencidos') return 'vencidos';
+    if (filters.fastFilter === 'Activos' || filters.estado === 'Activo') return 'activos';
+    if ((filters.fastFilter === 'Todos' || !filters.fastFilter) && filters.estado === 'Todos' && filters.seguimiento === 'Todos') return 'total';
     return undefined;
   }, [filters]);
 
   const handleSelectMetricCard = (metric: 'total' | 'activos' | 'vencidos') => {
     if (metric === 'total') {
-      setFilters((prev) => ({ ...prev, estado: 'Todos', seguimiento: 'Todos', soloVencidas: false }));
+      setFilters((prev) => ({ ...prev, estado: 'Todos', seguimiento: 'Todos', soloVencidas: false, fastFilter: 'Todos' }));
     } else if (metric === 'activos') {
-      setFilters((prev) => ({ ...prev, estado: 'Activo', seguimiento: 'Todos', soloVencidas: false }));
+      setFilters((prev) => ({ ...prev, estado: 'Activo', seguimiento: 'Todos', soloVencidas: false, fastFilter: 'Activos' }));
     } else if (metric === 'vencidos') {
-      setFilters((prev) => ({ ...prev, seguimiento: 'Vencidos', estado: 'Todos', soloVencidas: false }));
+      setFilters((prev) => ({ ...prev, seguimiento: 'Vencidos', estado: 'Todos', soloVencidas: false, fastFilter: 'Vencidos' }));
     }
   };
 

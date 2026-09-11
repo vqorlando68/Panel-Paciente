@@ -114,6 +114,7 @@ CREATE OR REPLACE PACKAGE BODY pkgln_pacientes_giris IS
   ) IS
     v_registros_pag    NUMBER := 10;
     v_total_reg        NUMBER := 0;
+    v_total_filtrado   NUMBER := 0;
     v_total_pag        NUMBER := 1;
     v_total_activos    NUMBER := 0;
     v_total_inconforme NUMBER := 0;
@@ -121,6 +122,8 @@ CREATE OR REPLACE PACKAGE BODY pkgln_pacientes_giris IS
     v_nombre           VARCHAR2(200);
     v_coordinador      VARCHAR2(200);
     v_convenio         VARCHAR2(500);
+    v_estado           VARCHAR2(100);
+    v_fast_filter      VARCHAR2(100);
   BEGIN
     IF p_json_entrada IS NOT NULL AND LENGTH(p_json_entrada) > 0 THEN
       BEGIN
@@ -135,6 +138,14 @@ CREATE OR REPLACE PACKAGE BODY pkgln_pacientes_giris IS
         IF v_convenio = 'Todos' OR LENGTH(v_convenio) = 0 THEN
           v_convenio := NULL;
         END IF;
+        v_estado         := TRIM(JSON_VALUE(p_json_entrada, '$.filtros.estado'));
+        IF v_estado = 'Todos' OR LENGTH(v_estado) = 0 THEN
+          v_estado := NULL;
+        END IF;
+        v_fast_filter    := TRIM(JSON_VALUE(p_json_entrada, '$.filtros.fastFilter'));
+        IF v_fast_filter = 'Todos' OR LENGTH(v_fast_filter) = 0 THEN
+          v_fast_filter := NULL;
+        END IF;
       EXCEPTION
         WHEN OTHERS THEN
           v_registros_pag  := 10;
@@ -142,6 +153,8 @@ CREATE OR REPLACE PACKAGE BODY pkgln_pacientes_giris IS
           v_nombre         := NULL;
           v_coordinador    := NULL;
           v_convenio       := NULL;
+          v_estado         := NULL;
+          v_fast_filter    := NULL;
       END;
     END IF;
 
@@ -178,15 +191,85 @@ CREATE OR REPLACE PACKAGE BODY pkgln_pacientes_giris IS
                  )
            ));
 
-    IF v_registros_pag > 0 THEN
-      v_total_pag := CEIL(v_total_reg / v_registros_pag);
+    -- Total efectivo de registros segun el filtro de estado / fastFilter
+    IF v_fast_filter = 'Activos' OR v_estado = 'Activo' THEN
+      v_total_filtrado := v_total_activos;
+    ELSIF v_fast_filter = 'Inconforme' THEN
+      v_total_filtrado := v_total_inconforme;
+    ELSIF v_fast_filter IS NOT NULL THEN
+      SELECT COUNT(*)
+        INTO v_total_filtrado
+        FROM tkr_usuarios u
+       WHERE (u.paciente_giris = 'S' OR EXISTS (SELECT 1 FROM tkr_usuarios_cohorte uc WHERE uc.id_usuario = u.id))
+         AND (v_identificacion IS NULL OR u.identificacion LIKE '%' || v_identificacion || '%')
+         AND (v_nombre IS NULL OR UPPER(u.nombres || ' ' || u.apellidos) LIKE '%' || UPPER(v_nombre) || '%')
+         AND (v_coordinador IS NULL OR EXISTS (
+                SELECT 1 
+                  FROM tkr_usuarios_cohorte uc2, tkr_usuarios uco2
+                 WHERE uc2.id_usuario = u.id
+                   AND uco2.id = uc2.id_coordinador
+                   AND (
+                     UPPER(uco2.nombres || ' ' || uco2.apellidos) LIKE '%' || UPPER(v_coordinador) || '%'
+                     OR UPPER(v_coordinador) LIKE '%' || UPPER(uco2.nombres || ' ' || uco2.apellidos) || '%'
+                   )
+             ))
+         AND (v_convenio IS NULL OR EXISTS (
+                SELECT 1
+                  FROM tkr_usuarios_cohorte uc_c, tkr_convenios conv_c
+                 WHERE uc_c.id_usuario = u.id
+                   AND conv_c.id = uc_c.id_convenio
+                   AND (
+                     INSTR(',' || v_convenio || ',', ',' || conv_c.nombre_convenio || ',') > 0
+                     OR UPPER(conv_c.nombre_convenio) LIKE '%' || UPPER(v_convenio) || '%'
+                     OR UPPER(v_convenio) LIKE '%' || UPPER(conv_c.nombre_convenio) || '%'
+                   )
+             ))
+         AND (
+           (v_fast_filter IN ('Críticos', 'Criticos') AND EXISTS (
+              SELECT 1 
+                FROM tkr_usuarios_cohorte uc_c 
+               WHERE uc_c.id_usuario = u.id 
+                 AND uc_c.tag_retroalimentacion = 'C'
+           ))
+           OR (v_fast_filter IN ('>90 días', '> 90 días', '>90 dias', '> 90 dias') AND NOT EXISTS (
+              SELECT 1 
+                FROM tkr_citas c 
+               WHERE c.id_usuario = u.id 
+                 AND c.id_especialidad IN (17, 18, 36, 37) 
+                 AND c.fecha_inicio_cita >= (SYSDATE - 90)
+           ))
+           OR (v_fast_filter IN ('Sin Acta', 'Sin Actas') AND NOT EXISTS (
+              SELECT 1 
+                FROM tkr_actas_medicas a 
+               WHERE a.id_usuario = u.id
+           ))
+           OR (v_fast_filter = 'Aceptados' AND pkgcn_cohortes.f_devolver_id_estado_usuario(u.id) IN (1, 6))
+           OR (v_fast_filter IN ('Rehúso', 'Rehuso') AND EXISTS (
+              SELECT 1 
+                FROM tkr_usuarios_cohorte uc_r 
+               WHERE uc_r.id_usuario = u.id 
+                 AND UPPER(uc_r.tag_retroalimentacion) LIKE '%R%'
+           ))
+         );
     ELSE
+      v_total_filtrado := v_total_reg;
+    END IF;
+
+    IF v_registros_pag > 0 THEN
+      v_total_pag := CEIL(v_total_filtrado / v_registros_pag);
+    ELSE
+      v_total_pag := 1;
+    END IF;
+    IF v_total_pag = 0 THEN
       v_total_pag := 1;
     END IF;
 
     p_json_salida := '{"codigo_respuesta": 0, "mensaje_respuesta": "Cálculo de paginación realizado exitosamente", "paginacion": {"registros_por_pagina": ' 
-                     || v_registros_pag || ', "total_registros": ' || v_total_reg || ', "total_paginas": ' || v_total_pag 
-                     || ', "total_activos": ' || v_total_activos || ', "total_inconforme": ' || v_total_inconforme || '}}';
+                     || v_registros_pag || ', "total_registros": ' || v_total_filtrado 
+                     || ', "total_base": ' || v_total_reg
+                     || ', "total_paginas": ' || v_total_pag 
+                     || ', "total_activos": ' || v_total_activos 
+                     || ', "total_inconforme": ' || v_total_inconforme || '}}';
   EXCEPTION
     WHEN OTHERS THEN
       p_json_salida := '{"codigo_respuesta": -1, "mensaje_respuesta": "Error en prc_obtener_total_paginas: ' || REPLACE(SQLERRM, '"', '\"') || '"}';
@@ -202,6 +285,7 @@ CREATE OR REPLACE PACKAGE BODY pkgln_pacientes_giris IS
     v_pagina           NUMBER := 1;
     v_registros_pag    NUMBER := 10;
     v_total_reg        NUMBER := 0;
+    v_total_filtrado   NUMBER := 0;
     v_total_pag        NUMBER := 1;
     v_total_activos    NUMBER := 0;
     v_total_inconforme NUMBER := 0;
@@ -209,6 +293,8 @@ CREATE OR REPLACE PACKAGE BODY pkgln_pacientes_giris IS
     v_nombre           VARCHAR2(200);
     v_coordinador      VARCHAR2(200);
     v_convenio         VARCHAR2(500);
+    v_estado           VARCHAR2(100);
+    v_fast_filter      VARCHAR2(100);
 
     v_hdr            CLOB;
     v_json_data      CLOB;
@@ -221,7 +307,7 @@ CREATE OR REPLACE PACKAGE BODY pkgln_pacientes_giris IS
     v_agenda         CLOB;
     v_epicrisis      CLOB;
 
-    CURSOR c_pacientes(p_offset NUMBER, p_limit NUMBER, p_identificacion VARCHAR2, p_nombre VARCHAR2, p_coordinador VARCHAR2, p_convenio VARCHAR2) IS
+    CURSOR c_pacientes(p_offset NUMBER, p_limit NUMBER, p_identificacion VARCHAR2, p_nombre VARCHAR2, p_coordinador VARCHAR2, p_convenio VARCHAR2, p_fast_filter VARCHAR2, p_estado VARCHAR2) IS
       SELECT *
         FROM (
           SELECT q.*, ROWNUM rnum
@@ -284,6 +370,43 @@ CREATE OR REPLACE PACKAGE BODY pkgln_pacientes_giris IS
                              OR UPPER(p_convenio) LIKE '%' || UPPER(conv_c.nombre_convenio) || '%'
                            )
                      ))
+                 AND (
+                   (p_fast_filter IS NULL AND (p_estado IS NULL OR p_estado = 'Todos'))
+                   OR (
+                     (p_fast_filter = 'Activos' OR p_estado = 'Activo')
+                     AND pkgcn_cohortes.f_devolver_id_estado_usuario(u.id) = 7
+                   )
+                   OR (
+                     p_fast_filter = 'Inconforme'
+                     AND EXISTS (SELECT 1 FROM tkr_usuarios_cohorte uc_inc WHERE uc_inc.id_usuario = u.id AND uc_inc.tag_retroalimentacion = 'I')
+                   )
+                   OR (
+                     p_fast_filter IN ('Críticos', 'Criticos')
+                     AND EXISTS (SELECT 1 FROM tkr_usuarios_cohorte uc_c WHERE uc_c.id_usuario = u.id AND uc_c.tag_retroalimentacion = 'C')
+                   )
+                   OR (
+                     p_fast_filter IN ('>90 días', '> 90 días', '>90 dias', '> 90 dias')
+                     AND NOT EXISTS (
+                       SELECT 1 
+                         FROM tkr_citas c 
+                        WHERE c.id_usuario = u.id 
+                          AND c.id_especialidad IN (17, 18, 36, 37) 
+                          AND c.fecha_inicio_cita >= (SYSDATE - 90)
+                     )
+                   )
+                   OR (
+                     p_fast_filter IN ('Sin Acta', 'Sin Actas')
+                     AND NOT EXISTS (SELECT 1 FROM tkr_actas_medicas a WHERE a.id_usuario = u.id)
+                   )
+                   OR (
+                     p_fast_filter = 'Aceptados'
+                     AND pkgcn_cohortes.f_devolver_id_estado_usuario(u.id) IN (1, 6)
+                   )
+                   OR (
+                     p_fast_filter IN ('Rehúso', 'Rehuso')
+                     AND EXISTS (SELECT 1 FROM tkr_usuarios_cohorte uc_r WHERE uc_r.id_usuario = u.id AND UPPER(uc_r.tag_retroalimentacion) LIKE '%R%')
+                   )
+                 )
                ORDER BY u.nombres, u.apellidos
             ) q
            WHERE ROWNUM <= (p_offset + p_limit)
@@ -304,6 +427,14 @@ CREATE OR REPLACE PACKAGE BODY pkgln_pacientes_giris IS
         IF v_convenio = 'Todos' OR LENGTH(v_convenio) = 0 THEN
           v_convenio := NULL;
         END IF;
+        v_estado         := TRIM(JSON_VALUE(p_json_entrada, '$.filtros.estado'));
+        IF v_estado = 'Todos' OR LENGTH(v_estado) = 0 THEN
+          v_estado := NULL;
+        END IF;
+        v_fast_filter    := TRIM(JSON_VALUE(p_json_entrada, '$.filtros.fastFilter'));
+        IF v_fast_filter = 'Todos' OR LENGTH(v_fast_filter) = 0 THEN
+          v_fast_filter := NULL;
+        END IF;
       EXCEPTION
         WHEN OTHERS THEN
           v_pagina         := 1;
@@ -312,6 +443,8 @@ CREATE OR REPLACE PACKAGE BODY pkgln_pacientes_giris IS
           v_nombre         := NULL;
           v_coordinador    := NULL;
           v_convenio       := NULL;
+          v_estado         := NULL;
+          v_fast_filter    := NULL;
       END;
     END IF;
 
@@ -348,16 +481,84 @@ CREATE OR REPLACE PACKAGE BODY pkgln_pacientes_giris IS
                  )
            ));
 
-    IF v_registros_pag > 0 THEN
-      v_total_pag := CEIL(v_total_reg / v_registros_pag);
+    -- Total efectivo de registros segun el filtro de estado / fastFilter
+    IF v_fast_filter = 'Activos' OR v_estado = 'Activo' THEN
+      v_total_filtrado := v_total_activos;
+    ELSIF v_fast_filter = 'Inconforme' THEN
+      v_total_filtrado := v_total_inconforme;
+    ELSIF v_fast_filter IS NOT NULL THEN
+      SELECT COUNT(*)
+        INTO v_total_filtrado
+        FROM tkr_usuarios u
+       WHERE (u.paciente_giris = 'S' OR EXISTS (SELECT 1 FROM tkr_usuarios_cohorte uc WHERE uc.id_usuario = u.id))
+         AND (v_identificacion IS NULL OR u.identificacion LIKE '%' || v_identificacion || '%')
+         AND (v_nombre IS NULL OR UPPER(u.nombres || ' ' || u.apellidos) LIKE '%' || UPPER(v_nombre) || '%')
+         AND (v_coordinador IS NULL OR EXISTS (
+                SELECT 1 
+                  FROM tkr_usuarios_cohorte uc2, tkr_usuarios uco2
+                 WHERE uc2.id_usuario = u.id
+                   AND uco2.id = uc2.id_coordinador
+                   AND (
+                     UPPER(uco2.nombres || ' ' || uco2.apellidos) LIKE '%' || UPPER(v_coordinador) || '%'
+                     OR UPPER(v_coordinador) LIKE '%' || UPPER(uco2.nombres || ' ' || uco2.apellidos) || '%'
+                   )
+             ))
+         AND (v_convenio IS NULL OR EXISTS (
+                SELECT 1
+                  FROM tkr_usuarios_cohorte uc_c, tkr_convenios conv_c
+                 WHERE uc_c.id_usuario = u.id
+                   AND conv_c.id = uc_c.id_convenio
+                   AND (
+                     INSTR(',' || v_convenio || ',', ',' || conv_c.nombre_convenio || ',') > 0
+                     OR UPPER(conv_c.nombre_convenio) LIKE '%' || UPPER(v_convenio) || '%'
+                     OR UPPER(v_convenio) LIKE '%' || UPPER(conv_c.nombre_convenio) || '%'
+                   )
+             ))
+         AND (
+           (v_fast_filter IN ('Críticos', 'Criticos') AND EXISTS (
+              SELECT 1 
+                FROM tkr_usuarios_cohorte uc_c 
+               WHERE uc_c.id_usuario = u.id 
+                 AND uc_c.tag_retroalimentacion = 'C'
+           ))
+           OR (v_fast_filter IN ('>90 días', '> 90 días', '>90 dias', '> 90 dias') AND NOT EXISTS (
+              SELECT 1 
+                FROM tkr_citas c 
+               WHERE c.id_usuario = u.id 
+                 AND c.id_especialidad IN (17, 18, 36, 37) 
+                 AND c.fecha_inicio_cita >= (SYSDATE - 90)
+           ))
+           OR (v_fast_filter IN ('Sin Acta', 'Sin Actas') AND NOT EXISTS (
+              SELECT 1 
+                FROM tkr_actas_medicas a 
+               WHERE a.id_usuario = u.id
+           ))
+           OR (v_fast_filter = 'Aceptados' AND pkgcn_cohortes.f_devolver_id_estado_usuario(u.id) IN (1, 6))
+           OR (v_fast_filter IN ('Rehúso', 'Rehuso') AND EXISTS (
+              SELECT 1 
+                FROM tkr_usuarios_cohorte uc_r 
+               WHERE uc_r.id_usuario = u.id 
+                 AND UPPER(uc_r.tag_retroalimentacion) LIKE '%R%'
+           ))
+         );
     ELSE
+      v_total_filtrado := v_total_reg;
+    END IF;
+
+    IF v_registros_pag > 0 THEN
+      v_total_pag := CEIL(v_total_filtrado / v_registros_pag);
+    ELSE
+      v_total_pag := 1;
+    END IF;
+    IF v_total_pag = 0 THEN
       v_total_pag := 1;
     END IF;
 
     DBMS_LOB.CREATETEMPORARY(v_json_data, TRUE);
 
     v_buf := '{"codigo_respuesta": 0, "mensaje_respuesta": "Página de pacientes obtenida exitosamente", "paginacion": {"pagina_actual": ' 
-             || v_pagina || ', "registros_por_pagina": ' || v_registros_pag || ', "total_registros": ' || v_total_reg 
+             || v_pagina || ', "registros_por_pagina": ' || v_registros_pag || ', "total_registros": ' || v_total_filtrado 
+             || ', "total_base": ' || v_total_reg
              || ', "total_paginas": ' || v_total_pag 
              || ', "total_activos": ' || v_total_activos 
              || ', "total_inconforme": ' || v_total_inconforme || '}, "especialidades_orden": ['
@@ -374,7 +575,7 @@ CREATE OR REPLACE PACKAGE BODY pkgln_pacientes_giris IS
 
     DBMS_LOB.WRITEAPPEND(v_json_data, LENGTH(v_buf), v_buf);
 
-    FOR r IN c_pacientes((v_pagina - 1) * v_registros_pag, v_registros_pag, v_identificacion, v_nombre, v_coordinador, v_convenio) LOOP
+    FOR r IN c_pacientes((v_pagina - 1) * v_registros_pag, v_registros_pag, v_identificacion, v_nombre, v_coordinador, v_convenio, v_fast_filter, v_estado) LOOP
       IF NOT v_first THEN
         v_buf := ',';
         DBMS_LOB.WRITEAPPEND(v_json_data, LENGTH(v_buf), v_buf);
