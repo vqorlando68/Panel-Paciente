@@ -51,6 +51,58 @@ const MOCK_ACTAS_FALLBACK = [
   }
 ];
 
+const MOCK_CUADRO_MEDICO_FALLBACK = [
+  {
+    id_profesional: 28,
+    profesional_id: "CC-1231234",
+    usuario: "carlos",
+    registro_medico: null,
+    profesional: "Carlos 28 Monsalve",
+    profesional_email: "vqorlando@hotmail.com",
+    profesional_tel: "3219596165",
+    especialidad: [
+      { id: 17, nombre_especialidad: "Medicina General", tipo_especialidad: "N" }
+    ],
+    url_perfil: "https://www.tekerapp.co/directorio/carlos",
+    url_foto_profesional: "https://tekerapp.maxapex.net/FILES_DEV_TEKER/Id_203_2A8AB4B4313765EB985D02EDF3AD33FB706B8199.png"
+  },
+  {
+    id_profesional: 65,
+    profesional_id: "CC-121212",
+    usuario: "rodolfo",
+    registro_medico: "12345678",
+    profesional: "65-Rodolfo Vargas",
+    profesional_email: "vqorlando@hotmail.com",
+    profesional_tel: "3168226095",
+    especialidad: [
+      { id: 2, nombre_especialidad: "Cardio", tipo_especialidad: "S" }
+    ],
+    url_perfil: "https://www.tekerapp.co/directorio/rodolfo",
+    url_foto_profesional: "https://tekerapp.maxapex.net/FILES_DEV_TEKER/Id_754_42346B624C5605F93C2D3067493C0927A9B561F2.JPG"
+  }
+];
+
+const MOCK_AGENDA_FALLBACK = [
+  {
+    codigo_cita: "2A2",
+    fecha_cita: "Diciembre  23 de 2026 11:50 AM",
+    nombre_especialidad: "Cardio",
+    id_profesional: 65,
+    nombre_profesional: "65-Rodolfo Vargas",
+    url_foto_profesional: "https://tekerapp.maxapex.net/FILES_DEV_TEKER/Id_754_42346B624C5605F93C2D3067493C0927A9B561F2.JPG",
+    estado_cita: "Solicitud de Cita"
+  },
+  {
+    codigo_cita: "2A3",
+    fecha_cita: "Enero      22 de 2027 11:50 AM",
+    nombre_especialidad: "Cardio",
+    id_profesional: 65,
+    nombre_profesional: "65-Rodolfo Vargas",
+    url_foto_profesional: "https://tekerapp.maxapex.net/FILES_DEV_TEKER/Id_754_42346B624C5605F93C2D3067493C0927A9B561F2.JPG",
+    estado_cita: "Solicitud de Cita"
+  }
+];
+
 // Safe helper for JSON responses
 function sendJson(res: any, status: number, data: any) {
   if (res.status && res.json) {
@@ -210,6 +262,12 @@ export default async function handler(req: any, res: any) {
       if (action === 'actas_x_usuario' || action === 'actas') {
         return sendJson(res, 200, MOCK_ACTAS_FALLBACK);
       }
+      if (action === 'cuadro_medico' || action === 'equipo_medico') {
+        return sendJson(res, 200, { success: true, profesionales: MOCK_CUADRO_MEDICO_FALLBACK });
+      }
+      if (action === 'agenda' || action === 'atenciones_programadas') {
+        return sendJson(res, 200, { success: true, agenda: MOCK_AGENDA_FALLBACK, atenciones_programadas: MOCK_AGENDA_FALLBACK });
+      }
       return sendJson(res, 200, {
         codigo_respuesta: -1,
         mensaje_respuesta: 'Variables de entorno de Oracle (ORACLE_DB_USER / ORACLE_DB_CONNECTION_STRING) no configuradas en Vercel.',
@@ -221,6 +279,12 @@ export default async function handler(req: any, res: any) {
     if (!oracledb) {
       if (action === 'actas_x_usuario' || action === 'actas') {
         return sendJson(res, 200, MOCK_ACTAS_FALLBACK);
+      }
+      if (action === 'cuadro_medico' || action === 'equipo_medico') {
+        return sendJson(res, 200, { success: true, profesionales: MOCK_CUADRO_MEDICO_FALLBACK });
+      }
+      if (action === 'agenda' || action === 'atenciones_programadas') {
+        return sendJson(res, 200, { success: true, agenda: MOCK_AGENDA_FALLBACK, atenciones_programadas: MOCK_AGENDA_FALLBACK });
       }
       return sendJson(res, 200, {
         codigo_respuesta: -1,
@@ -239,6 +303,9 @@ export default async function handler(req: any, res: any) {
         p_json_entrada: p_json_entrada_str,
         p_json_salida: { type: oracledb.STRING, dir: oracledb.BIND_OUT, maxSize: 5000000 }
       };
+      let rawStr = '';
+      let rawSalida: any = null;
+      const idUsuario = Number(queryObj.id_usuario || req.body?.id_usuario || queryObj.id || req.body?.id || 0);
 
       if (action === 'costos') {
         const rawMes = queryObj.mes_corte || req.body?.mes_corte;
@@ -255,11 +322,22 @@ export default async function handler(req: any, res: any) {
           p_json_salida: { type: oracledb.STRING, dir: oracledb.BIND_OUT, maxSize: 10000000 }
         };
       } else if (action === 'actas_x_usuario' || action === 'actas') {
-        const idUsuario = Number(queryObj.id_usuario || req.body?.id_usuario || queryObj.id || req.body?.id || 0);
         executeSql = `BEGIN pkgcn_cohortes.p_actas_x_usuario(:p_json_entrada, :p_json_salida); END;`;
         bindParams = {
           p_json_entrada: JSON.stringify({ id_usuario: idUsuario }),
           p_json_salida: { type: oracledb.STRING, dir: oracledb.BIND_OUT, maxSize: 5000000 }
+        };
+      } else if (action === 'cuadro_medico' || action === 'equipo_medico') {
+        executeSql = `BEGIN pkgcn_citas.p_equipo_medico_paciente(:p_id_usuario, :p_json_salida); END;`;
+        bindParams = {
+          p_id_usuario: idUsuario,
+          p_json_salida: { type: oracledb.CLOB, dir: oracledb.BIND_OUT }
+        };
+      } else if (action === 'agenda' || action === 'atenciones_programadas') {
+        executeSql = `BEGIN :p_json_salida := pkgcn_cohortes.f_atenciones_programadas(:p_id_usuario); END;`;
+        bindParams = {
+          p_id_usuario: idUsuario,
+          p_json_salida: { type: oracledb.CLOB, dir: oracledb.BIND_OUT }
         };
       } else if (action === 'ver_acta' || action === 'f_ver_acta' || action === 'imprimir_acta') {
         let idActa = Number(queryObj.id_acta || req.body?.id_acta || 0);
@@ -380,26 +458,106 @@ export default async function handler(req: any, res: any) {
             connection = null;
             return sendJson(res, 200, MOCK_ACTAS_FALLBACK);
           }
+        } else if ((action === 'cuadro_medico' || action === 'equipo_medico') && execErr.message?.includes('pkgcn_citas')) {
+          try {
+            const fallbackSql = `BEGIN teker_dev.pkgcn_citas.p_equipo_medico_paciente(:p_id_usuario, :p_json_salida); END;`;
+            result = await connection.execute(fallbackSql, bindParams);
+          } catch (err2: any) {
+            console.warn('[Oracle API Cuadro Medico Warning]: Fallback:', err2.message);
+            await connection.close();
+            connection = null;
+            return sendJson(res, 200, { success: false, error: err2.message, profesionales: MOCK_CUADRO_MEDICO_FALLBACK });
+          }
+        } else if ((action === 'agenda' || action === 'atenciones_programadas') && execErr.message?.includes('pkgcn_cohortes')) {
+          try {
+            const fallbackSql = `BEGIN :p_json_salida := teker_dev.pkgcn_cohortes.f_atenciones_programadas(:p_id_usuario); END;`;
+            result = await connection.execute(fallbackSql, bindParams);
+          } catch (err2: any) {
+            try {
+              const resDual = await connection.execute(
+                `SELECT pkgcn_cohortes.f_atenciones_programadas(:p_id_usuario) AS RES FROM DUAL`,
+                { p_id_usuario: idUsuario }
+              );
+              rawStr = await lobToString(resDual.rows?.[0]?.[0] || resDual.rows?.[0]?.RES);
+            } catch (err3: any) {
+              console.warn('[Oracle API Agenda Warning]: Fallback:', err3.message);
+              await connection.close();
+              connection = null;
+              return sendJson(res, 200, { success: false, error: err2.message, agenda: MOCK_AGENDA_FALLBACK, atenciones_programadas: MOCK_AGENDA_FALLBACK });
+            }
+          }
         } else {
           throw execErr;
+        }
+      }
+
+      if (!rawStr) {
+        rawSalida = result?.outBinds?.p_json_salida;
+        if (typeof rawSalida === 'string') {
+          rawStr = rawSalida;
+        } else if (rawSalida) {
+          rawStr = await lobToString(rawSalida);
         }
       }
 
       await connection.close();
       connection = null;
 
-      const rawSalida = result.outBinds?.p_json_salida;
-      console.log(`[Oracle API Actas] rawSalida for ${action}:`, typeof rawSalida, rawSalida ? rawSalida.substring(0, 100) : 'null');
+      console.log(`[Oracle API] rawSalida for ${action}:`, typeof rawSalida, rawStr ? rawStr.substring(0, 100) : 'null');
       let jsonSalida: any = null;
-      if (typeof rawSalida === 'string') {
+      if (rawStr) {
         try {
-          jsonSalida = JSON.parse(rawSalida);
+          jsonSalida = JSON.parse(rawStr);
         } catch (pe) {
-          jsonSalida = rawSalida;
+          jsonSalida = rawStr;
         }
-      } else {
-        jsonSalida = rawSalida;
       }
+
+      if (action === 'cuadro_medico' || action === 'equipo_medico') {
+        if (jsonSalida && typeof jsonSalida.profesionales === 'string') {
+          try {
+            jsonSalida.profesionales = JSON.parse(jsonSalida.profesionales);
+          } catch (e) {
+            console.warn('[Oracle API Cuadro Medico]: Error al parsear nested profesionales JSON:', e);
+          }
+        }
+        let profList: any[] = [];
+        if (jsonSalida && Array.isArray(jsonSalida.profesionales)) {
+          profList = jsonSalida.profesionales;
+        } else if (Array.isArray(jsonSalida)) {
+          profList = jsonSalida;
+        }
+        return sendJson(res, 200, {
+          success: true,
+          profesionales: profList
+        });
+      }
+
+      if (action === 'agenda' || action === 'atenciones_programadas') {
+        let atencionesList: any[] = [];
+        if (typeof jsonSalida === 'string') {
+          try {
+            jsonSalida = JSON.parse(jsonSalida);
+          } catch (e) {}
+        }
+        if (Array.isArray(jsonSalida)) {
+          atencionesList = jsonSalida;
+        } else if (jsonSalida && Array.isArray(jsonSalida.atenciones_programadas)) {
+          atencionesList = jsonSalida.atenciones_programadas;
+        } else if (jsonSalida && Array.isArray(jsonSalida.agenda)) {
+          atencionesList = jsonSalida.agenda;
+        } else if (jsonSalida && typeof jsonSalida.atenciones === 'string') {
+          try {
+            atencionesList = JSON.parse(jsonSalida.atenciones);
+          } catch (e) {}
+        }
+        return sendJson(res, 200, {
+          success: true,
+          agenda: atencionesList,
+          atenciones_programadas: atencionesList
+        });
+      }
+
       if ((action === 'actas_x_usuario' || action === 'actas') && !jsonSalida) {
         jsonSalida = [];
       }
@@ -410,6 +568,12 @@ export default async function handler(req: any, res: any) {
       }
       if (action === 'actas_x_usuario' || action === 'actas') {
         return sendJson(res, 200, MOCK_ACTAS_FALLBACK);
+      }
+      if (action === 'cuadro_medico' || action === 'equipo_medico') {
+        return sendJson(res, 200, { success: false, error: dbErr.message, profesionales: MOCK_CUADRO_MEDICO_FALLBACK });
+      }
+      if (action === 'agenda' || action === 'atenciones_programadas') {
+        return sendJson(res, 200, { success: false, error: dbErr.message, agenda: MOCK_AGENDA_FALLBACK, atenciones_programadas: MOCK_AGENDA_FALLBACK });
       }
       if (action === 'ver_acta' || action === 'f_ver_acta') {
         return sendJson(res, 200, { success: false, error: dbErr.message });

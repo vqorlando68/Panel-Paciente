@@ -103,14 +103,51 @@ export interface CuadroMedicoItem {
   phone?: string;
 }
 
+export interface EspecialidadProfesional {
+  id: number;
+  nombre_especialidad: string;
+  tipo_especialidad: string;
+}
+
+export interface ProfesionalEquipoMedico {
+  id_profesional: number;
+  profesional_id: string;
+  usuario: string;
+  registro_medico: string | null;
+  profesional: string;
+  profesional_email: string;
+  profesional_tel: string;
+  especialidad: EspecialidadProfesional[];
+  url_foto_profesional: string;
+  url_perfil?: string;
+}
+
+export interface AtencionProgramadaDB {
+  codigo_cita: string;
+  fecha_cita: string;
+  nombre_especialidad: string;
+  id_profesional: number | null;
+  nombre_profesional: string;
+  url_foto_profesional?: string | null;
+  estado_cita: string;
+}
+
 export interface AgendaItem {
   id: string;
+  codigo_cita?: string;
   date: string;
-  time: string;
+  time?: string;
+  fecha_cita?: string;
   specialty: string;
+  nombre_especialidad?: string;
   professional: string;
-  status: 'Programada' | 'Completada' | 'Cancelada' | 'Pendiente';
-  type: 'Presencial' | 'Teleconsulta' | 'Domiciliaria';
+  nombre_profesional?: string;
+  id_profesional?: number | null;
+  url_foto_profesional?: string | null;
+  status: string;
+  estado_cita?: string;
+  type?: 'Presencial' | 'Teleconsulta' | 'Domiciliaria' | string;
+  location?: string;
 }
 
 export interface Patient {

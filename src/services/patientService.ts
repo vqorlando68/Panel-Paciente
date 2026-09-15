@@ -1,4 +1,4 @@
-import { Patient, SpecialistKey, SpecialistInfo, ActaInfo, ActaUsuarioDB, CostAnalysisResponse } from '../types';
+import { Patient, SpecialistKey, SpecialistInfo, ActaInfo, ActaUsuarioDB, CostAnalysisResponse, ProfesionalEquipoMedico, AtencionProgramadaDB } from '../types';
 import { INITIAL_PATIENTS } from '../mockData';
 import { DEFAULT_COST_ANALYSIS_DATA } from '../mockCostData';
 
@@ -623,6 +623,59 @@ export class PatientService {
       console.warn('[PatientService] Error calling /api/patients?action=ver_acta:', error);
     }
     return null;
+  }
+
+  /**
+   * Fetches assigned medical team (Cuadro Médico Asignado) for a patient
+   * by calling /api/patients?action=cuadro_medico&id_usuario=<id>
+   * which executes pkgcn_citas.p_equipo_medico_paciente(v_id_usuario, v_json_salida)
+   */
+  static async getEquipoMedico(idUsuario: string | number): Promise<ProfesionalEquipoMedico[]> {
+    try {
+      const cleanId = String(idUsuario || '').replace(/\D/g, '') || String(idUsuario || '').trim();
+      if (!cleanId) return [];
+      const resp = await fetch(`/api/patients?action=cuadro_medico&id_usuario=${encodeURIComponent(cleanId)}`);
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data && Array.isArray(data.profesionales)) {
+          return data.profesionales;
+        }
+        if (Array.isArray(data)) {
+          return data;
+        }
+      }
+    } catch (error) {
+      console.warn('[PatientService] Error calling /api/patients?action=cuadro_medico:', error);
+    }
+    return [];
+  }
+
+  /**
+   * Fetches programmed agenda / scheduled attentions for a patient
+   * by calling /api/patients?action=agenda&id_usuario=<id>
+   * which executes pkgcn_cohortes.f_atenciones_programadas(p_id_usuario)
+   */
+  static async getAtencionesProgramadas(idUsuario: string | number): Promise<AtencionProgramadaDB[]> {
+    try {
+      const cleanId = String(idUsuario || '').replace(/\D/g, '') || String(idUsuario || '').trim();
+      if (!cleanId) return [];
+      const resp = await fetch(`/api/patients?action=agenda&id_usuario=${encodeURIComponent(cleanId)}`);
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data && Array.isArray(data.atenciones_programadas)) {
+          return data.atenciones_programadas;
+        }
+        if (data && Array.isArray(data.agenda)) {
+          return data.agenda;
+        }
+        if (Array.isArray(data)) {
+          return data;
+        }
+      }
+    } catch (error) {
+      console.warn('[PatientService] Error calling /api/patients?action=agenda:', error);
+    }
+    return [];
   }
 }
 
