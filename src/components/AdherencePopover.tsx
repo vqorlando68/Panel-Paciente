@@ -1,6 +1,7 @@
-import React, { useEffect, useRef } from 'react';
-import { Patient, SpecialistInfo } from '../types';
-import { X, Clock } from 'lucide-react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { Patient, AdherenciaData } from '../types';
+import { X, Clock, Loader2, AlertCircle } from 'lucide-react';
+import { PatientService } from '../services/patientService';
 
 interface AdherencePopoverProps {
   patient: Patient;
@@ -9,7 +10,34 @@ interface AdherencePopoverProps {
 
 export const AdherencePopover: React.FC<AdherencePopoverProps> = ({ patient, onClose }) => {
   const popoverRef = useRef<HTMLDivElement>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [data, setData] = useState<AdherenciaData | null>(patient.adherencia ?? null);
 
+  // Fetch adherencia from API if not already loaded on patient object
+  const fetchAdherencia = useCallback(async () => {
+    if (patient.adherencia != null) {
+      setData(patient.adherencia);
+      setLoading(false);
+      return;
+    }
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await PatientService.getAdherencia(patient.id);
+      setData(result);
+    } catch (e: any) {
+      setError('No se pudo cargar la adherencia.');
+    } finally {
+      setLoading(false);
+    }
+  }, [patient.id, patient.adherencia]);
+
+  useEffect(() => {
+    fetchAdherencia();
+  }, [fetchAdherencia]);
+
+  // Close on click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement | null;
@@ -27,19 +55,23 @@ export const AdherencePopover: React.FC<AdherencePopoverProps> = ({ patient, onC
     };
   }, [onClose]);
 
-  const cancPct = patient.tasas?.cancelacionesPct ?? 15;
-  const inasPct = patient.tasas?.inasistenciasPct ?? 5;
-  const reprogPct = patient.tasas?.reprogramacionesPct ?? 10;
-  const totalSpecs = Object.keys(patient.specialists || {}).length || 7;
-  const overdueCount = Object.values(patient.specialists || {}).filter(
-    (s: SpecialistInfo) => s?.isOverdue
-  ).length;
-  const vencPct = Math.round((overdueCount / totalSpecs) * 100) || 20;
+  const recomendadas = data?.recomendadas ?? 0;
+  const realizadas = data?.realizadas ?? 0;
+  const porcentaje = data?.porcentaje ?? (recomendadas > 0 ? Math.round((realizadas / recomendadas) * 100) : 0);
+  const pendientes = Math.max(0, recomendadas - realizadas);
+
+  // Color based on adherence percentage
+  const getBarColor = (pct: number) => {
+    if (pct >= 80) return '#01ae6c';   // green
+    if (pct >= 50) return '#f59e0b';   // amber
+    return '#e11d48';                   // red
+  };
+  const barColor = getBarColor(porcentaje);
 
   return (
     <div
       ref={popoverRef}
-      className="absolute left-full top-0 ml-1.5 z-50 bg-white dark:bg-[#1e293b] text-[#033d59] dark:text-[#f8fafc] rounded-xl shadow-2xl border border-[#00aae1]/40 w-72 p-3 space-y-2.5 animate-in fade-in zoom-in-95 duration-150"
+      className="absolute left-full top-0 ml-1.5 z-50 bg-white dark:bg-[#1e293b] text-[#033d59] dark:text-[#f8fafc] rounded-xl shadow-2xl border border-[#00aae1]/40 w-64 p-3 space-y-2.5 animate-in fade-in zoom-in-95 duration-150"
     >
       {/* Header */}
       <div className="flex items-center justify-between pb-1.5 border-b border-[#e2e8eb] dark:border-[#334155]">
@@ -47,9 +79,12 @@ export const AdherencePopover: React.FC<AdherencePopoverProps> = ({ patient, onC
           <div className="w-6 h-6 rounded-lg bg-[#effaff] dark:bg-[#00aae1]/20 border border-[#00aae1]/30 flex items-center justify-center text-[#00aae1] dark:text-[#38bdf8]">
             <Clock className="w-3.5 h-3.5" />
           </div>
-          <div>
-            <h3 className="font-bold text-[#033d59] dark:text-[#f8fafc] text-[11px]">Adherencia: {patient.nombre}</h3>
-          </div>
+          <h3 className="font-bold text-[#033d59] dark:text-[#f8fafc] text-[11px] leading-tight">
+            Adherencia
+            <span className="block text-[10px] font-normal text-[#035476]/60 dark:text-gray-400 truncate max-w-[130px]">
+              {patient.nombre}
+            </span>
+          </h3>
         </div>
         <button
           type="button"
@@ -62,57 +97,83 @@ export const AdherencePopover: React.FC<AdherencePopoverProps> = ({ patient, onC
       </div>
 
       {/* Content */}
-      <div className="space-y-2">
-        <div className="h-4 w-full bg-[#f1f5f9] dark:bg-gray-800 rounded-lg p-0.5 flex gap-1 border border-[#e2e8eb] dark:border-[#334155] items-center overflow-hidden shadow-inner">
-          {cancPct > 0 && (
-            <div
-              style={{ width: `${cancPct}%` }}
-              className="bg-[#e11d48] h-full rounded flex items-center justify-center text-[9px] font-extrabold text-white transition-all shrink-0"
-              title={`% Cancelaciones: ${cancPct}%`}
-            />
-          )}
-          {inasPct > 0 && (
-            <div
-              style={{ width: `${inasPct}%` }}
-              className="bg-[#f59e0b] h-full rounded flex items-center justify-center text-[9px] font-extrabold text-white transition-all shrink-0"
-              title={`% Inasistencias: ${inasPct}%`}
-            />
-          )}
-          {reprogPct > 0 && (
-            <div
-              style={{ width: `${reprogPct}%` }}
-              className="bg-[#00aae1] h-full rounded flex items-center justify-center text-[9px] font-extrabold text-white transition-all shrink-0"
-              title={`% Reprogramaciones: ${reprogPct}%`}
-            />
-          )}
-          {vencPct > 0 && (
-            <div
-              style={{ width: `${vencPct}%` }}
-              className="bg-[#a855f7] h-full rounded flex items-center justify-center text-[9px] font-extrabold text-white transition-all shrink-0"
-              title={`% Vencimientos: ${vencPct}%`}
-            />
-          )}
+      {loading ? (
+        <div className="flex items-center justify-center gap-2 py-4 text-[#00aae1] text-[11px]">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          <span>Cargando adherencia…</span>
         </div>
+      ) : error ? (
+        <div className="flex items-center gap-1.5 py-2 text-[#e11d48] text-[10px]">
+          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+          <span>{error}</span>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {/* Percentage Badge */}
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-semibold text-[#035476]/70 dark:text-gray-400 uppercase tracking-wider">
+              Porcentaje
+            </span>
+            <span
+              className="text-base font-black leading-none"
+              style={{ color: barColor }}
+            >
+              {porcentaje}%
+            </span>
+          </div>
 
-        <div className="grid grid-cols-4 gap-1 text-center font-bold text-[9px]">
-          <div className="bg-[#fff1f2] dark:bg-rose-950/40 border border-[#fecdd3] dark:border-rose-900 text-[#e11d48] dark:text-rose-400 rounded py-1 px-1 flex flex-col items-center justify-center">
-            <span>Canc.</span>
-            <span className="text-[10px] font-extrabold">{cancPct}%</span>
+          {/* Progress Bar */}
+          <div className="h-3 w-full bg-[#f1f5f9] dark:bg-gray-800 rounded-full overflow-hidden border border-[#e2e8eb] dark:border-[#334155] shadow-inner">
+            <div
+              style={{ width: `${Math.min(100, porcentaje)}%`, backgroundColor: barColor }}
+              className="h-full rounded-full transition-all duration-500"
+            />
           </div>
-          <div className="bg-[#fffbeb] dark:bg-amber-950/40 border border-[#fde68a] dark:border-amber-900 text-[#d97706] dark:text-amber-400 rounded py-1 px-1 flex flex-col items-center justify-center">
-            <span>Inasis.</span>
-            <span className="text-[10px] font-extrabold">{inasPct}%</span>
-          </div>
-          <div className="bg-[#f0f9ff] dark:bg-sky-950/40 border border-[#bae6fd] dark:border-sky-900 text-[#00aae1] dark:text-sky-400 rounded py-1 px-1 flex flex-col items-center justify-center">
-            <span>Reprog.</span>
-            <span className="text-[10px] font-extrabold">{reprogPct}%</span>
-          </div>
-          <div className="bg-[#faf5ff] dark:bg-purple-950/40 border border-[#e9d5ff] dark:border-purple-900 text-[#a855f7] dark:text-purple-400 rounded py-1 px-1 flex flex-col items-center justify-center">
-            <span>Vencid.</span>
-            <span className="text-[10px] font-extrabold">{vencPct}%</span>
+
+          {/* Stats Grid */}
+          <div className="grid grid-cols-3 gap-1 text-center">
+            {/* Recomendadas */}
+            <div className="bg-[#f0f9ff] dark:bg-sky-950/40 border border-[#bae6fd] dark:border-sky-900 rounded-lg py-1.5 px-1 flex flex-col items-center justify-center">
+              <span className="text-[9px] font-semibold text-[#0369a1] dark:text-sky-400 uppercase tracking-wide leading-tight">
+                Recom.
+              </span>
+              <span className="text-sm font-black text-[#0369a1] dark:text-sky-300 leading-tight">
+                {recomendadas}
+              </span>
+            </div>
+            {/* Realizadas */}
+            <div
+              className="border rounded-lg py-1.5 px-1 flex flex-col items-center justify-center"
+              style={{
+                backgroundColor: `${barColor}18`,
+                borderColor: `${barColor}60`,
+              }}
+            >
+              <span
+                className="text-[9px] font-semibold uppercase tracking-wide leading-tight"
+                style={{ color: barColor }}
+              >
+                Realiz.
+              </span>
+              <span
+                className="text-sm font-black leading-tight"
+                style={{ color: barColor }}
+              >
+                {realizadas}
+              </span>
+            </div>
+            {/* Pendientes */}
+            <div className="bg-[#f8fafc] dark:bg-[#0f172a] border border-[#e2e8eb] dark:border-[#334155] rounded-lg py-1.5 px-1 flex flex-col items-center justify-center">
+              <span className="text-[9px] font-semibold text-[#64748b] dark:text-gray-400 uppercase tracking-wide leading-tight">
+                Pend.
+              </span>
+              <span className="text-sm font-black text-[#64748b] dark:text-gray-300 leading-tight">
+                {pendientes}
+              </span>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

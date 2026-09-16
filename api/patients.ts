@@ -339,6 +339,12 @@ export default async function handler(req: any, res: any) {
           p_id_usuario: idUsuario,
           p_json_salida: { type: oracledb.CLOB, dir: oracledb.BIND_OUT }
         };
+      } else if (action === 'adherencia') {
+        executeSql = `BEGIN :p_json_salida := pkgcn_cohortes.f_adherencia_usuario(:p_id_usuario); END;`;
+        bindParams = {
+          p_id_usuario: idUsuario,
+          p_json_salida: { type: oracledb.CLOB, dir: oracledb.BIND_OUT }
+        };
       } else if (action === 'ver_acta' || action === 'f_ver_acta' || action === 'imprimir_acta') {
         let idActa = Number(queryObj.id_acta || req.body?.id_acta || 0);
         const codigoCita = String(queryObj.codigo_cita || queryObj.codigo || req.body?.codigo_cita || '').trim();
@@ -486,6 +492,16 @@ export default async function handler(req: any, res: any) {
               return sendJson(res, 200, { success: false, error: err2.message, agenda: MOCK_AGENDA_FALLBACK, atenciones_programadas: MOCK_AGENDA_FALLBACK });
             }
           }
+        } else if (action === 'adherencia' && execErr.message?.includes('pkgcn_cohortes')) {
+          try {
+            const fallbackSql = `BEGIN :p_json_salida := teker_dev.pkgcn_cohortes.f_adherencia_usuario(:p_id_usuario); END;`;
+            result = await connection.execute(fallbackSql, bindParams);
+          } catch (err2: any) {
+            console.warn('[Oracle API Adherencia Warning]: Fallback:', err2.message);
+            await connection.close();
+            connection = null;
+            return sendJson(res, 200, { success: false, error: err2.message, id_usuario: idUsuario, recomendadas: 0, realizadas: 0 });
+          }
         } else {
           throw execErr;
         }
@@ -561,6 +577,21 @@ export default async function handler(req: any, res: any) {
       if ((action === 'actas_x_usuario' || action === 'actas') && !jsonSalida) {
         jsonSalida = [];
       }
+
+      if (action === 'adherencia') {
+        let adh: any = jsonSalida;
+        if (typeof adh === 'string') {
+          try { adh = JSON.parse(adh); } catch (_) { adh = null; }
+        }
+        if (!adh || typeof adh !== 'object') {
+          adh = { id_usuario: idUsuario, recomendadas: 0, realizadas: 0 };
+        }
+        const recomendadas = Number(adh.recomendadas ?? 0);
+        const realizadas = Number(adh.realizadas ?? 0);
+        const porcentaje = recomendadas > 0 ? Math.round((realizadas / recomendadas) * 100) : 0;
+        return sendJson(res, 200, { success: true, id_usuario: idUsuario, recomendadas, realizadas, porcentaje });
+      }
+
       return sendJson(res, 200, jsonSalida);
     } catch (dbErr: any) {
       if (connection) {
@@ -574,6 +605,9 @@ export default async function handler(req: any, res: any) {
       }
       if (action === 'agenda' || action === 'atenciones_programadas') {
         return sendJson(res, 200, { success: false, error: dbErr.message, agenda: MOCK_AGENDA_FALLBACK, atenciones_programadas: MOCK_AGENDA_FALLBACK });
+      }
+      if (action === 'adherencia') {
+        return sendJson(res, 200, { success: false, error: dbErr.message, id_usuario: idUsuario, recomendadas: 0, realizadas: 0, porcentaje: 0 });
       }
       if (action === 'ver_acta' || action === 'f_ver_acta') {
         return sendJson(res, 200, { success: false, error: dbErr.message });

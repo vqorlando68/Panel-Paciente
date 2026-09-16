@@ -1,4 +1,4 @@
-import { Patient, SpecialistKey, SpecialistInfo, ActaInfo, ActaUsuarioDB, CostAnalysisResponse, ProfesionalEquipoMedico, AtencionProgramadaDB } from '../types';
+import { Patient, SpecialistKey, SpecialistInfo, ActaInfo, ActaUsuarioDB, CostAnalysisResponse, ProfesionalEquipoMedico, AtencionProgramadaDB, AdherenciaData } from '../types';
 import { INITIAL_PATIENTS } from '../mockData';
 import { DEFAULT_COST_ANALYSIS_DATA } from '../mockCostData';
 
@@ -676,6 +676,32 @@ export class PatientService {
       console.warn('[PatientService] Error calling /api/patients?action=agenda:', error);
     }
     return [];
+  }
+
+  /**
+   * Obtiene la adherencia de un paciente llamando
+   * /api/patients?action=adherencia&id_usuario=<id>
+   * que ejecuta pkgcn_cohortes.f_adherencia_usuario(id_usuario)
+   * Retorna: { id_usuario, recomendadas, realizadas, porcentaje }
+   */
+  static async getAdherencia(idUsuario: string | number): Promise<AdherenciaData | null> {
+    try {
+      const cleanId = String(idUsuario || '').trim();
+      if (!cleanId) return null;
+      const resp = await fetch(`/api/patients?action=adherencia&id_usuario=${encodeURIComponent(cleanId)}`);
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data && typeof data.recomendadas === 'number') {
+          const recomendadas = Number(data.recomendadas);
+          const realizadas = Number(data.realizadas);
+          const porcentaje = recomendadas > 0 ? Math.round((realizadas / recomendadas) * 100) : 0;
+          return { id_usuario: Number(data.id_usuario || idUsuario), recomendadas, realizadas, porcentaje };
+        }
+      }
+    } catch (error) {
+      console.warn('[PatientService] Error calling /api/patients?action=adherencia:', error);
+    }
+    return null;
   }
 }
 

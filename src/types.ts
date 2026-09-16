@@ -150,6 +150,13 @@ export interface AgendaItem {
   location?: string;
 }
 
+export interface AdherenciaData {
+  id_usuario: number;
+  recomendadas: number;
+  realizadas: number;
+  porcentaje?: number; // realizadas / recomendadas * 100
+}
+
 export interface Patient {
   id: string;
   nombres?: string | null;
@@ -187,6 +194,7 @@ export interface Patient {
   operationalNotes?: NoteEntry[];
   clinicalNotes?: NoteEntry[];
   epicrisis?: string | null;
+  adherencia?: AdherenciaData | null;
 }
 
 export interface FilterState {
