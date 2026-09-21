@@ -3,6 +3,7 @@ import { AlertTriangle } from 'lucide-react';
 import {
   Patient,
   UserRole,
+  ColumnGroup,
   FilterState,
   EstadoPaciente,
   NivelRiesgo,
@@ -30,11 +31,21 @@ import { AgendaDrawer } from './components/AgendaDrawer';
 import { TasasDrawer } from './components/TasasDrawer';
 import { OracleDocModal } from './components/OracleDocModal';
 import { EpicrisisModal } from './components/EpicrisisModal';
+import { Patient360Modal } from './components/Patient360Modal';
 
 export default function App() {
   const [patients, setPatients] = useState<Patient[]>(INITIAL_PATIENTS);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [activeRole, setActiveRole] = useState<UserRole>('comite_medico');
+
+  // Column Group View: 'coordinador' (todas las columnas) | 'clinico' (vista clínica con Equipo Médico)
+  const [columnGroup, setColumnGroup] = useState<ColumnGroup>(() => {
+    return (localStorage.getItem('panel_pacientes_col_group') as ColumnGroup) || 'coordinador';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('panel_pacientes_col_group', columnGroup);
+  }, [columnGroup]);
 
   // Theme state: 'light' | 'dark'
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -206,6 +217,7 @@ export default function App() {
   const [agendaPatient, setAgendaPatient] = useState<Patient | null>(null);
   const [tasasPatient, setTasasPatient] = useState<Patient | null>(null);
   const [epicrisisPatient, setEpicrisisPatient] = useState<Patient | null>(null);
+  const [selected360Patient, setSelected360Patient] = useState<Patient | null>(null);
 
   // Helper: check if a patient has any overdue specialist
   const patientHasOverdueSpecialist = (patient: Patient): boolean => {
@@ -617,12 +629,15 @@ export default function App() {
           onResetFilters={handleResetFilters}
           alarmCount={alarmCount}
           onAddCohorte={handleAddCohorte}
+          columnGroup={columnGroup}
+          onColumnGroupChange={setColumnGroup}
         />
 
-        {/* Main Table Section (14 Columns) */}
+        {/* Main Table Section */}
         <PatientTable
           patients={filteredPatients}
           activeRole={activeRole}
+          columnGroup={columnGroup}
           isLoading={isLoading}
           serverPagination={{
             currentPage,
@@ -650,6 +665,7 @@ export default function App() {
           onOpenCuadroMedico={(patient) => setCuadroMedicoPatient(patient)}
           onOpenAgenda={(patient) => setAgendaPatient(patient)}
           onOpenTasas={(patient) => setTasasPatient(patient)}
+          onOpen360={(patient) => setSelected360Patient(patient)}
         />
 
         {/* Footer Status Bar */}
@@ -769,6 +785,13 @@ export default function App() {
         <EpicrisisModal
           patient={epicrisisPatient}
           onClose={() => setEpicrisisPatient(null)}
+        />
+      )}
+
+      {selected360Patient && (
+        <Patient360Modal
+          patient={selected360Patient}
+          onClose={() => setSelected360Patient(null)}
         />
       )}
 

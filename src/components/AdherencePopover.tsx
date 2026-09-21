@@ -114,12 +114,17 @@ export const AdherencePopover: React.FC<AdherencePopoverProps> = ({ patient, onC
             <span className="text-[10px] font-semibold text-[#035476]/70 dark:text-gray-400 uppercase tracking-wider">
               Porcentaje
             </span>
-            <span
-              className="text-base font-black leading-none"
-              style={{ color: barColor }}
-            >
-              {porcentaje}%
-            </span>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-xs font-bold text-gray-500 dark:text-gray-400 font-mono">
+                ({realizadas}/{recomendadas})
+              </span>
+              <span
+                className="text-base font-black leading-none"
+                style={{ color: barColor }}
+              >
+                {porcentaje}%
+              </span>
+            </div>
           </div>
 
           {/* Progress Bar */}

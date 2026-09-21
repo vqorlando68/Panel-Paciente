@@ -1,5 +1,7 @@
 export type UserRole = 'comite_medico' | 'coordinadora_siau';
 
+export type ColumnGroup = 'coordinador' | 'clinico';
+
 export type EstadoPaciente = 'Activo' | 'Aceptado' | 'Rechazado';
 
 export type NivelRiesgo = 'Critical' | 'High' | 'Medium' | 'Low';

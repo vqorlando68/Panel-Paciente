@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { FilterState, COHORTE_OPTIONS } from '../types';
-import { Search, FilterX, ChevronDown, ChevronUp, Plus, Check, X, Layers } from 'lucide-react';
+import { FilterState, COHORTE_OPTIONS, ColumnGroup } from '../types';
+import { Search, FilterX, ChevronDown, ChevronUp, Plus, Check, X, Layers, LayoutList, Stethoscope } from 'lucide-react';
 
 interface FilterBarProps {
   filters: FilterState;
@@ -10,6 +10,8 @@ interface FilterBarProps {
   onResetFilters: () => void;
   alarmCount?: number;
   onAddCohorte?: (name: string, description: string) => void;
+  columnGroup?: ColumnGroup;
+  onColumnGroupChange?: (group: ColumnGroup) => void;
 }
 
 const SPECIFIC_CONVENIOS = [
@@ -26,6 +28,8 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   conveniosList,
   onResetFilters,
   onAddCohorte,
+  columnGroup = 'coordinador',
+  onColumnGroupChange,
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isConvenioMenuOpen, setIsConvenioMenuOpen] = useState(false);
@@ -137,7 +141,42 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Selector de Grupo de Columnas (Coordinador / Clínico) */}
+          {onColumnGroupChange && (
+            <div className="flex items-center bg-[#f1f5f9] dark:bg-[#0f172a] p-0.5 rounded-lg border border-[#e2e8eb] dark:border-[#334155] shadow-2xs">
+              <span className="text-[10px] font-bold text-[#035476] dark:text-[#94a3b8] px-2 uppercase tracking-wider hidden sm:inline">
+                Grupo:
+              </span>
+              <button
+                type="button"
+                onClick={() => onColumnGroupChange('coordinador')}
+                className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  columnGroup === 'coordinador'
+                    ? 'bg-white dark:bg-[#1e293b] text-[#00aae1] dark:text-[#38bdf8] shadow-xs'
+                    : 'text-[#035476] dark:text-[#94a3b8] hover:text-[#033d59] dark:hover:text-white'
+                }`}
+                title="Grupo Coordinador: Muestra todas las columnas del panel"
+              >
+                <LayoutList className="w-3.5 h-3.5" />
+                <span>Coordinador</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onColumnGroupChange('clinico')}
+                className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  columnGroup === 'clinico'
+                    ? 'bg-white dark:bg-[#1e293b] text-[#00aae1] dark:text-[#38bdf8] shadow-xs'
+                    : 'text-[#035476] dark:text-[#94a3b8] hover:text-[#033d59] dark:hover:text-white'
+                }`}
+                title="Grupo Clínico: Vista clínica con Equipo Médico, Estado, Riesgo, Etiqueta, Fase, Próx. Revisión, Especialidades y Notas"
+              >
+                <Stethoscope className="w-3.5 h-3.5" />
+                <span>Clínico</span>
+              </button>
+            </div>
+          )}
+
           {/* Primary Button "+ Nueva COHORTE" */}
           <button
             type="button"

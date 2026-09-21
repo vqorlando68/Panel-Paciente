@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import {
   Patient,
   UserRole,
+  ColumnGroup,
   EstadoPaciente,
   NivelRiesgo,
   FasePaciente,
@@ -40,6 +41,7 @@ import {
   Clock,
   X,
   BarChart2,
+  Compass,
 } from 'lucide-react';
 
 export type SortField =
@@ -115,6 +117,8 @@ const specialistHasInfo = (spec?: SpecialistInfo | null): boolean => {
 const DEFAULT_COLUMN_WIDTHS: Record<string, number> = {
   acciones: 100,
   nombre: 240,
+  equipoMedico: 110,
+  col360: 80,
   convenioNombre: 170,
   cohorte: 140,
   riesgo: 95,
@@ -151,6 +155,7 @@ export interface ServerPaginationProps {
 interface PatientTableProps {
   patients: Patient[];
   activeRole: UserRole;
+  columnGroup?: ColumnGroup;
   isLoading?: boolean;
   serverPagination?: ServerPaginationProps;
   onEditPatient: (patient: Patient) => void;
@@ -167,11 +172,13 @@ interface PatientTableProps {
   onOpenCuadroMedico: (patient: Patient) => void;
   onOpenAgenda: (patient: Patient) => void;
   onOpenTasas: (patient: Patient) => void;
+  onOpen360?: (patient: Patient) => void;
 }
 
 export const PatientTable: React.FC<PatientTableProps> = ({
   patients,
   activeRole,
+  columnGroup = 'coordinador',
   isLoading = false,
   serverPagination,
   onEditPatient,
@@ -188,6 +195,7 @@ export const PatientTable: React.FC<PatientTableProps> = ({
   onOpenCuadroMedico,
   onOpenAgenda,
   onOpenTasas,
+  onOpen360,
 }) => {
   // Column Widths State (with localStorage persistence)
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => {
@@ -386,7 +394,7 @@ export const PatientTable: React.FC<PatientTableProps> = ({
     return colsWithData.length > 0 ? colsWithData : ALL_SPECIALTY_COLUMNS.slice(0, 3);
   }, [paginatedPatients]);
 
-  const totalColSpan = 12 + visibleSpecialtyColumns.length;
+  const totalColSpan = (columnGroup === 'clinico' ? 10 : 13) + visibleSpecialtyColumns.length;
 
   // Reset to page 1 if current page becomes out of bounds or filters change
   useEffect(() => {
@@ -709,20 +717,34 @@ export const PatientTable: React.FC<PatientTableProps> = ({
   };
 
   const totalTableWidth = useMemo(() => {
-    const fixedCols = [
-      'acciones',
-      'nombre',
-      'convenioNombre',
-      'cohorte',
-      'riesgo',
-      'etiqueta',
-      'fase',
-      'coordinador',
-      'numeroCarga',
-      'fechaProximaRevision',
-      'nota_op',
-      'nota_cli',
-    ];
+    const fixedCols =
+      columnGroup === 'clinico'
+        ? [
+            'acciones',
+            'nombre',
+            'equipoMedico',
+            'cohorte',
+            'riesgo',
+            'etiqueta',
+            'fase',
+            'fechaProximaRevision',
+            'nota_op',
+            'nota_cli',
+          ]
+        : [
+            'acciones',
+            'nombre',
+            'convenioNombre',
+            'cohorte',
+            'riesgo',
+            'etiqueta',
+            'fase',
+            'coordinador',
+            'numeroCarga',
+            'fechaProximaRevision',
+            'nota_op',
+            'nota_cli',
+          ];
     const fixedSum = fixedCols.reduce(
       (sum, k) => sum + (columnWidths[k] || DEFAULT_COLUMN_WIDTHS[k] || 120),
       0
@@ -732,7 +754,7 @@ export const PatientTable: React.FC<PatientTableProps> = ({
       0
     );
     return fixedSum + specSum;
-  }, [columnWidths, visibleSpecialtyColumns]);
+  }, [columnWidths, visibleSpecialtyColumns, columnGroup]);
 
   return (
     <div className="flex-1 overflow-x-auto overflow-y-auto touch-pan-x relative w-full bg-white dark:bg-[#1e293b] font-sans max-w-[1550px] mx-auto rounded-xl shadow-2xs border border-[#e2e8eb] dark:border-[#334155] my-2 transition-colors duration-200" style={{ WebkitOverflowScrolling: 'touch' }}>
@@ -805,28 +827,80 @@ export const PatientTable: React.FC<PatientTableProps> = ({
               </div>
             </th>
 
-            {/* Col 3: CONVENIO */}
-            {renderHeader('CONV.', 'convenioNombre', 'convenioNombre')}
+            {/* Col 3: EQ. MÉDICO (Visible solo en Grupo Clínico, inmediatamente después de PACIENTE) */}
+            {columnGroup === 'clinico' && (
+              <th
+                style={{
+                  width: `${columnWidths.equipoMedico || DEFAULT_COLUMN_WIDTHS.equipoMedico || 110}px`,
+                  minWidth: `${columnWidths.equipoMedico || DEFAULT_COLUMN_WIDTHS.equipoMedico || 110}px`,
+                  maxWidth: `${columnWidths.equipoMedico || DEFAULT_COLUMN_WIDTHS.equipoMedico || 110}px`,
+                }}
+                className="sticky top-0 z-30 bg-[#f9fafb] dark:bg-[#0f172a] border-b border-[#e2e8eb] dark:border-[#334155] px-2 h-10 text-center select-none relative group/th bg-clip-padding"
+                title="Equipo Médico Asignado. Arrastre el borde derecho para cambiar ancho."
+              >
+                <div className="flex items-center justify-center gap-1 text-[#00aae1] dark:text-[#38bdf8]">
+                  <Users className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">EQ. MÉDICO</span>
+                </div>
+                <div
+                  onMouseDown={(e) => handleResizeStart(e, 'equipoMedico')}
+                  onClick={(e) => e.stopPropagation()}
+                  className="absolute right-0 top-0 bottom-0 w-2.5 cursor-col-resize hover:bg-[#00aae1] active:bg-[#00aae1] z-30 opacity-0 group-hover/th:opacity-100 transition-opacity flex items-center justify-center"
+                  title="Arrastrar para cambiar ancho de columna"
+                >
+                  <div className="w-[1.5px] h-4 bg-gray-300 dark:bg-gray-600 rounded-full" />
+                </div>
+              </th>
+            )}
 
-            {/* Col 4: ESTADO / COHORTE */}
+            {/* Col 360 (Visible solo en Grupo Coordinador, inmediatamente después de PACIENTE) */}
+            {columnGroup === 'coordinador' && (
+              <th
+                style={{
+                  width: `${columnWidths.col360 || DEFAULT_COLUMN_WIDTHS.col360 || 80}px`,
+                  minWidth: `${columnWidths.col360 || DEFAULT_COLUMN_WIDTHS.col360 || 80}px`,
+                  maxWidth: `${columnWidths.col360 || DEFAULT_COLUMN_WIDTHS.col360 || 80}px`,
+                }}
+                className="sticky top-0 z-30 bg-[#f9fafb] dark:bg-[#0f172a] border-b border-[#e2e8eb] dark:border-[#334155] px-2 h-10 text-center select-none relative group/th bg-clip-padding"
+                title="Evolución 360° del Paciente. Arrastre el borde derecho para cambiar ancho."
+              >
+                <div className="flex items-center justify-center gap-1 text-[#00aae1] dark:text-[#38bdf8]">
+                  <Compass className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">360</span>
+                </div>
+                <div
+                  onMouseDown={(e) => handleResizeStart(e, 'col360')}
+                  onClick={(e) => e.stopPropagation()}
+                  className="absolute right-0 top-0 bottom-0 w-2.5 cursor-col-resize hover:bg-[#00aae1] active:bg-[#00aae1] z-30 opacity-0 group-hover/th:opacity-100 transition-opacity flex items-center justify-center"
+                  title="Arrastrar para cambiar ancho de columna"
+                >
+                  <div className="w-[1.5px] h-4 bg-gray-300 dark:bg-gray-600 rounded-full" />
+                </div>
+              </th>
+            )}
+
+            {/* Col CONVENIO (Solo visible en Grupo Coordinador) */}
+            {columnGroup === 'coordinador' && renderHeader('CONV.', 'convenioNombre', 'convenioNombre')}
+
+            {/* Col ESTADO / COHORTE (Visible en ambos grupos) */}
             {renderHeader('ESTADO', 'cohorte', 'cohorte')}
 
-            {/* Col 5: RIESGO */}
+            {/* Col RIESGO (Visible en ambos grupos) */}
             {renderHeader('RIESGO', 'riesgo', 'riesgo', 'text-center')}
 
-            {/* Col 6: ETIQUETA */}
+            {/* Col ETIQUETA (Visible en ambos grupos) */}
             {renderHeader('ETIQUETA', 'etiqueta', 'etiqueta', 'text-center')}
 
-            {/* Col 7: FASE */}
+            {/* Col FASE (Visible en ambos grupos) */}
             {renderHeader('FASE', 'fase', 'fase', 'text-center')}
 
-            {/* Col 8: COORDINADOR */}
-            {renderHeader('COORDINADOR', 'coordinador', 'coordinador')}
+            {/* Col COORDINADOR (Solo visible en Grupo Coordinador) */}
+            {columnGroup === 'coordinador' && renderHeader('COORDINADOR', 'coordinador', 'coordinador')}
 
-            {/* Col 9: N° CARGA */}
-            {renderHeader('N° CARGA', 'numeroCarga', 'numeroCarga', 'text-center')}
+            {/* Col N° CARGA (Solo visible en Grupo Coordinador) */}
+            {columnGroup === 'coordinador' && renderHeader('N° CARGA', 'numeroCarga', 'numeroCarga', 'text-center')}
 
-            {/* Col 10: FECHA PROX. REVISIÓN */}
+            {/* Col FECHA PROX. REVISIÓN (Visible en ambos grupos) */}
             {renderHeader('FECHA PROX. REVISIÓN', 'fechaProximaRevision', 'fechaProximaRevision', 'text-center')}
 
             {/* Columnas Dinámicas de Especialidades (solo las que tienen información en la página actual) */}
@@ -847,7 +921,7 @@ export const PatientTable: React.FC<PatientTableProps> = ({
               );
             })}
 
-            {/* Col NOTA OP (Sticky on sm+ horizontally & top-0 vertically) */}
+            {/* Col NOTA OP (Visible en Grupo Coordinador y Clínico, Sticky on sm+) */}
             <th
               style={{
                 width: `${columnWidths.nota_op}px`,
@@ -868,7 +942,7 @@ export const PatientTable: React.FC<PatientTableProps> = ({
               </div>
             </th>
 
-            {/* Col NOTA CLI (Sticky on sm+ horizontally & top-0 vertically) */}
+            {/* Col NOTA CLI (Visible en Grupo Coordinador y Clínico, Sticky on sm+) */}
             <th
               style={{
                 width: `${columnWidths.nota_cli}px`,
@@ -1017,20 +1091,66 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                     />
                   </td>
 
-                  {/* Col 3: CONVENIO */}
-                  <td
-                    style={{
-                      width: `${columnWidths.convenioNombre}px`,
-                      minWidth: `${columnWidths.convenioNombre}px`,
-                      maxWidth: `${columnWidths.convenioNombre}px`,
-                    }}
-                    className="px-3 py-2 text-[#033d59] dark:text-[#f8fafc] font-medium text-[11px] truncate"
-                    title={patient.convenioNombre || ''}
-                  >
-                    {patient.convenioNombre}
-                  </td>
+                  {/* Col EQ. MÉDICO (Visible solo en Grupo Clínico, inmediatamente después de PACIENTE) */}
+                  {columnGroup === 'clinico' && (
+                    <td
+                      style={{
+                        width: `${columnWidths.equipoMedico || DEFAULT_COLUMN_WIDTHS.equipoMedico || 110}px`,
+                        minWidth: `${columnWidths.equipoMedico || DEFAULT_COLUMN_WIDTHS.equipoMedico || 110}px`,
+                        maxWidth: `${columnWidths.equipoMedico || DEFAULT_COLUMN_WIDTHS.equipoMedico || 110}px`,
+                      }}
+                      className="px-2 py-2 text-center"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => onOpenCuadroMedico(patient)}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#effaff] dark:bg-[#00aae1]/20 hover:bg-[#00aae1] text-[#00aae1] dark:text-[#38bdf8] hover:text-white transition-all border border-[#00aae1]/30 hover:border-[#00aae1] cursor-pointer shadow-2xs group/btn"
+                        title="Ver Equipo Médico Asignado"
+                      >
+                        <Users className="w-3.5 h-3.5 text-[#00aae1] dark:text-[#38bdf8] group-hover/btn:text-white transition-colors" />
+                        <span className="text-[11px] font-bold">Equipo</span>
+                      </button>
+                    </td>
+                  )}
 
-                  {/* Col 4: ESTADO / COHORTE */}
+                  {/* Col 360 (Solo visible en Grupo Coordinador, inmediatamente después de PACIENTE) */}
+                  {columnGroup === 'coordinador' && (
+                    <td
+                      style={{
+                        width: `${columnWidths.col360 || DEFAULT_COLUMN_WIDTHS.col360 || 80}px`,
+                        minWidth: `${columnWidths.col360 || DEFAULT_COLUMN_WIDTHS.col360 || 80}px`,
+                        maxWidth: `${columnWidths.col360 || DEFAULT_COLUMN_WIDTHS.col360 || 80}px`,
+                      }}
+                      className="px-2 py-2 text-center"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => onOpen360?.(patient)}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-cyan-50 dark:bg-cyan-950/40 hover:bg-[#00aae1] text-[#00aae1] dark:text-[#38bdf8] hover:text-white transition-all border border-cyan-200/80 dark:border-cyan-800/60 hover:border-[#00aae1] cursor-pointer shadow-2xs group/btn"
+                        title="Abrir Evolución 360° del Paciente"
+                      >
+                        <Compass className="w-3.5 h-3.5 text-[#00aae1] dark:text-[#38bdf8] group-hover/btn:text-white transition-colors" />
+                        <span className="text-[11px] font-black">360°</span>
+                      </button>
+                    </td>
+                  )}
+
+                  {/* Col CONVENIO (Solo visible en Grupo Coordinador) */}
+                  {columnGroup === 'coordinador' && (
+                    <td
+                      style={{
+                        width: `${columnWidths.convenioNombre}px`,
+                        minWidth: `${columnWidths.convenioNombre}px`,
+                        maxWidth: `${columnWidths.convenioNombre}px`,
+                      }}
+                      className="px-3 py-2 text-[#033d59] dark:text-[#f8fafc] font-medium text-[11px] truncate"
+                      title={patient.convenioNombre || ''}
+                    >
+                      {patient.convenioNombre}
+                    </td>
+                  )}
+
+                  {/* Col 4: ESTADO / COHORTE (Visible en ambos grupos) */}
                   <td
                     style={{
                       width: `${columnWidths.cohorte}px`,
@@ -1042,7 +1162,7 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                     {renderCohorteBadge(patient)}
                   </td>
 
-                  {/* Col 5: RIESGO */}
+                  {/* Col 5: RIESGO (Visible en ambos grupos) */}
                   <td
                     style={{
                       width: `${columnWidths.riesgo}px`,
@@ -1081,7 +1201,7 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                     )}
                   </td>
 
-                  {/* Col 6: ETIQUETA (Crítico 'C' o Inconforme 'I') */}
+                  {/* Col 6: ETIQUETA (Crítico 'C' o Inconforme 'I', Visible en ambos grupos) */}
                   <td
                     style={{
                       width: `${columnWidths.etiqueta}px`,
@@ -1109,7 +1229,7 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                     )}
                   </td>
 
-                  {/* Col 7: FASE */}
+                  {/* Col 7: FASE (Visible en ambos grupos) */}
                   <td
                     style={{
                       width: `${columnWidths.fase}px`,
@@ -1121,31 +1241,35 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                     {renderFaseCell(patient)}
                   </td>
 
-                  {/* Col 8: COORDINADOR */}
-                  <td
-                    style={{
-                      width: `${columnWidths.coordinador}px`,
-                      minWidth: `${columnWidths.coordinador}px`,
-                      maxWidth: `${columnWidths.coordinador}px`,
-                    }}
-                    className="px-3 py-2"
-                  >
-                    {renderCoordinadorBadge(patient)}
-                  </td>
+                  {/* Col COORDINADOR (Solo visible en Grupo Coordinador) */}
+                  {columnGroup === 'coordinador' && (
+                    <td
+                      style={{
+                        width: `${columnWidths.coordinador}px`,
+                        minWidth: `${columnWidths.coordinador}px`,
+                        maxWidth: `${columnWidths.coordinador}px`,
+                      }}
+                      className="px-3 py-2"
+                    >
+                      {renderCoordinadorBadge(patient)}
+                    </td>
+                  )}
 
-                  {/* Col 9: N° CARGA */}
-                  <td
-                    style={{
-                      width: `${columnWidths.numeroCarga}px`,
-                      minWidth: `${columnWidths.numeroCarga}px`,
-                      maxWidth: `${columnWidths.numeroCarga}px`,
-                    }}
-                    className="px-2 py-2 text-center font-mono text-[11px] text-[#033d59] dark:text-[#f8fafc] font-medium truncate"
-                  >
-                    {patient.numeroCarga || '—'}
-                  </td>
+                  {/* Col N° CARGA (Solo visible en Grupo Coordinador) */}
+                  {columnGroup === 'coordinador' && (
+                    <td
+                      style={{
+                        width: `${columnWidths.numeroCarga}px`,
+                        minWidth: `${columnWidths.numeroCarga}px`,
+                        maxWidth: `${columnWidths.numeroCarga}px`,
+                      }}
+                      className="px-2 py-2 text-center font-mono text-[11px] text-[#033d59] dark:text-[#f8fafc] font-medium truncate"
+                    >
+                      {patient.numeroCarga || '—'}
+                    </td>
+                  )}
 
-                  {/* Col 10: FECHA PROX. REVISIÓN */}
+                  {/* Col 10: FECHA PROX. REVISIÓN (Visible en ambos grupos) */}
                   <td
                     style={{
                       width: `${columnWidths.fechaProximaRevision}px`,
@@ -1157,7 +1281,7 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                     {patient.fechaProximaRevision || '—'}
                   </td>
 
-                  {/* Columnas Dinámicas de Especialistas (evaluadas según la página actual) */}
+                  {/* Columnas Dinámicas de Especialistas (evaluadas según la página actual, Visible en ambos) */}
                   {visibleSpecialtyColumns.map((col) => (
                     <td
                       key={col.key}
@@ -1172,7 +1296,7 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                     </td>
                   ))}
 
-                  {/* Col 18: NOTA OP (Sticky on sm+) */}
+                  {/* Col NOTA OP (Visible en Grupo Coordinador y Clínico, Sticky on sm+) */}
                   <td
                     style={{
                       width: `${columnWidths.nota_op}px`,
@@ -1196,7 +1320,7 @@ export const PatientTable: React.FC<PatientTableProps> = ({
                     </button>
                   </td>
 
-                  {/* Col 19: NOTA CLI (Sticky on sm+) */}
+                  {/* Col NOTA CLI (Visible en Grupo Coordinador y Clínico, Sticky on sm+) */}
                   <td
                     style={{
                       width: `${columnWidths.nota_cli}px`,

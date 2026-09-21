@@ -109,7 +109,7 @@ function sendJson(res: any, status: number, data: any) {
     return res.status(status).json(data);
   }
   res.statusCode = status;
-  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
   return res.end(JSON.stringify(data));
 }
 
@@ -259,6 +259,9 @@ export default async function handler(req: any, res: any) {
 
     const config = getOracleConfig();
     if (!config.user || !config.connectString) {
+      if (action === '360_all' || action === '360') {
+        return sendJson(res, 200, { success: true, identificacion: queryObj.identificacion || '1006108333', data: MOCK_ACTAS_FALLBACK });
+      }
       if (action === 'actas_x_usuario' || action === 'actas') {
         return sendJson(res, 200, MOCK_ACTAS_FALLBACK);
       }
@@ -277,6 +280,9 @@ export default async function handler(req: any, res: any) {
 
     const oracledb = await getOracleDb();
     if (!oracledb) {
+      if (action === '360_all' || action === '360') {
+        return sendJson(res, 200, { success: true, identificacion: queryObj.identificacion || '1006108333', data: {} });
+      }
       if (action === 'actas_x_usuario' || action === 'actas') {
         return sendJson(res, 200, MOCK_ACTAS_FALLBACK);
       }
@@ -296,6 +302,105 @@ export default async function handler(req: any, res: any) {
     let connection: any = null;
     try {
       connection = await oracledb.getConnection(config);
+
+      // --- 360 COORDINADOR ACTIONS ---
+      if (action === '360' || action === '360_metodo') {
+        const rawCedula = queryObj.identificacion || req.body?.identificacion || '';
+        const cedula = String(rawCedula).replace(/\D/g, '') || String(rawCedula).trim();
+        const metodo = String(queryObj.metodo || req.body?.metodo || '/api/v1/patients/{id}/summary/consultas').trim();
+
+        const inPayload = JSON.stringify({ metodo, identificacion: cedula });
+        const sql = `
+          DECLARE
+              v_json_entrada CLOB := :p_in;
+              v_json_salida  CLOB;
+          BEGIN
+              pkgln_big_query.p_datos_usuario_cohorte(v_json_entrada, v_json_salida);
+              :p_out := v_json_salida;
+          END;
+        `;
+        const result = await connection.execute(sql, {
+          p_in: inPayload,
+          p_out: { type: oracledb.CLOB, dir: oracledb.BIND_OUT }
+        });
+        const rawClob = await lobToString(result.outBinds?.p_out);
+        await connection.close();
+        connection = null;
+
+        let parsed: any = null;
+        if (rawClob) {
+          try {
+            parsed = JSON.parse(rawClob);
+          } catch (_) {
+            parsed = { raw: rawClob };
+          }
+        }
+        return sendJson(res, 200, { success: true, identificacion: cedula, metodo, data: parsed });
+      }
+
+      if (action === '360_all') {
+        const rawCedula = queryObj.identificacion || req.body?.identificacion || '';
+        const cedula = String(rawCedula).replace(/\D/g, '') || String(rawCedula).trim();
+
+        const coordinatorEndpoints = [
+          { key: 'consultas', metodo: '/api/v1/patients/{id}/summary/consultas' },
+          { key: 'cambiosClave', metodo: '/api/v1/patients/{id}/summary/cambios-clave' },
+          { key: 'perceptionSurvey', metodo: '/api/v1/patients/{id}/perception-survey' },
+          { key: 'engagement', metodo: '/api/v1/patients/{id}/engagement' },
+          { key: 'status', metodo: '/api/v1/patients/{id}/status' },
+          { key: 'visits', metodo: '/api/v1/patients/{id}/visits' },
+          { key: 'cost', metodo: '/api/v1/patients/{id}/cost' },
+          { key: 'surveys', metodo: '/api/v1/patients/{id}/surveys' },
+          { key: 'completeness', metodo: '/api/v1/patients/{id}/completeness' },
+        ];
+
+        const sql = `
+          DECLARE
+              v_json_entrada CLOB := :p_in;
+              v_json_salida  CLOB;
+          BEGIN
+              pkgln_big_query.p_datos_usuario_cohorte(v_json_entrada, v_json_salida);
+              :p_out := v_json_salida;
+          END;
+        `;
+
+        const aggregatedData: Record<string, any> = {};
+        const errors: Record<string, string> = {};
+
+        for (const item of coordinatorEndpoints) {
+          try {
+            const inPayload = JSON.stringify({ metodo: item.metodo, identificacion: cedula });
+            const result = await connection.execute(sql, {
+              p_in: inPayload,
+              p_out: { type: oracledb.CLOB, dir: oracledb.BIND_OUT }
+            });
+            const rawClob = await lobToString(result.outBinds?.p_out);
+            if (rawClob) {
+              try {
+                aggregatedData[item.key] = JSON.parse(rawClob);
+              } catch (_) {
+                aggregatedData[item.key] = rawClob;
+              }
+            } else {
+              aggregatedData[item.key] = null;
+            }
+          } catch (methodErr: any) {
+            console.warn(`[Oracle API 360 Error on ${item.key}]:`, methodErr.message);
+            errors[item.key] = methodErr.message;
+            aggregatedData[item.key] = null;
+          }
+        }
+
+        await connection.close();
+        connection = null;
+
+        return sendJson(res, 200, {
+          success: true,
+          identificacion: cedula,
+          data: aggregatedData,
+          errors: Object.keys(errors).length > 0 ? errors : undefined
+        });
+      }
 
       let procedureName = 'prc_obtener_pacientes_pagina';
       let executeSql = `BEGIN pkgln_pacientes_giris.${procedureName}(:p_json_entrada, :p_json_salida); END;`;
@@ -607,7 +712,8 @@ export default async function handler(req: any, res: any) {
         return sendJson(res, 200, { success: false, error: dbErr.message, agenda: MOCK_AGENDA_FALLBACK, atenciones_programadas: MOCK_AGENDA_FALLBACK });
       }
       if (action === 'adherencia') {
-        return sendJson(res, 200, { success: false, error: dbErr.message, id_usuario: idUsuario, recomendadas: 0, realizadas: 0, porcentaje: 0 });
+        const fallbackUserId = Number(queryObj.id_usuario || req.body?.id_usuario || queryObj.id || req.body?.id || 0);
+        return sendJson(res, 200, { success: false, error: dbErr.message, id_usuario: fallbackUserId, recomendadas: 0, realizadas: 0, porcentaje: 0 });
       }
       if (action === 'ver_acta' || action === 'f_ver_acta') {
         return sendJson(res, 200, { success: false, error: dbErr.message });

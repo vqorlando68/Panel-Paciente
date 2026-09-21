@@ -1,6 +1,8 @@
 import { Patient, SpecialistKey, SpecialistInfo, ActaInfo, ActaUsuarioDB, CostAnalysisResponse, ProfesionalEquipoMedico, AtencionProgramadaDB, AdherenciaData } from '../types';
 import { INITIAL_PATIENTS } from '../mockData';
 import { DEFAULT_COST_ANALYSIS_DATA } from '../mockCostData';
+import { Patient360FullPayload } from '../types360';
+import { MOCK_360_FALLBACK } from '../mock360Data';
 
 const DEFAULT_SPECIALISTS: Record<SpecialistKey, SpecialistInfo> = {
   med_gen: {
@@ -700,6 +702,58 @@ export class PatientService {
       }
     } catch (error) {
       console.warn('[PatientService] Error calling /api/patients?action=adherencia:', error);
+    }
+    return null;
+  }
+
+  /**
+   * Obtiene la visión 360 completa para el perfil Coordinador
+   * ejecutando en backend los 9 endpoints mediante Oracle pkgln_big_query.p_datos_usuario_cohorte
+   */
+  static async getPatient360All(identificacion: string): Promise<Patient360FullPayload> {
+    const cleanId = String(identificacion || '').replace(/\D/g, '') || String(identificacion || '').trim();
+    try {
+      if (!cleanId) {
+        return { ...MOCK_360_FALLBACK, identificacion: cleanId };
+      }
+      const resp = await fetch(`/api/patients?action=360_all&identificacion=${encodeURIComponent(cleanId)}`);
+      if (resp.ok) {
+        const json = await resp.json();
+        if (json && json.success && json.data) {
+          return {
+            identificacion: cleanId,
+            consultas: json.data.consultas || null,
+            cambiosClave: json.data.cambiosClave || null,
+            perceptionSurvey: json.data.perceptionSurvey || null,
+            engagement: json.data.engagement || null,
+            status: json.data.status || null,
+            visits: json.data.visits || null,
+            cost: json.data.cost || null,
+            surveys: json.data.surveys || null,
+            completeness: json.data.completeness || null,
+            rawErrors: json.errors
+          };
+        }
+      }
+    } catch (err) {
+      console.warn('[PatientService] Error calling /api/patients?action=360_all:', err);
+    }
+    return { ...MOCK_360_FALLBACK, identificacion: cleanId };
+  }
+
+  /**
+   * Ejecuta un método 360 puntual mediante Oracle pkgln_big_query.p_datos_usuario_cohorte
+   */
+  static async getPatient360Method(identificacion: string, metodo: string): Promise<any> {
+    const cleanId = String(identificacion || '').replace(/\D/g, '') || String(identificacion || '').trim();
+    try {
+      const resp = await fetch(`/api/patients?action=360&identificacion=${encodeURIComponent(cleanId)}&metodo=${encodeURIComponent(metodo)}`);
+      if (resp.ok) {
+        const json = await resp.json();
+        return json.data;
+      }
+    } catch (err) {
+      console.warn(`[PatientService] Error calling 360 method ${metodo}:`, err);
     }
     return null;
   }
