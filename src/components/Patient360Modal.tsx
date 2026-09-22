@@ -1121,9 +1121,11 @@ export const Patient360Modal: React.FC<Patient360ModalProps> = ({ patient, onClo
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                            {data.status.history.map((h, idx) => (
+                            {[...(data.status.history || [])]
+                              .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
+                              .map((h, idx) => (
                               <tr key={idx} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/40">
-                                <td className="px-4 py-2.5 font-mono text-gray-500">
+                                <td className="px-4 py-2.5 font-mono text-gray-500 whitespace-nowrap">
                                   {new Date(h.fecha).toLocaleString('es-CO')}
                                 </td>
                                 <td className="px-4 py-2.5 font-semibold text-gray-700 dark:text-gray-300">
