@@ -719,7 +719,13 @@ export class PatientService {
       const resp = await fetch(`/api/patients?action=360_all&identificacion=${encodeURIComponent(cleanId)}`);
       if (resp.ok) {
         const json = await resp.json();
-        if (json && json.success && json.data) {
+        const extractedError = json.detail || json.errorMessage || json.error ||
+          json.data?.consultas?.detail ||
+          json.data?.status?.detail ||
+          json.data?.consultas?.mensaje_error ||
+          (json.errors && Object.keys(json.errors).length > 0 ? Object.values(json.errors)[0] : null);
+
+        if (json && json.data) {
           return {
             identificacion: cleanId,
             consultas: json.data.consultas || null,
@@ -731,12 +737,26 @@ export class PatientService {
             cost: json.data.cost || null,
             surveys: json.data.surveys || null,
             completeness: json.data.completeness || null,
-            rawErrors: json.errors
+            rawErrors: json.errors,
+            errorMessage: extractedError ? String(extractedError) : null,
+            detail: json.detail || (typeof extractedError === 'string' ? extractedError : null)
           };
         }
+      } else {
+        const errText = await resp.text();
+        return {
+          ...MOCK_360_FALLBACK,
+          identificacion: cleanId,
+          errorMessage: `Error HTTP (${resp.status}): ${errText}`
+        };
       }
-    } catch (err) {
+    } catch (err: any) {
       console.warn('[PatientService] Error calling /api/patients?action=360_all:', err);
+      return {
+        ...MOCK_360_FALLBACK,
+        identificacion: cleanId,
+        errorMessage: `Error de conexión: ${err.message}`
+      };
     }
     return { ...MOCK_360_FALLBACK, identificacion: cleanId };
   }
@@ -756,6 +776,77 @@ export class PatientService {
       console.warn(`[PatientService] Error calling 360 method ${metodo}:`, err);
     }
     return null;
+  }
+
+  /**
+   * Envía una pregunta al chat del paciente ejecutando en Oracle pkgln_big_query.p_chat_usuario_cohorte
+   */
+  static async sendPatientChatMessage(params: {
+    identificacion: string;
+    question: string;
+    rol: 'coordinator' | 'doctor';
+    sessionId?: string;
+  }): Promise<{ success: boolean; answer: string; session_id?: string | null; error?: string }> {
+    const cleanId = String(params.identificacion || '').replace(/\D/g, '') || String(params.identificacion || '').trim();
+    try {
+      const resp = await fetch('/api/patients?action=chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'chat',
+          identificacion: cleanId,
+          metodo: '/patients/{id}/chat',
+          question: params.question,
+          rol: params.rol,
+          session_id: params.sessionId,
+        }),
+      });
+
+      if (resp.ok) {
+        const data = await resp.json();
+        const isError = !data.success || Boolean(data.error) || Boolean(data.detail);
+        const errorText = data.detail || data.error || (isError ? data.answer : undefined);
+        return {
+          success: !isError,
+          answer: data.answer || errorText || 'Sin respuesta',
+          session_id: data.session_id,
+          error: errorText,
+        };
+      }
+      const errText = await resp.text();
+      return {
+        success: false,
+        answer: `Error en la solicitud HTTP (${resp.status}): ${errText}`,
+        error: `Error en la solicitud HTTP (${resp.status}): ${errText}`,
+      };
+    } catch (err: any) {
+      console.error('[PatientService] Error calling chat endpoint:', err);
+      return {
+        success: false,
+        answer: `Error de comunicación con el servidor: ${err.message}`,
+        error: err.message,
+      };
+    }
+  }
+
+  /**
+   * Busca cualquier paciente del aplicativo marcado con paciente_giris = 'S' en tkr_usuarios
+   */
+  static async searchAllPatientsChat(search?: string): Promise<Patient[]> {
+    try {
+      const q = String(search || '').trim();
+      const resp = await fetch(`/api/patients?action=pacientes_chat${q ? `&search=${encodeURIComponent(q)}` : ''}`);
+      if (resp.ok) {
+        const json = await resp.json();
+        const list = Array.isArray(json) ? json : json.pacientes || json.data || [];
+        return list;
+      }
+    } catch (err) {
+      console.warn('[PatientService] Error searching chat patients:', err);
+    }
+    return [];
   }
 }
 

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Bot, Sparkles } from 'lucide-react';
 import {
   Patient,
   UserRole,
@@ -32,6 +32,7 @@ import { TasasDrawer } from './components/TasasDrawer';
 import { OracleDocModal } from './components/OracleDocModal';
 import { EpicrisisModal } from './components/EpicrisisModal';
 import { Patient360Modal } from './components/Patient360Modal';
+import { PatientChatModal } from './components/PatientChatModal';
 
 export default function App() {
   const [patients, setPatients] = useState<Patient[]>(INITIAL_PATIENTS);
@@ -218,6 +219,10 @@ export default function App() {
   const [tasasPatient, setTasasPatient] = useState<Patient | null>(null);
   const [epicrisisPatient, setEpicrisisPatient] = useState<Patient | null>(null);
   const [selected360Patient, setSelected360Patient] = useState<Patient | null>(null);
+
+  // Chat Asistente IA (pkgln_big_query.p_chat_usuario_cohorte) State
+  const [isChatOpen, setIsChatOpen] = useState<boolean>(false);
+  const [chatInitialPatient, setChatInitialPatient] = useState<Patient | null>(null);
 
   // Helper: check if a patient has any overdue specialist
   const patientHasOverdueSpecialist = (patient: Patient): boolean => {
@@ -618,6 +623,10 @@ export default function App() {
           theme={theme}
           onToggleTheme={toggleTheme}
           onOpenOracleDoc={() => setIsOracleDocOpen(true)}
+          onOpenChat={() => {
+            setChatInitialPatient(null);
+            setIsChatOpen(true);
+          }}
         />
 
         {/* Filter Bar */}
@@ -794,6 +803,38 @@ export default function App() {
           onClose={() => setSelected360Patient(null)}
         />
       )}
+
+      {/* Floating Action Button (FAB) para Chat Asistente IA */}
+      {!isChatOpen && (
+        <aside aria-label="Asistente IA Teker" className="fixed bottom-6 right-6 z-40">
+          <button
+            type="button"
+            onClick={() => {
+              setChatInitialPatient(null);
+              setIsChatOpen(true);
+            }}
+            title="Iniciar conversación con el Asistente IA"
+            className="group relative flex items-center gap-2.5 px-4 py-3 rounded-full bg-gradient-to-r from-[#008cb9] via-[#00aae1] to-[#00c0f7] text-white font-bold shadow-xl shadow-[#00aae1]/35 hover:shadow-2xl hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer border-2 border-white/20"
+          >
+            <div className="relative flex items-center justify-center">
+              <Bot className="w-5 h-5 text-white animate-pulse" />
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-white animate-ping" />
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-white" />
+            </div>
+            <span className="text-xs tracking-wide">Chat IA</span>
+            <Sparkles className="w-3.5 h-3.5 text-amber-300 group-hover:rotate-12 transition-transform" />
+          </button>
+        </aside>
+      )}
+
+      {/* Asistente IA Chat Modal */}
+      <PatientChatModal
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+        patients={filteredPatients}
+        initialPatient={chatInitialPatient}
+        columnGroup={columnGroup}
+      />
 
       {/* Oracle DB Documentation Modal */}
       <OracleDocModal

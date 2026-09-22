@@ -172,6 +172,21 @@ export default async function handler(req: any, res: any) {
       queryObj[key] = val;
     });
 
+    // If POST and req.body is not yet parsed (e.g. Vite dev connect middleware)
+    if (req.method === 'POST' && (!req.body || Object.keys(req.body).length === 0)) {
+      try {
+        const rawBody = await new Promise<string>((resolve) => {
+          let data = '';
+          req.on('data', (chunk: any) => { data += chunk; });
+          req.on('end', () => resolve(data));
+          req.on('error', () => resolve(''));
+        });
+        if (rawBody) {
+          req.body = JSON.parse(rawBody);
+        }
+      } catch (_) {}
+    }
+
     const action = queryObj.action || req.body?.action || 'pagina';
 
     // 1. Diagnostic Connection Test Endpoint
@@ -271,6 +286,14 @@ export default async function handler(req: any, res: any) {
       if (action === 'agenda' || action === 'atenciones_programadas') {
         return sendJson(res, 200, { success: true, agenda: MOCK_AGENDA_FALLBACK, atenciones_programadas: MOCK_AGENDA_FALLBACK });
       }
+      if (action === 'chat' || action === 'p_chat_usuario_cohorte') {
+        return sendJson(res, 200, {
+          success: true,
+          answer: "No hay conexión directa a la base de datos Oracle configurada en las variables de entorno. Puedes validar manualmente ejecutando el bloque PL/SQL en tu base de datos.",
+          session_id: "mock-session-id",
+          acta_draft: null
+        });
+      }
       return sendJson(res, 200, {
         codigo_respuesta: -1,
         mensaje_respuesta: 'Variables de entorno de Oracle (ORACLE_DB_USER / ORACLE_DB_CONNECTION_STRING) no configuradas en Vercel.',
@@ -292,6 +315,17 @@ export default async function handler(req: any, res: any) {
       if (action === 'agenda' || action === 'atenciones_programadas') {
         return sendJson(res, 200, { success: true, agenda: MOCK_AGENDA_FALLBACK, atenciones_programadas: MOCK_AGENDA_FALLBACK });
       }
+      if (action === 'chat' || action === 'p_chat_usuario_cohorte') {
+        return sendJson(res, 200, {
+          success: true,
+          answer: "El módulo oracledb no pudo inicializarse. Valida manualmente el procedimiento en tu base de datos Oracle.",
+          session_id: "mock-session-id",
+          acta_draft: null
+        });
+      }
+      if (action === 'pacientes_chat' || action === 'buscar_pacientes_chat') {
+        return sendJson(res, 200, []);
+      }
       return sendJson(res, 200, {
         codigo_respuesta: -1,
         mensaje_respuesta: 'El modulo node-oracledb no se pudo cargar en este entorno Serverless de Vercel.',
@@ -302,6 +336,180 @@ export default async function handler(req: any, res: any) {
     let connection: any = null;
     try {
       connection = await oracledb.getConnection(config);
+
+      // --- BUSCADOR GLOBAL DE PACIENTES GIRIS (tkr_usuarios.paciente_giris = 'S') PARA EL CHAT ---
+      if (action === 'pacientes_chat' || action === 'buscar_pacientes_chat') {
+        const rawSearch = queryObj.search || req.body?.search || queryObj.q || req.body?.q || '';
+        const search = String(rawSearch).trim();
+
+        const sql = `
+          DECLARE
+              v_json_entrada CLOB := :p_in;
+              v_json_salida  CLOB;
+          BEGIN
+              pkgln_pacientes_giris.prc_buscar_pacientes_chat(v_json_entrada, v_json_salida);
+              :p_out := v_json_salida;
+          EXCEPTION
+              WHEN OTHERS THEN
+                  SELECT NVL(JSON_ARRAYAGG(
+                           JSON_OBJECT(
+                             'id'                 VALUE TO_CHAR(u.id),
+                             'tipoIdentificacion' VALUE NVL((SELECT ti.abreviatura FROM tkr_tipos_identificacion ti WHERE ti.id = u.id_tipo_identificacion), 'CC'),
+                             'identificacion'     VALUE u.identificacion,
+                             'nombre'             VALUE TRIM(u.nombres || ' ' || u.apellidos),
+                             'nombreCompleto'     VALUE TRIM(u.nombres || ' ' || u.apellidos),
+                             'telefono'           VALUE u.telefono,
+                             'email'              VALUE u.correo_electronico,
+                             'cohorte'            VALUE (SELECT ec.descripcion FROM tkr_estados_cohorte ec WHERE ec.id = pkgcn_cohortes.f_devolver_id_estado_usuario(u.id)),
+                             'riesgo'             VALUE (
+                                                    CASE (
+                                                      SELECT nivel_riesgo
+                                                        FROM (SELECT a.nivel_riesgo
+                                                                FROM tkr_actas_medicas a
+                                                               WHERE a.id_usuario = u.id
+                                                            ORDER BY a.fecha_acta_medica DESC, a.id DESC)
+                                                       WHERE ROWNUM = 1
+                                                    )
+                                                      WHEN 1 THEN 'High'
+                                                      WHEN 2 THEN 'Medium'
+                                                      WHEN 3 THEN 'Low'
+                                                      WHEN 4 THEN 'Critical'
+                                                      ELSE NULL
+                                                    END
+                                                  ),
+                             'convenioNombre'     VALUE (SELECT conv.nombre_convenio FROM tkr_convenios conv, tkr_usuarios_cohorte uc WHERE uc.id_usuario = u.id AND conv.id = uc.id_convenio AND ROWNUM = 1)
+                             RETURNING CLOB
+                           )
+                           RETURNING CLOB
+                         ), '[]')
+                    INTO :p_out
+                    FROM (
+                      SELECT u.id, u.id_tipo_identificacion, u.identificacion, u.nombres, u.apellidos, u.telefono, u.correo_electronico
+                        FROM tkr_usuarios u
+                       WHERE (u.paciente_giris = 'S' OR EXISTS (SELECT 1 FROM tkr_usuarios_cohorte uc WHERE uc.id_usuario = u.id))
+                         AND (
+                           :p_search IS NULL
+                           OR u.identificacion LIKE '%' || :p_search || '%'
+                           OR UPPER(u.nombres || ' ' || u.apellidos) LIKE '%' || UPPER(:p_search) || '%'
+                         )
+                       ORDER BY u.nombres, u.apellidos
+                    ) u
+                   WHERE ROWNUM <= 150;
+          END;
+        `;
+
+        try {
+          const result = await connection.execute(sql, {
+            p_in: JSON.stringify({ search }),
+            p_search: search ? search : null,
+            p_out: { type: oracledb.CLOB, dir: oracledb.BIND_OUT }
+          });
+          const rawClob = await lobToString(result.outBinds?.p_out);
+          await connection.close();
+          connection = null;
+
+          let list: any[] = [];
+          if (rawClob) {
+            try {
+              list = JSON.parse(rawClob);
+            } catch (_) {
+              list = [];
+            }
+          }
+          return sendJson(res, 200, Array.isArray(list) ? list : []);
+        } catch (dbErr: any) {
+          console.warn('[Oracle API pacientes_chat Warning]:', dbErr.message);
+          if (connection) {
+            try { await connection.close(); } catch (_) {}
+            connection = null;
+          }
+          return sendJson(res, 200, []);
+        }
+      }
+
+      // --- CHAT ASISTENTE IA (pkgln_big_query.p_chat_usuario_cohorte) ---
+      if (action === 'chat' || action === 'p_chat_usuario_cohorte') {
+        const rawCedula = queryObj.identificacion || req.body?.identificacion || '';
+        const cedula = String(rawCedula).trim();
+        const question = String(queryObj.question || req.body?.question || req.body?.cuerpo?.question || '').trim();
+        const rawRol = String(queryObj.rol || req.body?.rol || req.body?.cuerpo?.rol || 'coordinator').trim().toLowerCase();
+        const rol = rawRol === 'doctor' || rawRol === 'clinico' ? 'doctor' : 'coordinator';
+        const metodo = String(queryObj.metodo || req.body?.metodo || '/patients/{id}/chat').trim();
+        const sessionId = queryObj.session_id || req.body?.session_id || req.body?.cuerpo?.session_id;
+
+        const cuerpoObj: Record<string, any> = {
+          question,
+          rol,
+        };
+        if (sessionId) {
+          cuerpoObj.session_id = sessionId;
+        }
+
+        const inPayloadObj = {
+          identificacion: cedula,
+          metodo,
+          cuerpo: cuerpoObj
+        };
+        const inPayload = JSON.stringify(inPayloadObj);
+
+        console.log('[Oracle API Chat] Ejecutando pkgln_big_query.p_chat_usuario_cohorte con payload:', inPayload);
+
+        const sql = `
+          DECLARE
+              v_json_entrada CLOB := :p_in;
+              v_json_salida  CLOB;
+          BEGIN
+              pkgln_big_query.p_chat_usuario_cohorte(v_json_entrada, v_json_salida);
+              :p_out := v_json_salida;
+          END;
+        `;
+
+        try {
+          const result = await connection.execute(sql, {
+            p_in: inPayload,
+            p_out: { type: oracledb.CLOB, dir: oracledb.BIND_OUT }
+          });
+          const rawClob = await lobToString(result.outBinds?.p_out);
+          await connection.close();
+          connection = null;
+
+          console.log('[Oracle API Chat] Respuesta recibida de Oracle (primeros 200 chars):', rawClob ? rawClob.substring(0, 200) : 'null');
+
+          let parsed: any = null;
+          if (rawClob) {
+            try {
+              parsed = JSON.parse(rawClob);
+            } catch (_) {
+              parsed = { answer: rawClob };
+            }
+          }
+
+          const isError = Boolean(parsed?.detail || parsed?.error || (parsed?.codigo_error && parsed.codigo_error !== 0));
+          const errorMsg = parsed?.detail || parsed?.mensaje_error || parsed?.error;
+          const answerText = parsed?.answer || parsed?.mensaje || (typeof parsed === 'string' ? parsed : '') || (isError ? `Error: ${errorMsg}` : '');
+
+          return sendJson(res, 200, {
+            success: !isError,
+            answer: answerText,
+            error: errorMsg || undefined,
+            detail: parsed?.detail || undefined,
+            session_id: parsed?.session_id || sessionId || null,
+            acta_draft: parsed?.acta_draft || null,
+            raw: parsed
+          });
+        } catch (execErr: any) {
+          console.warn('[Oracle API Chat Warning]:', execErr.message);
+          if (connection) {
+            try { await connection.close(); } catch (_) {}
+            connection = null;
+          }
+          return sendJson(res, 200, {
+            success: false,
+            error: execErr.message,
+            answer: `Error al ejecutar en BD Oracle: ${execErr.message}\n\n*Recuerda que si el paquete 'pkgln_big_query.p_chat_usuario_cohorte' requiere compilarse en la base de datos, debes compilarlo manualmente.*`
+          });
+        }
+      }
 
       // --- 360 COORDINADOR ACTIONS ---
       if (action === '360' || action === '360_metodo') {
@@ -335,7 +543,17 @@ export default async function handler(req: any, res: any) {
             parsed = { raw: rawClob };
           }
         }
-        return sendJson(res, 200, { success: true, identificacion: cedula, metodo, data: parsed });
+        const isError = Boolean(parsed?.detail || parsed?.error || (parsed?.codigo_error && parsed.codigo_error !== 0));
+        const errorMsg = parsed?.detail || parsed?.mensaje_error || parsed?.error;
+
+        return sendJson(res, 200, {
+          success: !isError,
+          identificacion: cedula,
+          metodo,
+          data: parsed,
+          error: errorMsg || undefined,
+          detail: parsed?.detail || undefined
+        });
       }
 
       if (action === '360_all') {
@@ -366,6 +584,8 @@ export default async function handler(req: any, res: any) {
 
         const aggregatedData: Record<string, any> = {};
         const errors: Record<string, string> = {};
+        let detectedDetail: string | null = null;
+        let detectedError: string | null = null;
 
         for (const item of coordinatorEndpoints) {
           try {
@@ -377,7 +597,16 @@ export default async function handler(req: any, res: any) {
             const rawClob = await lobToString(result.outBinds?.p_out);
             if (rawClob) {
               try {
-                aggregatedData[item.key] = JSON.parse(rawClob);
+                const parsedItem = JSON.parse(rawClob);
+                aggregatedData[item.key] = parsedItem;
+                if (parsedItem && typeof parsedItem === 'object') {
+                  if (parsedItem.detail && !detectedDetail) {
+                    detectedDetail = String(parsedItem.detail);
+                  }
+                  if (parsedItem.mensaje_error && !detectedError) {
+                    detectedError = String(parsedItem.mensaje_error);
+                  }
+                }
               } catch (_) {
                 aggregatedData[item.key] = rawClob;
               }
@@ -387,6 +616,7 @@ export default async function handler(req: any, res: any) {
           } catch (methodErr: any) {
             console.warn(`[Oracle API 360 Error on ${item.key}]:`, methodErr.message);
             errors[item.key] = methodErr.message;
+            if (!detectedError) detectedError = methodErr.message;
             aggregatedData[item.key] = null;
           }
         }
@@ -394,10 +624,14 @@ export default async function handler(req: any, res: any) {
         await connection.close();
         connection = null;
 
+        const finalErrorMessage = detectedDetail || detectedError || (Object.keys(errors).length > 0 ? Object.values(errors)[0] : null);
+
         return sendJson(res, 200, {
-          success: true,
+          success: !finalErrorMessage,
           identificacion: cedula,
           data: aggregatedData,
+          detail: detectedDetail || undefined,
+          errorMessage: finalErrorMessage || undefined,
           errors: Object.keys(errors).length > 0 ? errors : undefined
         });
       }

@@ -48,7 +48,9 @@ export const Patient360Modal: React.FC<Patient360ModalProps> = ({ patient, onClo
   const [activeTab, setActiveTab] = useState<TabType>('consultas');
   const [loading, setLoading] = useState<boolean>(true);
   const [data, setData] = useState<Patient360FullPayload | null>(null);
+  const [dismissedError, setDismissedError] = useState(false);
   const [costSearch, setCostSearch] = useState('');
+  const [costMonthSortOrder, setCostMonthSortOrder] = useState<'desc' | 'asc'>('desc');
   const [visitStatusFilter, setVisitStatusFilter] = useState('Todos');
   const tabsContainerRef = useRef<HTMLDivElement>(null);
 
@@ -69,6 +71,7 @@ export const Patient360Modal: React.FC<Patient360ModalProps> = ({ patient, onClo
   const loadData = async () => {
     if (!patient) return;
     setLoading(true);
+    setDismissedError(false);
     try {
       const payload = await PatientService.getPatient360All(patient.identificacion);
       setData(payload);
@@ -326,6 +329,42 @@ export const Patient360Modal: React.FC<Patient360ModalProps> = ({ patient, onClo
             </div>
           </div>
         </div>
+
+        {/* BANNER DE NOTIFICACIÓN DE ERROR EN PANTALLA (BIGQUERY / ORACLE) */}
+        {!dismissedError && (data?.errorMessage || data?.detail) && (
+          <div className="mx-6 mt-3 mb-1 p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700/60 flex items-start justify-between gap-3 text-amber-900 dark:text-amber-200 shadow-xs animate-in fade-in slide-in-from-top-1 duration-200 shrink-0">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/60 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5">
+                <AlertTriangle className="w-4 h-4" />
+              </div>
+              <div className="text-xs">
+                <div className="flex items-center gap-2">
+                  <p className="font-bold text-amber-900 dark:text-amber-200">
+                    Aviso en la consulta 360° (Servicio BigQuery / Oracle)
+                  </p>
+                  <span className="px-1.5 py-0.2 text-[9px] font-mono font-bold uppercase rounded bg-amber-200/80 dark:bg-amber-900/80 text-amber-900 dark:text-amber-200">
+                    Alerta API
+                  </span>
+                </div>
+                <div className="mt-1 font-mono text-[11px] bg-white/90 dark:bg-black/40 border border-amber-200 dark:border-amber-800/60 p-2 rounded-lg text-amber-950 dark:text-amber-100 select-all break-all shadow-inner">
+                  {typeof (data?.errorMessage || data?.detail) === 'object'
+                    ? JSON.stringify(data?.errorMessage || data?.detail)
+                    : String(data?.errorMessage || data?.detail)}
+                </div>
+                <p className="mt-1.5 text-[10px] text-amber-700/90 dark:text-amber-400/90">
+                  Mostrando datos de respaldo locales en pantalla. Verifica la API Key y configuración del paquete <strong className="font-mono">pkgln_big_query</strong> en la base de datos Oracle.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setDismissedError(true)}
+              className="p-1 text-amber-600 hover:text-amber-950 dark:text-amber-400 hover:bg-amber-200/60 dark:hover:bg-amber-900/60 rounded-md transition-colors cursor-pointer shrink-0"
+              title="Cerrar notificación"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
 
         {/* NAVIGATION TABS WITH HORIZONTAL SCROLL CONTROLS */}
         <div className="relative flex items-center border-b border-gray-200 dark:border-gray-800 bg-gray-50/70 dark:bg-[#0e172e] shrink-0">
@@ -961,7 +1000,18 @@ export const Patient360Modal: React.FC<Patient360ModalProps> = ({ patient, onClo
                       <table className="w-full text-xs text-left">
                         <thead className="sticky top-0 bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-400 font-bold border-b border-gray-200 dark:border-gray-800 z-10">
                           <tr>
-                            <th className="px-3 py-2">Mes</th>
+                            <th 
+                              className="px-3 py-2 cursor-pointer hover:bg-gray-200/70 dark:hover:bg-gray-800 transition-colors select-none group"
+                              onClick={() => setCostMonthSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
+                              title={`Ordenar por Mes (${costMonthSortOrder === 'desc' ? 'Descendente' : 'Ascendente'})`}
+                            >
+                              <div className="flex items-center gap-1.5">
+                                <span>Mes</span>
+                                <span className="text-[10px] font-black text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-800/60">
+                                  {costMonthSortOrder === 'desc' ? '↓ Desc' : '↑ Asc'}
+                                </span>
+                              </div>
+                            </th>
                             <th className="px-3 py-2">CUPS / Código</th>
                             <th className="px-3 py-2">Descripción del Servicio</th>
                             <th className="px-3 py-2">Tipo Servicio</th>
@@ -980,6 +1030,22 @@ export const Patient360Modal: React.FC<Patient360ModalProps> = ({ patient, onClo
                                 it.tipo_servicio?.toLowerCase().includes(q) ||
                                 it.prestador?.toLowerCase().includes(q)
                               );
+                            })
+                            .sort((a, b) => {
+                              const strA = String(a.mes_emision || a.mes_reporte || a.mes || '').trim();
+                              const strB = String(b.mes_emision || b.mes_reporte || b.mes || '').trim();
+
+                              const timeA = Date.parse(strA);
+                              const timeB = Date.parse(strB);
+
+                              let cmp = 0;
+                              if (!isNaN(timeA) && !isNaN(timeB)) {
+                                cmp = timeB - timeA;
+                              } else {
+                                cmp = strB.localeCompare(strA);
+                              }
+
+                              return costMonthSortOrder === 'desc' ? cmp : -cmp;
                             })
                             .map((it, idx) => (
                               <tr key={idx} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/40">

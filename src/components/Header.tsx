@@ -1,6 +1,6 @@
 import React from 'react';
 import { UserRole } from '../types';
-import { Activity, Sun, Moon, Database } from 'lucide-react';
+import { Activity, Sun, Moon, Database, Bot } from 'lucide-react';
 
 interface HeaderProps {
   activeRole: UserRole;
@@ -17,6 +17,7 @@ interface HeaderProps {
   theme?: 'light' | 'dark';
   onToggleTheme?: () => void;
   onOpenOracleDoc?: () => void;
+  onOpenChat?: () => void;
 }
 
 const FAST_FILTER_CHIPS = [
@@ -41,6 +42,7 @@ export const Header: React.FC<HeaderProps> = ({
   theme = 'light',
   onToggleTheme,
   onOpenOracleDoc,
+  onOpenChat,
 }) => {
   return (
     <header className="bg-white dark:bg-[#1e293b] border-b border-[#e2e8eb] dark:border-[#334155] px-6 py-3 flex flex-wrap lg:flex-nowrap items-center justify-between gap-4 shrink-0 max-w-[1550px] w-full mx-auto font-sans rounded-b-xl shadow-2xs transition-colors duration-200">
@@ -117,6 +119,19 @@ export const Header: React.FC<HeaderProps> = ({
             ) : (
               <Moon className="w-4 h-4 text-slate-700 animate-in spin-in-90 duration-200" />
             )}
+          </button>
+        )}
+
+        {/* Botón Asistente IA Chat */}
+        {onOpenChat && (
+          <button
+            type="button"
+            onClick={onOpenChat}
+            title="Abrir Asistente IA - Chat de Paciente"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#008cb9] to-[#00aae1] hover:from-[#007b9e] hover:to-[#009acb] text-white text-xs font-bold shadow-xs hover:shadow-md transition-all cursor-pointer border border-[#00aae1]/30"
+          >
+            <Bot className="w-4 h-4 text-white" />
+            <span className="hidden sm:inline">Chat IA</span>
           </button>
         )}
       </div>

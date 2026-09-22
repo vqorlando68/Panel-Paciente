@@ -184,4 +184,6 @@ export interface Patient360FullPayload {
   surveys?: SurveysData | null;
   completeness?: CompletenessData | null;
   rawErrors?: Record<string, string>;
+  errorMessage?: string | null;
+  detail?: string | null;
 }

@@ -96,6 +96,17 @@ CREATE OR REPLACE PACKAGE pkgln_pacientes_giris IS
     p_json_salida  OUT CLOB
   );
 
+  /*****************************************************************************
+    PROCEDIMIENTO: prc_buscar_pacientes_chat
+    DESCRIPCION: Retorna los pacientes marcados en tkr_usuarios con paciente_giris = 'S'
+                 filtrados por término de búsqueda (identificación o nombre)
+                 para el selector global de pacientes del chat.
+  *****************************************************************************/
+  PROCEDURE prc_buscar_pacientes_chat (
+    p_json_entrada IN  CLOB,
+    p_json_salida  OUT CLOB
+  );
+
 END pkgln_pacientes_giris;
 /
 SHOW ERRORS;
@@ -978,6 +989,73 @@ CREATE OR REPLACE PACKAGE BODY pkgln_pacientes_giris IS
     WHEN OTHERS THEN
       p_json_salida := '{"codigo_respuesta": -1, "mensaje_respuesta": "Error al agregar nota: ' || REPLACE(SQLERRM, '"', '\"') || '"}';
   END prc_agregar_nota;
+
+  ------------------------------------------------------------------------------
+  -- PROCEDIMIENTO: prc_buscar_pacientes_chat
+  ------------------------------------------------------------------------------
+  PROCEDURE prc_buscar_pacientes_chat (
+    p_json_entrada IN  CLOB,
+    p_json_salida  OUT CLOB
+  ) IS
+    v_search VARCHAR2(500);
+  BEGIN
+    v_search := JSON_VALUE(p_json_entrada, '$.search');
+
+    SELECT NVL(JSON_ARRAYAGG(
+             JSON_OBJECT(
+               'id'                     VALUE TO_CHAR(u.id),
+               'tipoIdentificacion'     VALUE NVL((SELECT ti.abreviatura FROM tkr_tipos_identificacion ti WHERE ti.id = u.id_tipo_identificacion), 'CC'),
+               'tipo_identificacion_abrev' VALUE (SELECT ti.abreviatura FROM tkr_tipos_identificacion ti WHERE ti.id = u.id_tipo_identificacion),
+               'identificacion'         VALUE u.identificacion,
+               'nombre'                 VALUE TRIM(u.nombres || ' ' || u.apellidos),
+               'nombreCompleto'         VALUE TRIM(u.nombres || ' ' || u.apellidos),
+               'telefono'               VALUE u.telefono,
+               'email'                  VALUE u.correo_electronico,
+               'cohorte'                VALUE (SELECT ec.descripcion FROM tkr_estados_cohorte ec WHERE ec.id = pkgcn_cohortes.f_devolver_id_estado_usuario(u.id)),
+               'riesgo'                 VALUE (
+                                          CASE (
+                                            SELECT nivel_riesgo
+                                              FROM (SELECT a.nivel_riesgo
+                                                      FROM tkr_actas_medicas a
+                                                     WHERE a.id_usuario = u.id
+                                                  ORDER BY a.fecha_acta_medica DESC, a.id DESC)
+                                             WHERE ROWNUM = 1
+                                          )
+                                            WHEN 1 THEN 'High'
+                                            WHEN 2 THEN 'Medium'
+                                            WHEN 3 THEN 'Low'
+                                            WHEN 4 THEN 'Critical'
+                                            ELSE NULL
+                                          END
+                                        ),
+               'convenioNombre'         VALUE (SELECT conv.nombre_convenio FROM tkr_convenios conv, tkr_usuarios_cohorte uc WHERE uc.id_usuario = u.id AND conv.id = uc.id_convenio AND ROWNUM = 1)
+               RETURNING CLOB
+             )
+             RETURNING CLOB
+           ), '[]')
+      INTO p_json_salida
+      FROM (
+        SELECT u.id,
+               u.id_tipo_identificacion,
+               u.identificacion,
+               u.nombres,
+               u.apellidos,
+               u.telefono,
+               u.correo_electronico
+          FROM tkr_usuarios u
+         WHERE (u.paciente_giris = 'S' OR EXISTS (SELECT 1 FROM tkr_usuarios_cohorte uc WHERE uc.id_usuario = u.id))
+           AND (
+             v_search IS NULL
+             OR u.identificacion LIKE '%' || v_search || '%'
+             OR UPPER(u.nombres || ' ' || u.apellidos) LIKE '%' || UPPER(v_search) || '%'
+           )
+         ORDER BY u.nombres, u.apellidos
+      ) u
+     WHERE ROWNUM <= 150;
+  EXCEPTION
+    WHEN OTHERS THEN
+      p_json_salida := '[]';
+  END prc_buscar_pacientes_chat;
 
 END pkgln_pacientes_giris;
 /
