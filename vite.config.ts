@@ -12,13 +12,41 @@ function oracleApiPlugin(): Plugin {
   return {
     name: 'oracle-api-middleware',
     configureServer(server) {
-      server.middlewares.use(async (req, res, next) => {
+      server.middlewares.use(async (req: any, res, next) => {
+        if (req.url && req.url.startsWith('/api/')) {
+          if (req.method === 'POST' && !req.body) {
+            await new Promise<void>((resolve) => {
+              let raw = '';
+              req.on('data', (c: any) => { raw += c; });
+              req.on('end', () => {
+                try { req.body = raw ? JSON.parse(raw) : {}; } catch { req.body = {}; }
+                resolve();
+              });
+              req.on('error', () => resolve());
+              // Timeout de seguridad
+              setTimeout(resolve, 1500);
+            });
+          }
+        }
+
         if (req.url && req.url.startsWith('/api/patients')) {
           try {
             const { default: handler } = await server.ssrLoadModule('./api/patients.ts');
             await handler(req, res);
           } catch (e: any) {
             console.error('[Oracle API Dev Server Middleware Error]:', e);
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: e.message }));
+          }
+          return;
+        }
+        if (req.url && req.url.startsWith('/api/auth')) {
+          try {
+            const { default: handler } = await server.ssrLoadModule('./api/auth.ts');
+            await handler(req, res);
+          } catch (e: any) {
+            console.error('[Auth API Dev Server Middleware Error]:', e);
             res.statusCode = 500;
             res.setHeader('Content-Type', 'application/json');
             res.end(JSON.stringify({ error: e.message }));

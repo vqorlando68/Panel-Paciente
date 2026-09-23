@@ -1,6 +1,7 @@
 import React from 'react';
 import { UserRole } from '../types';
-import { Activity, Sun, Moon, Database, Bot } from 'lucide-react';
+import { AuthUser } from '../types/auth';
+import { Activity, Sun, Moon, Database, Bot, User, LogOut } from 'lucide-react';
 
 interface HeaderProps {
   activeRole: UserRole;
@@ -18,6 +19,8 @@ interface HeaderProps {
   onToggleTheme?: () => void;
   onOpenOracleDoc?: () => void;
   onOpenChat?: () => void;
+  user?: AuthUser | null;
+  onLogout?: () => void;
 }
 
 const FAST_FILTER_CHIPS = [
@@ -43,102 +46,139 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleTheme,
   onOpenOracleDoc,
   onOpenChat,
+  user,
+  onLogout,
 }) => {
   return (
-    <header className="bg-white dark:bg-[#1e293b] border-b border-[#e2e8eb] dark:border-[#334155] px-6 py-3 flex flex-wrap lg:flex-nowrap items-center justify-between gap-4 shrink-0 max-w-[1550px] w-full mx-auto font-sans rounded-b-xl shadow-2xs transition-colors duration-200">
-      {/* Title & Brand */}
-      <div className="flex items-center gap-3 shrink-0">
-        <div className="w-10 h-10 rounded-lg bg-[#effaff] dark:bg-[#00aae1]/10 border border-[#00aae1]/20 flex items-center justify-center text-[#00aae1] dark:text-[#38bdf8]">
-          <Activity className="w-5 h-5" />
-        </div>
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-[#033d59] dark:text-[#f8fafc] tracking-tight">Panel de Listado de Pacientes</h1>
-            <span className="text-[11px] px-2 py-0.5 rounded bg-[#effaff] dark:bg-[#00aae1]/20 text-[#00aae1] dark:text-[#38bdf8] font-medium border border-[#00aae1]/20">
-              SIAU v2.0
-            </span>
+    <header className="bg-white dark:bg-[#1e293b] border-b border-[#e2e8eb] dark:border-[#334155] px-6 py-2.5 flex flex-col gap-2.5 shrink-0 max-w-[1550px] w-full mx-auto font-sans rounded-b-xl shadow-2xs transition-colors duration-200">
+      {/* ===================== FILA 1: IDENTIDAD, ROL Y ACCIONES/PERFIL ===================== */}
+      <div className="flex items-center justify-between gap-4 w-full">
+        {/* Izquierda: Marca, Título y Selector de Rol */}
+        <div className="flex items-center gap-5 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-[#effaff] dark:bg-[#00aae1]/10 border border-[#00aae1]/20 flex items-center justify-center text-[#00aae1] dark:text-[#38bdf8] shrink-0">
+              <Activity className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-lg font-bold text-[#033d59] dark:text-[#f8fafc] tracking-tight">
+                  Panel de Listado de Pacientes
+                </h1>
+                <span className="text-[11px] px-2 py-0.5 rounded bg-[#effaff] dark:bg-[#00aae1]/20 text-[#00aae1] dark:text-[#38bdf8] font-medium border border-[#00aae1]/20">
+                  SIAU v2.0
+                </span>
+              </div>
+              <p className="text-[11px] text-[#035476] dark:text-[#94a3b8]">
+                Seguimiento clínico multidisciplinario e indicadores de vencimiento
+              </p>
+            </div>
           </div>
-          <p className="text-xs text-[#035476] dark:text-[#94a3b8]">
-            Seguimiento clínico multidisciplinario e indicadores de vencimiento
-          </p>
+
+          {/* Selector de Rol Segmentado */}
+          <div className="flex items-center bg-[#f1f5f9] dark:bg-[#0f172a] p-0.5 rounded-lg border border-[#e2e8eb] dark:border-[#334155]">
+            <button
+              onClick={() => onRoleChange('comite_medico')}
+              className={`px-3 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                activeRole === 'comite_medico'
+                  ? 'bg-white dark:bg-[#1e293b] text-[#00aae1] dark:text-[#38bdf8] shadow-xs'
+                  : 'text-[#035476] dark:text-[#94a3b8] hover:text-[#033d59] dark:hover:text-white'
+              }`}
+              title="Permisos completos para modificar Riesgo, Estado y Actas"
+            >
+              Comité Médico
+            </button>
+
+            <button
+              onClick={() => onRoleChange('coordinadora_siau')}
+              className={`px-3 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                activeRole === 'coordinadora_siau'
+                  ? 'bg-white dark:bg-[#1e293b] text-[#00aae1] dark:text-[#38bdf8] shadow-xs'
+                  : 'text-[#035476] dark:text-[#94a3b8] hover:text-[#033d59] dark:hover:text-white'
+              }`}
+              title="Vista enfocada en gestión operativa y seguimiento SIAU"
+            >
+              Coordinadora SIAU
+            </button>
+          </div>
+
+          {/* Oracle DB Integration Doc Button (Ctrl + Alt + D) */}
+          {onOpenOracleDoc && (
+            <button
+              type="button"
+              onClick={onOpenOracleDoc}
+              tabIndex={-1}
+              aria-hidden="true"
+              className="hidden"
+            >
+              Oracle DB Doc
+            </button>
+          )}
+        </div>
+
+        {/* Derecha: Chat IA, Tema, Usuario y Logout */}
+        <div className="flex items-center gap-3 shrink-0">
+          {/* Botón Asistente IA Chat */}
+          {onOpenChat && (
+            <button
+              type="button"
+              onClick={onOpenChat}
+              title="Abrir Asistente IA - Chat de Paciente"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#008cb9] to-[#00aae1] hover:from-[#007b9e] hover:to-[#009acb] text-white text-xs font-bold shadow-xs hover:shadow-md transition-all cursor-pointer border border-[#00aae1]/30"
+            >
+              <Bot className="w-4 h-4 text-white" />
+              <span>Chat IA</span>
+            </button>
+          )}
+
+          {/* Theme Switcher Toggle */}
+          {onToggleTheme && (
+            <button
+              type="button"
+              onClick={onToggleTheme}
+              title={theme === 'dark' ? 'Cambiar a Modo Claro' : 'Cambiar a Modo Oscuro'}
+              className="w-8 h-8 rounded-lg border border-[#e2e8eb] dark:border-[#334155] bg-gray-50 dark:bg-[#0f172a] text-[#033d59] dark:text-[#f8fafc] flex items-center justify-center hover:bg-gray-100 dark:hover:bg-[#334155] transition-all cursor-pointer shadow-2xs"
+            >
+              {theme === 'dark' ? (
+                <Sun className="w-4 h-4 text-amber-400" />
+              ) : (
+                <Moon className="w-4 h-4 text-slate-700" />
+              )}
+            </button>
+          )}
+
+          {/* Usuario Autenticado & Logout */}
+          {user && (
+            <div className="flex items-center gap-2.5 pl-3 border-l border-slate-200 dark:border-[#334155]">
+              <div className="w-8 h-8 rounded-full bg-[#00aae1]/15 dark:bg-[#00aae1]/30 border border-[#00aae1]/30 flex items-center justify-center text-[#00aae1] dark:text-[#38bdf8] font-bold text-xs shrink-0">
+                {user.nombres ? user.nombres.charAt(0).toUpperCase() : <User className="w-4 h-4" />}
+              </div>
+              <div className="flex flex-col text-left">
+                <span className="text-xs font-bold text-[#033d59] dark:text-[#f8fafc] leading-tight whitespace-nowrap">
+                  {user.nombres} {user.apellidos}
+                </span>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                  {user.identificacion}
+                </span>
+              </div>
+
+              {onLogout && (
+                <button
+                  type="button"
+                  onClick={onLogout}
+                  title="Cerrar Sesión TeKer"
+                  className="w-8 h-8 ml-1 rounded-lg border border-red-200 dark:border-red-900/40 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 flex items-center justify-center hover:bg-red-100 dark:hover:bg-red-900/50 transition-all cursor-pointer shadow-2xs shrink-0"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Center Actions: Role Switcher & DB Doc Button */}
-      <div className="flex items-center gap-4 shrink-0">
-        {/* Role Switcher Tabs */}
-        <div className="flex items-center gap-4 border-b border-transparent">
-          <button
-            onClick={() => onRoleChange('comite_medico')}
-            className={`pb-1 text-xs font-semibold transition-all cursor-pointer ${
-              activeRole === 'comite_medico'
-                ? 'text-[#00aae1] dark:text-[#38bdf8] border-b-2 border-[#00aae1] dark:border-[#38bdf8]'
-                : 'text-[#035476] dark:text-[#94a3b8] hover:text-[#033d59] dark:hover:text-white'
-            }`}
-            title="Permisos completos para modificar Riesgo, Estado y Actas"
-          >
-            Comité Médico
-          </button>
-
-          <button
-            onClick={() => onRoleChange('coordinadora_siau')}
-            className={`pb-1 text-xs font-semibold transition-all cursor-pointer ${
-              activeRole === 'coordinadora_siau'
-                ? 'text-[#00aae1] dark:text-[#38bdf8] border-b-2 border-[#00aae1] dark:border-[#38bdf8]'
-                : 'text-[#035476] dark:text-[#94a3b8] hover:text-[#033d59] dark:hover:text-white'
-            }`}
-            title="Vista enfocada en gestión operativa y seguimiento SIAU"
-          >
-            Coordinadora SIAU
-          </button>
-        </div>
-
-        {/* Oracle DB Integration Doc Button (Oculto visualmente, accesible con Ctrl + Alt + D) */}
-        {onOpenOracleDoc && (
-          <button
-            type="button"
-            onClick={onOpenOracleDoc}
-            tabIndex={-1}
-            aria-hidden="true"
-            className="hidden"
-          >
-            Oracle DB Doc
-          </button>
-        )}
-
-        {/* Theme Switcher Toggle (Sun / Moon) */}
-        {onToggleTheme && (
-          <button
-            type="button"
-            onClick={onToggleTheme}
-            title={theme === 'dark' ? 'Cambiar a Modo Claro' : 'Cambiar a Modo Oscuro'}
-            className="w-9 h-9 rounded-lg border border-[#e2e8eb] dark:border-[#334155] bg-gray-50 dark:bg-[#0f172a] text-[#033d59] dark:text-[#f8fafc] flex items-center justify-center hover:bg-gray-100 dark:hover:bg-[#334155] transition-all cursor-pointer shadow-2xs"
-          >
-            {theme === 'dark' ? (
-              <Sun className="w-4 h-4 text-amber-400 animate-in spin-in-90 duration-200" />
-            ) : (
-              <Moon className="w-4 h-4 text-slate-700 animate-in spin-in-90 duration-200" />
-            )}
-          </button>
-        )}
-
-        {/* Botón Asistente IA Chat */}
-        {onOpenChat && (
-          <button
-            type="button"
-            onClick={onOpenChat}
-            title="Abrir Asistente IA - Chat de Paciente"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#008cb9] to-[#00aae1] hover:from-[#007b9e] hover:to-[#009acb] text-white text-xs font-bold shadow-xs hover:shadow-md transition-all cursor-pointer border border-[#00aae1]/30"
-          >
-            <Bot className="w-4 h-4 text-white" />
-            <span className="hidden sm:inline">Chat IA</span>
-          </button>
-        )}
-      </div>
-
-      {/* Right Side: Organized Horizontal Lines */}
-      <div className="flex flex-col items-end gap-2 text-xs shrink-0">
-        {/* Line 1: Counters (Total, Activos, Vencidos, Inconforme) */}
+      {/* ===================== FILA 2: CONTADORES Y FILTROS RÁPIDOS ===================== */}
+      <div className="flex items-center justify-between gap-4 w-full pt-2 border-t border-[#e2e8eb]/70 dark:border-[#334155]/70 text-xs">
+        {/* Lado Izquierdo: Contadores de Pacientes */}
         <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
@@ -225,7 +265,7 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         </div>
 
-        {/* Line 2: Chips (Críticos, >90 días, Rehuso, Aceptados, Sin Acta) */}
+        {/* Lado Derecho: Chips de filtro rápido */}
         <div className="flex items-center gap-1.5 flex-wrap justify-end">
           {FAST_FILTER_CHIPS.map((chip) => {
             const isActive =

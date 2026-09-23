@@ -33,8 +33,11 @@ import { OracleDocModal } from './components/OracleDocModal';
 import { EpicrisisModal } from './components/EpicrisisModal';
 import { Patient360Modal } from './components/Patient360Modal';
 import { PatientChatModal } from './components/PatientChatModal';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { LoginView } from './components/LoginView';
 
-export default function App() {
+function MainDashboard() {
+  const { user, isAuthenticated, isLoading: isAuthLoading, logout } = useAuth();
   const [patients, setPatients] = useState<Patient[]>(INITIAL_PATIENTS);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [activeRole, setActiveRole] = useState<UserRole>('comite_medico');
@@ -604,6 +607,21 @@ export default function App() {
     }
   };
 
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen bg-[#f8fafc] dark:bg-[#0f172a] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-4 border-[#00aae1] border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs text-slate-500 font-medium">Iniciando plataforma TeKer...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <LoginView />;
+  }
+
   return (
     <div className="h-screen w-screen flex flex-col overflow-hidden bg-[#f8fafc] dark:bg-[#0b1329] font-sans text-[#033d59] dark:text-[#f8fafc] transition-colors duration-200">
       <div className="flex-1 flex flex-col overflow-hidden px-4 md:px-8 py-2 max-w-[1600px] w-full mx-auto">
@@ -627,6 +645,8 @@ export default function App() {
             setChatInitialPatient(null);
             setIsChatOpen(true);
           }}
+          user={user}
+          onLogout={logout}
         />
 
         {/* Filter Bar */}
@@ -842,5 +862,13 @@ export default function App() {
         onClose={() => setIsOracleDocOpen(false)}
       />
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <MainDashboard />
+    </AuthProvider>
   );
 }
